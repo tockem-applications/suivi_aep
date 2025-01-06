@@ -1,0 +1,404 @@
+{
+    "releve": [
+        {
+            "nom_feuille": "Distribution",
+            "data": [
+                {
+                    "libele": "CPT FOR",
+                    "numero": "",
+                    "ancien_index": 1031,
+                    "nouvel_index": 1049,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "CPT RES vers carrefour",
+                    "numero": "",
+                    "ancien_index": 940,
+                    "nouvel_index": 949,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "CPT RES vers \u00E9cole",
+                    "numero": "",
+                    "ancien_index": 270,
+                    "nouvel_index": 274,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "CPT ELECTRIQUE (KW)",
+                    "numero": "",
+                    "ancien_index": 5544,
+                    "nouvel_index": 5725,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                }
+            ]
+        },
+        {
+            "nom_feuille": "Conso. B.F",
+            "data": [
+                {
+                    "libele": "BF 1 (\u00E9cole)",
+                    "numero": "",
+                    "ancien_index": 49,
+                    "nouvel_index": 51,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "BF 2 (quartier cue)",
+                    "numero": "",
+                    "ancien_index": 0,
+                    "nouvel_index": 8,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "BF 3 (r\u00E9servoir)",
+                    "numero": "",
+                    "ancien_index": 951,
+                    "nouvel_index": 952,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "BF 4 (chefferie)",
+                    "numero": "",
+                    "ancien_index": 405,
+                    "nouvel_index": 409,
+                    "reseau": "RP",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                }
+            ]
+        },
+        {
+            "nom_feuille": "Conso. B.P",
+            "data": [
+                {
+                    "libele": "Mme Guimatieu Marie-michelle",
+                    "numero": "",
+                    "ancien_index": 113,
+                    "nouvel_index": 120,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Manfo Robert",
+                    "numero": "",
+                    "ancien_index": 109,
+                    "nouvel_index": 110,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Tekem Norbert",
+                    "numero": "204006699",
+                    "ancien_index": 212,
+                    "nouvel_index": 215,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mme. Zemo Yvonne ",
+                    "numero": "20201055",
+                    "ancien_index": 38,
+                    "nouvel_index": 39,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mme Zemo Colette",
+                    "numero": "",
+                    "ancien_index": 44,
+                    "nouvel_index": 40,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Demanou Fabien",
+                    "numero": "",
+                    "ancien_index": 0,
+                    "nouvel_index": 2,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Kenfack R.",
+                    "numero": "",
+                    "ancien_index": 15,
+                    "nouvel_index": 18,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Zangui St\u00E9phane",
+                    "numero": "",
+                    "ancien_index": 89,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Zangue M.",
+                    "numero": "",
+                    "ancien_index": 55,
+                    "nouvel_index": 60,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Djoumessi Mathias",
+                    "numero": "",
+                    "ancien_index": 425,
+                    "nouvel_index": 431,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "M. Kagho Justin",
+                    "numero": "",
+                    "ancien_index": 13,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Dongmo L\u00E9onard",
+                    "numero": "H21801152",
+                    "ancien_index": 40,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mme. Momo catherine",
+                    "numero": "H21801128",
+                    "ancien_index": 0,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mme.Tapigue Mezague",
+                    "numero": "H20902657",
+                    "ancien_index": 22,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "MATOLO THERESE",
+                    "numero": "",
+                    "ancien_index": 152,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Limoteu Mathias",
+                    "numero": "H20502817",
+                    "ancien_index": 2,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "MAGNIFEUT Epse Djoumessi",
+                    "numero": "",
+                    "ancien_index": 43,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "JIEDJIATSA Sylvestre",
+                    "numero": "",
+                    "ancien_index": 33,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "DONHAGHO DEMANOU",
+                    "numero": "",
+                    "ancien_index": 3,
+                    "nouvel_index": 0,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "GUEMEJIO Jean Jaures",
+                    "numero": "",
+                    "ancien_index": 5,
+                    "nouvel_index": 7,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "GUELEMO Fr\u00E9d\u00E9rique",
+                    "numero": "",
+                    "ancien_index": 1,
+                    "nouvel_index": 2,
+                    "reseau": "Branche vers carrefour",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Jionnang Pierre",
+                    "numero": "H21801192",
+                    "ancien_index": 43,
+                    "nouvel_index": 45,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Zangue Jean Marie",
+                    "numero": "H20500436",
+                    "ancien_index": 40,
+                    "nouvel_index": 0,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Mekaka Francois",
+                    "numero": "H21801164",
+                    "ancien_index": 37,
+                    "nouvel_index": 39,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mr. Ngueagho Thomas",
+                    "numero": "",
+                    "ancien_index": 21,
+                    "nouvel_index": 21,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Mme. Medontsop R\u00E9gine",
+                    "numero": "H20501559",
+                    "ancien_index": 34,
+                    "nouvel_index": 35,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Dongmo tebonso",
+                    "numero": "",
+                    "ancien_index": 26,
+                    "nouvel_index": 27,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "Ngouadjieu Audette",
+                    "numero": "",
+                    "ancien_index": 11,
+                    "nouvel_index": 12,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "LONTSI EPSE DONGMO",
+                    "numero": "",
+                    "ancien_index": 7,
+                    "nouvel_index": 9,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                },
+                {
+                    "libele": "KANA DAVID",
+                    "numero": "",
+                    "ancien_index": 0,
+                    "nouvel_index": 4,
+                    "reseau": "ranche vers \u00E9cole",
+                    "latitude": 0,
+                    "date_releve": "10/07/2024",
+                    "numero_abone": ""
+                }
+            ]
+        }
+    ],
+    "info_reseau": {
+        "nom_reseau": "Mbou",
+        "agent_export": "Non Disponible",
+        "date_export": "10/07/2024:12/38/54"
+    }
+}

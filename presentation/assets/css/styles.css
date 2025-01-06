@@ -1,0 +1,47 @@
+
+body{
+    background-color: rgba(100, 120, 152, 0.02);
+}
+nab{
+    background-color: #5c636a;
+}
+
+.btn-imprimer{
+    position: fixed;
+    bottom: 0px;
+    background-color: rgb(161, 150, 150);
+    padding:10px 20px;
+    right: 15px;
+}
+td>label{
+    margin-right: 20px;
+    margin-left: 10px;
+}
+td{
+    text-align: center;
+    padding: 10px 12px;
+    width: 10%;
+    border-color: azure;
+}
+.bon{
+    margin: auto;
+    padding: 2%;
+    box-shadow:
+        0	2px	6px	rgba(0,	0,	0,	.24),
+        0	2px	8px	rgba(0,	0,	0,	.12);
+ }
+
+.mescard{
+    transition: background-color 0.5s ease-in-out, color 0.1s ease-in-out;
+}
+
+.mescard:hover{
+    background-color: grey;
+    color: white;
+    /*visibility: ;*/
+    /*display: ;*/
+}
+
+
+
+

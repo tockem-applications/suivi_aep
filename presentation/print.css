@@ -1,0 +1,23 @@
+
+.conseil-bg-color {
+    background-color: #2F5597;
+}
+.info-boite-facture-bg-color{
+    background-color: #8FAADC;
+}
+
+.my-text-white{
+    color: white;
+}
+
+.reste-boite-conseil {
+    border: 2px solid #5B9BD5;
+    border-radius: 10px;
+}
+
+@media print {
+    .my-text-white{
+        color: red;
+        background-color: red;
+    }
+}
