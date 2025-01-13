@@ -1,6 +1,8 @@
 <?php
 @include_once("../donnees/reseau.php");
 @include_once("donnees/reseau.php");
+@include_once("../traitement/compteur_t.php");
+@include_once("traitement/compteur_t.php");
 
 
 class Reseau_t
@@ -9,6 +11,7 @@ class Reseau_t
     public static function ajout()
     {
         if (isset($_GET['ajout'])) {
+            var_dump($_POST);
             if (isset($_POST['nom'], $_POST['abreviation'], $_POST['date_creation'], $_POST['description_reseau'])) {
                 echo "ooooooooooo";
                 $nom = htmlspecialchars($_POST['nom']);
@@ -18,11 +21,12 @@ class Reseau_t
                 
                 $nouveau_reseau = new Reseau(0, $nom, $abreviation, $date_creation, $description_reseau, $_SESSION['id_aep']);
                 var_dump($nouveau_reseau);
-                $res = $nouveau_reseau->ajouter();
-                if (!$res)
-                    header("location: ../index.php?form=reseau&operation=error");
-                else
-                    header("location: ../index.php?form=abone&operation=succes");
+                $compteur = Compteur_t::createCompteurFromPost($_SESSION);
+                $res = $nouveau_reseau->saveReseau($compteur);
+//                if (!$res)
+//                    header("location: ../index.php?form=reseau&operation=error");
+//                else
+//                    header("location: ../index.php?form=abone&operation=succes");
                 
             }
         }
@@ -159,6 +163,14 @@ class Reseau_t
 //            if ($photot != null){
             echo "<option value='$id' ".($id == $item?'selected':''). " >$prenom de $nom</option>";
         }
+    }
+
+
+    public static function getAllReseauFromAepId(){
+        $req = Reseau::getAllByIdReseau($_SESSION['id_aep']);
+        $tab = array();
+        $req = $req->fetchAll();
+        return $req;
     }
 }
 

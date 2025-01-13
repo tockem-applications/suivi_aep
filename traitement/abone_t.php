@@ -44,7 +44,7 @@ class Abone_t
                     $type_compteur
                 );
 
-                $res = $nouvel_abone->ajouter();
+                $res = $nouvel_abone->save_abone();
                 var_dump($nouvel_abone);
                 $nouvel_abone->getAboneIdBy();
                 var_dump($nouvel_abone);
@@ -332,7 +332,7 @@ class Abone_t
     }
     public static function getListeAboneSimple($type_compteur = '')
     {
-        $req = Abones::getSimpleAbone($type_compteur, $_SESSION['id_aep']);
+        $req = Abones::getSimpleAbone( $_SESSION['id_aep']);
         $req = $req->fetchAll();
         if($type_compteur == '')
             $titre_page ='Liste de tout les compteurs (production et distribution)';
@@ -459,7 +459,7 @@ class Abone_t
          ''.$data[3],'actif',''.$data[6],''.$data[5],
          ''.$data[8]); //$donnee;
          $abone->ajouter();
-          $facture = new Facture('','','','','','','','','');
+//          $facture = new Facture('','','','','','','','','');
 
     }
     return $tab;

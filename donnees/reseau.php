@@ -17,6 +17,22 @@ class Reseau extends Manager
         return self::prepare_query("SELECT * FROM reseau WHERE id_aep = ?", array($id_aep));
     }
 
+    public  function saveReseau($compteur)
+    {
+        try {
+            $this->ajouter();
+            if($compteur != null){
+                $compteur->ajouter();
+                self::prepare_query("insert into compteur_reseau(id_compteur, id_reseau) values(?, ?)", array($compteur->id, $this->id));
+            }
+            return true;
+        }catch (Exception $e){
+            echo $e->getMessage();
+//            throw $e;
+        }
+        return false;
+    }
+
 
     function getconstraint()
     {

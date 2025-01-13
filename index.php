@@ -108,7 +108,7 @@ include_once("presentation/header.php");
     <!-- <aside class="left_side_body" style="border-right: solid white 1px;">
         <img src="presentation/assets/images/aside_image.png" alt="tockem image" style="width: 100%; height: 50%;">
     </aside> -->
-    <article class="rigth_side_body container-fluid overflow-y-scroll" id="a_imprimer" style="height: 90vh">
+    <article class="rigth_side_body overflow-y-auto overflow-x-hidden" id="a_imprimer" style="width: 100%">
         <?php
 //        var_dump($_SESSION);
         if (count($_GET) == 0)
@@ -122,6 +122,7 @@ include_once("presentation/header.php");
             } else {
                 include_once("presentation/home.php");
             }
+            include_once("presentation/compteur_component.php");
             include_once("presentation/fomulaire.php");
 
             $previous_request = explode('?',  $_SERVER['REQUEST_URI']);

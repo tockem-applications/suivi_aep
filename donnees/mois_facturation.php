@@ -25,9 +25,12 @@ class MoisFacturation extends Manager
             $mois_fin = '2200-01';
         }
         return self::prepare_query('select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
-                           sum(f.nouvel_index-f.ancien_index) conso
-                        from mois_facturation m, facture f, constante_reseau c
-                        where m.id = f.id_mois_facturation and c.id = m.id_constante and m.mois>=? and m.mois <=? and c.id_aep=?
+                           sum(nouvel_index-ancien_index) conso
+                        from mois_facturation m 
+                            inner join constante_reseau c on m.id_constante = c.id
+                            inner join indexes id on m.id = id.id_mois_facturation
+                            inner join facture f on id.id = f.id_indexes
+                        where m.mois>=? and m.mois <=? and c.id_aep=?
                         group by m.id order by mois desc ;', array($mois_debut, $mois_fin, $id_aep)
         );
     }
@@ -128,6 +131,7 @@ class MoisFacturation extends Manager
 //            echo "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk<br>";
             //on recupere la liste des ancienne factures pour avoir acces aux penalites et impayes
             $res = Facture::getAncienneFacture($id_aep);
+            echo "oooooooooooooooooooooooooooooooooooooooo";
             $tab_ancienne_facture = $res->fetchAll();
             var_dump($tab_ancienne_facture);
             self::prepare_query("
@@ -160,6 +164,7 @@ class MoisFacturation extends Manager
                 $nouvel_index = (float)$ligne_tab_index['nouvel_index'];
                 $ancien_index = (float)$ligne_tab_index['ancien_index'];
                 $id_abone = (int)$ligne_tab_index['id'];
+                $id_compteur = (int)$ligne_tab_index['id_compteur'];
 
                 //une fois que l'on a le nouvel index de l'abone, on le place dans l'abone pour un acces facile
                 //mais avant il faut se rassurer qu'il est au moins egal a l'ancien index. sinon on ne lui ajoute pas de facture
@@ -176,9 +181,11 @@ class MoisFacturation extends Manager
 //                echo"*****************************************************************<br>";
 //                echo"*****************************************************************<br>";
                 var_dump(count($tab_ancienne_facture));
+                var_dump(count($tab_ancienne_facture));
+                var_dump(count($tab_ancienne_facture));
                 foreach ($tab_ancienne_facture as $ligne_ancienne_facture) {
                     echo "44444444444444444444444444444444444444444444444<br>";
-                    if ((int)$ligne_ancienne_facture['id_abone'] == $id_abone) {
+                    if ((int)$ligne_ancienne_facture['id_compteur'] == $id_compteur) {
 
                         $prix_eau = $ligne_ancienne_facture['prix_metre_cube_eau'];
                         $id_ancienne_facture = $ligne_ancienne_facture['id'];
@@ -212,6 +219,7 @@ class MoisFacturation extends Manager
                 echo "bonjour la famille <br>";
                 // ace stade les index sont valides donc onsere le nouvel index dans la table de l'abone
                 $res = Abones::updateIndex($id_abone, $nouvel_index);
+                var_dump("eriidkddndndndndnndnd");
                 if (!$res) {
                     self::$bd->rollBack();
                     return 0;
@@ -221,8 +229,8 @@ class MoisFacturation extends Manager
                     , $nouvel_index
                     , 0.00, '00/00/0000'
                     , $nouvelle_penalite, $id_mois_facturation
-                    , $id_abone, '');
-                $res = $nouvelle_facture->ajouter();
+                    , $id_abone, '', $id_compteur);
+                $res = $nouvelle_facture->save_facture();
                 if ((int)$nouvel_impaye != 0) {
                     $impaye_object = new Impaye('', (int)$id_ancienne_facture, (int)$nouvel_impaye, 0, '00/00/0000');
                     $impaye_object->ajouter();

@@ -230,7 +230,7 @@ if (isset($_GET['list'])) {
                         <select name="id_selected_month" class="form-select" id="">
                             <option value="">Veuillez choisir un mois</option>
                             <?php
-                            MoisFacturation_t::getOnlyOption($id_mois_listing);
+                            //MoisFacturation_t::getOnlyOption($id_mois_listing);
                             ?>
                         </select>
                         <button type="submit" class="btn-primary">Afficher</button>
@@ -296,6 +296,12 @@ if (isset($_GET['list'])) {
         ?>
         <a href="?form=constante_reseau">modifier les tarifs</a>
         <?php
+    } else if ($_GET['page'] == 'reseau') {
+        include_once('reseau_component.php');
+        $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
+        afficherPageReseau($id_reseau);
+
+
     }else if ($_GET['page'] == 'home') {
         include_once('presentation/home.php');
     } else if ($_GET['page'] == 'proprietaire') {

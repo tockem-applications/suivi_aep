@@ -9,9 +9,11 @@ $req = Abones::getLastmonthIndex($_SESSION['id_aep']);
 //var_dump($req);
 $date_export = new DateTime();
 $data =json_encode($req);
+//exit();
+//var_dump($_SESSION);
 $all = array("releve"=> array("nom_feuille"=>"nom_aep", "data"=> $req), 
     "info_reseau"=> array(
-        "nom_reseau"=> "Mbou",
+        "nom_reseau"=> $_SESSION['libele_aep'],
         "agent_export"=> "Non Disponible",
         "date_export"=> $date_export->format('d/m/Y:H/i/s'))
     );

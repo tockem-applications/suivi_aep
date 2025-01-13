@@ -19,9 +19,16 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
                            data-bs-toggle="dropdown" aria-expanded="false">
-                            Abones
+                            Structure
                         </a>
                         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+
+                            <li><a class="dropdown-item" href="?page=reseau">Reseaux</a></li>
+                            <li><a class="dropdown-item" href="?form=reseau">Nouveau reseau</a></li>
+
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item" href="?form=abone"> Ajouter un aboné</a></li>
                             <!--                        <li><a class="dropdown-item" href="?form=contrat">Contrat</a></li>-->
                             <li><a class="dropdown-item" href="?list=abone_simple">liste Compteurs</a></li>

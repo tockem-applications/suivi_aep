@@ -383,6 +383,7 @@ if (isset($_GET['form'])) {
         </div>
 
         <?php
+        make_formulaire_compteur_colapse();
 //        ob_start();
 //        tarif_t::getAll('Liste des Tarifs');
 //        $liste = ob_get_clean();

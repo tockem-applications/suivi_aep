@@ -16,9 +16,7 @@ create table reseau(
 create table abone(
     id int(4) UNSIGNED AUTO_INCREMENT primary key, 
     nom varchar(128) not null,
-    numero_compteur varchar(32) not null,
     numero_telephone varchar(16) not null,
-    derniers_index DECIMAL(7,2) UNSIGNED not null default 0,
     numero_compte_anticipation varchar(16) not null,
     etat varchar(10) not null,
     rang int(4),
@@ -257,6 +255,51 @@ create table utilisateur(
     prenom varchar(32) not null,
     numero_telephone varchar(16) not null
 )engine=innodb;
+
+
+create table compteur(
+    id integer(5) unsigned primary key auto_increment,
+    numero_comteur varchar(16) not null,
+    longitude decimal(12, 6),
+    latitude decimal(12, 6),
+    dernier_index decimal(7,2) not null,
+    description text(1000)
+) engine = innoDB;
+
+alter table compteur
+    change dernier_index derniers_index decimal(7, 2) not null;
+
+alter table compteur
+    change numero_comteur numero_compteur varchar(16) not null;
+
+create table compteur_abone(
+   id_abone integer(5) unsigned not null,
+   id_compteur integer(5) unsigned not null,
+   constraint fk_abone_compteur_abone foreign key (id_abone) references abone(id),
+   constraint fk_compteur_compteur_abone foreign key (id_compteur) references compteur(id)
+)engine=innoDB;
+
+create table position_compteur_aep(
+    id integer(2) unsigned primary key auto_increment,
+    position varchar(32) not null
+)engine = innoDB;
+
+
+create table compteur_aep(
+   id_aep integer(5) unsigned not null,
+   id_compteur integer(5) unsigned not null,
+   id_position integer(3) unsigned not null,
+   constraint fk_aep_compteur_aep foreign key (id_aep) references aep(id),
+   constraint fk_aep_compteur_aep foreign key (id_aep) references aep(id),
+   constraint fk_compteur_compteur_abone foreign key (id_compteur) references compteur(id)
+)engine=innoDB;
+
+create table compteur_reseau(
+       id_reseau integer(5) unsigned not null,
+       id_compteur integer(5) unsigned not null,
+       constraint fk_reseau_compteur_reseau foreign key (id_reseau) references reseau(id),
+       constraint fk_compteur_compteur_abone foreign key (id_compteur) references compteur(id)
+)engine=innoDB;
 
 alter table reseau
     drop column id_aep;

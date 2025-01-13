@@ -349,14 +349,19 @@ abstract class Manager{
     }
 
     public static function prepare_query($query, $data){
-        if(self::$bd == null)
-            self::$bd = Connexion::connect();
-        $req = self::$bd->prepare($query);
-        $res = $req->execute($data);
+        try {
+            if(self::$bd == null)
+                self::$bd = Connexion::connect();
+            $req = self::$bd->prepare($query);
+            $res = $req->execute($data);
 //        var_dump($data);
-        return $res ? $req: false;
-//        $req->execute(array("table_name"=>htmlspecialchars($table_name)));
-//        return $req->execute($data);
+            return $res ? $req: false;
+        }catch (Exception $e){
+            echo $e."<br>";
+            echo $query;
+//            throw new Exception($e);
+        }
+        return false;
     }
 
 
