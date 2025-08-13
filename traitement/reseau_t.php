@@ -21,12 +21,12 @@ class Reseau_t
                 
                 $nouveau_reseau = new Reseau(0, $nom, $abreviation, $date_creation, $description_reseau, $_SESSION['id_aep']);
                 var_dump($nouveau_reseau);
-                $compteur = Compteur_t::createCompteurFromPost($_SESSION);
-                $res = $nouveau_reseau->saveReseau($compteur);
-//                if (!$res)
-//                    header("location: ../index.php?form=reseau&operation=error");
-//                else
-//                    header("location: ../index.php?form=abone&operation=succes");
+//                $compteur = Compteur_t::createCompteurFromPost($_POST);
+                $res = $nouveau_reseau->ajouter();
+                if (!$res)
+                    header("location: ../index.php?form=reseau&operation=error");
+                else
+                    header("location: ../index.php?page=reseau&id_reseau=$nouveau_reseau->id");
                 
             }
         }
@@ -56,11 +56,11 @@ class Reseau_t
         if (isset($_GET['id_delete'])) {
             $id = $_GET['id_delete'];
             $reseau = new Reseau($id, '', '' , '', '');
-            $res = $reseau->delete();
+            $res = $reseau->deleteReseau();
             if (!$res)
-                header("location: ../presentation/index.php?list=tarif&operation=error");
+                header("location: ../index.php?page=reseau&id_reseau=$id&operation=error");
             else
-                header("location: ../presentation/index.php?list=tarif&operation=succes");
+                header("location: ../index.php?page=reseau&operation=succes");
         }
     }
     public static function findUpadate()

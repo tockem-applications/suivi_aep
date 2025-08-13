@@ -2,14 +2,15 @@
 <project version="4">
   <component name="SqlDialectMappings">
     <file url="file://$PROJECT_DIR$/donnees/Abones.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/donnees/aepModel.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/donnees/bd/empty.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/donnees/bd/empty2.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/donnees/bd/empty3.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/donnees/bd/empty4.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/donnees/compteur.php" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/donnees/facture.php" dialect="GenericSQL" />
-    <file url="file://$PROJECT_DIR$/donnees/mois_facturation.php" dialect="GenericSQL" />
-    <file url="file://$PROJECT_DIR$/donnees/reseau.php" dialect="GenericSQL" />
-    <file url="file://$PROJECT_DIR$/suivi_aep_fokoue.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/donnees/impaye.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/donnees/user.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/donnees/versements.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/presentation/redevance_deatails_page.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/presentation/user_detail_component.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/traitement/role_t.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/traitement/user_t.php" dialect="GenericSQL" />
   </component>
 </project>

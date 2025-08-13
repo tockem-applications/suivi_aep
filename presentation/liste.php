@@ -5,10 +5,10 @@ function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form'
 {
     ob_start()
     ?>
-    <div class="modal fade " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
+    <div class="modal fade  " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
          aria-labelledby="deleteModalLabel"
          aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <span class="h2"><?php echo $titre ?></span>
@@ -87,11 +87,25 @@ function create_accordeon($titre, $html_body, $expande, $id)
             ';
 }
 
+if (!isset($_SESSION['user_id'])) {
+//    var_dump((isset($_GET['form']) || isset($_GET['list'])));
+    //l'utilisateur n'est pas connecte et il ne veux que la page de login ou d'enregistrment
+    if (isset($_GET['page'])) {
+//        var_dump("lllllllllllllllllllllllllllllll");
+        if ($_GET['page'] != 'login' && $_GET['page'] != 'register' && $_GET['page'] != 'logout')
+            header("location: ?page=login");
+    } else {
+        header("location: ?page=login");
+
+    }
+
+}
+
 if (isset($_GET['list'])) {
 //    var_dump($_SESSION);
-    if ($_GET['list'] == 'abone_simple') {
+    if ($_GET['list'] == 'compteur_reseau') {
         require_once('traitement/abone_t.php');
-        Abone_t::getListeAboneSimple();
+        Abone_t::getListeAboneSimple('compteur_reseau');
 
     }
     if ($_GET['list'] == 'distribution_simple') {
@@ -105,6 +119,7 @@ if (isset($_GET['list'])) {
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
         require_once("traitement/facture_t.php");
+//        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
     } elseif ($_GET['list'] == 'ajout_abones') {
@@ -112,17 +127,11 @@ if (isset($_GET['list'])) {
         $data = Abone_t::getData();
         var_dump($data);
 
-    } elseif ($_GET['list'] == 'transaction') {
-        require_once("traitement/flux_financier_t.php");
-//        var_dump('oosodooooooooooooo');
-        Flux_financier_t::afficheFluxFinancier();
-//        var_dump($data);
-
-    } elseif ($_GET['list'] == 'insolvables') {
+    }  elseif ($_GET['list'] == 'insolvables') {
         require_once("traitement/facture_t.php");
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
-    } elseif ($_GET['list'] == 'releve_indexx') {
+    } elseif ($_GET['list'] == 'releve_index') {
         require_once("traitement/facture_t.php");
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
@@ -208,45 +217,14 @@ if (isset($_GET['list'])) {
             Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
         }
         //echo $id_mois_listing;
-    } else if ($_GET['list'] == 'mois_facturation') {
+    }else if ($_GET['list'] == 'mois_facturation') {
         include_once("traitement/mois_facturation_t.php");
         //echo $id_mois_listing;
         MoisFacturation_t::getListeMoisFacture();
     } else if ($_GET['list'] == 'recouvrement') {
-        // require_once '../traitement/locataire_t.php';
-        // Locataire_t::getAll('Liste Des Locataires');
-        include_once("traitement/facture_t.php");
-        require_once("traitement/mois_facturation_t.php");
-        $id_mois_listing = 0;
-        if (isset($_GET["id_selected_month"]))
-            $id_mois_listing = $_GET['id_selected_month']
-        ?>
-        <div class="container mt-3 d-flex justify-content-center">
-            <div class="row">
-                <form action="?" method="GET" class="">
-                    <input type="hidden" name="list" value="recouvrement">
-                    <div class="input-group">
-                        <span class="input-group-text">Mois de facturation</span>
-                        <select name="id_selected_month" class="form-select" id="">
-                            <option value="">Veuillez choisir un mois</option>
-                            <?php
-                            //MoisFacturation_t::getOnlyOption($id_mois_listing);
-                            ?>
-                        </select>
-                        <button type="submit" class="btn-primary">Afficher</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php
-        //echo $id_mois_listing;
+        include_once("facture_component.php");
+        display_tab_facture_by_month();
 
-        $id_mois_listing = Facture_t::getTableauFactureByMoisId($id_mois_listing);
-        //echo $id_mois_listing;
-//        echo "<div class='col-12'><a class='btn-primary btn w-25' href='?list=liste_facture_month&id_constante=0&id_mois=$id_mois_listing&id_selected_month=$id_mois_listing'>Facturer</a></div>";
-        ?>
-
-        <?php
     } else if ($_GET['list'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
         Proprietaire_t::getAll('Liste Des Prooprietaires');
@@ -276,13 +254,13 @@ if (isset($_GET['list'])) {
                     class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
                 <a href="?list=abone_simple" class="btn btn-primary ">< Liste des abones </a>
                 <div class="me-2">
-                    <?php Abone_t::afficheInfoAbone($id_abone); ?>
+                    <?php $id_compteur = Abone_t::afficheInfoAbone($id_abone); ?>
                 </div>
             </article>
 
             <aside class=" col-xl-7">
                 <?php
-                echo Abone_t::afficheInputRecouvrementAbone($id_abone);
+                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
                 ?>
                 <!--                <div class="col-12 h-5"> Est ce aue tout le meonde va bien</div>-->
             </aside>
@@ -299,10 +277,18 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
         $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
-        afficherPageReseau($id_reseau);
+        ob_start();
+        $statistiqueReseau = afficherStatistiqueReseau($id_reseau);
+        $code_html = ob_get_clean();
+        afficherPageReseau($id_reseau, $statistiqueReseau, $code_html);
 
+//        echo "<div class='row d-flex'> ";
+//        echo "<div class='col-12 col-md-4'>".$code_html. "</div>";
+//        echo "<div class='col-12 col-md-8'>";
+//                echo "</div>";
+//        echo "</div>";
 
-    }else if ($_GET['page'] == 'home') {
+    } else if ($_GET['page'] == 'home') {
         include_once('presentation/home.php');
     } else if ($_GET['page'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
@@ -310,6 +296,38 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'tarif') {
         require_once '../traitement/tarif_t.php';
         tarif_t::getAll('Liste Des Tarifs');
+    } else if ($_GET['page'] == 'login') {
+        require_once 'presentation/login_component.php';
+    } else if ($_GET['page'] == 'releves') {
+        include "presentation/releve_page.php";
+    }else if ($_GET['page'] == 'aep') {
+        require_once 'presentation/aep_page.php';
+    }else if ($_GET['page'] == 'aep_dashboard') {
+        require_once 'presentation/aep_dashbord.php';
+    } else if ($_GET['page'] == 'register') {
+        require_once 'presentation/register_component.php';
+    } else if ($_GET['page'] == 'role') {
+        require_once 'presentation/role_component.php';
+    } else if ($_GET['page'] == 'logout') {
+        AuthManager::logout();
+    } else if ($_GET['page'] == 'download_index') {
+        header("location: traitement/abone_t.php?action=export_index");
+    } else if ($_GET['page'] == 'role_detail') {
+        require_once 'presentation/role_detail_component.php';
+    } else if ($_GET['page'] == 'clefs') {
+        require_once 'presentation/clef_page.php';
+    } else if ($_GET['page'] == 'redevance_details') {
+        require_once 'presentation/redevance_deatails_page.php';
+    } else if ($_GET['page'] == 'redevance') {
+        require_once 'presentation/redevance_page.php';
+    } else if ($_GET['page'] == 'versement') {
+        require_once 'presentation/versments_page.php';
+    } else if ($_GET['page'] == 'user_details') {
+        require_once 'presentation/user_detail_component.php';
+    } elseif ($_GET['page'] == 'transaction') {
+        require_once "presentation/transactions_component.php";
+    } else if ($_GET['page'] == 'edit_aep') {
+        require_once 'presentation/aep_edit.php';
     } else if ($_GET['page'] == 'cle') {
         if ($_SESSION['id'] == '1') {
             require_once '../traitement/admin_t.php';
@@ -326,7 +344,7 @@ if (isset($_GET['list'])) {
         include_once('traitement/abone_t.php');
         Abone_t::getJsonDataToExport();
     } else {
-        echo "<strong>Erreur 404: La pae que vous recherchez n'existe pas</strong>";
+        echo "<strong>Erreur 404: La page que vous recherchez n'existe pas</strong>";
     }
 
 } else if (count($_GET) == 0) {

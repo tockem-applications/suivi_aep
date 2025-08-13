@@ -15,9 +15,11 @@ class Facture_t
 {
 
 
-    public static function getTableauFactureactiveForReleve($id_mois = 0, $titre = 'Releve des nouveaux index')
+    public static function getTableauFactureactiveForReleve($id_mois, $titre = 'Releve des nouveaux index:')
     {
         $mois_lettre = '';
+//        if()
+
         $id_mois_actif = MoisFacturation::getIdMoisFacturationActive($_SESSION['id_aep']);
         $editable = $id_mois == $id_mois_actif || $id_mois == 0;
         if ($id_mois == 0) {
@@ -33,47 +35,40 @@ class Facture_t
             //$id_mois = (int) $mois[0]['id'];
             $mois_lettre = getLetterMonth($mois[0]['mois']);
         }
-        $req = Facture::getMonthFacture((int)$id_mois, $_SESSION['id_aep']);
-        //echo 'oooooooooooo';
-        // var_dump($req);
+        //recuperation des index des abones
+        $req = Facture::getAboneMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
         $req = $req->fetchAll();
+
+        // recperation des index des reseaux
+        $req2 = Facture::getReseauMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
+        $req2 = $req2->fetchAll();
+
+
         $titre = "$titre $mois_lettre";
         $mes_facture = "";
         ob_start();
         ?>
+        <style>
+            /* Masquer les flèches d'incrémentation dans les navigateurs modernes */
+            input[type='number']::-webkit-inner-spin-button,
+            input[type='number']::-webkit-outer-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+            }
+            /* Masquer les flèches dans Firefox */
+            input[type='number'] {
+                -moz-appearance: textfield;
+            }
+        </style>
         <tr>
-            <th>Id</th>
+            <th>N° compteur</th>
             <th>Nom et Prenom</th>
             <th>Ancien index</th>
             <th>nouvel index</th>
         </tr>
         <?php
-        foreach ($req as $data) {
-            ?>
-
-            <tr class=" <?php if((float)$data['ancien_index'] > (float)$data['nouvel_index'])
-                                echo 'bg-danger';
-                            elseif (((float)$data['ancien_index'] == (float)$data['nouvel_index']))
-                                echo 'bg-warning';
-                            elseif((float)$data['ancien_index'] < (float)$data['nouvel_index'])
-                                echo '';
-                            ?>">
-                <td> <?php echo $data['id_abone'] ?> </td>
-                <td> <?php echo $data['nom'] ?> </td>
-                <td id="ancien_index<?php  echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
-                <td class="w-auto">
-                    <input type="number" class="form-control w-0"
-                        id="nouvel_index<?php echo $data['id']?>"
-                        min="<?php echo $data['ancien_index']?>"
-                        onkeyup="handleReleve_pressed_enter(event, this.value, <?php echo $data['id'] ?>, <?php echo $data['id_abone'] ?>)"
-                        onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_abone'] ?>)" step="0.01"
-                        value="<?php echo ((int) $data['nouvel_index'] == 0 ? '' :  $data['nouvel_index']) ?>"
-                        aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
-                        <input type="hidden" value="<?php echo $data['nouvel_index'] ?>" id="ex_nouvel_index<?php echo $data['id']?>">
-                </td>
-            </tr>
-            <?php
-        }
+            self::creerLigneTableauReleveManuelle($req2);
+            self::creerLigneTableauReleveManuelle($req);
         echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
         $codeHtml = ob_get_clean();
         self::createTable($codeHtml, $titre, ""/*"<a href='traitement/moisfacturation_t.php?action=export_index' target='_blank'>Telecharger les index</a><br>"*/);
@@ -91,152 +86,266 @@ class Facture_t
         //echo $mes_facture;
 
     }
-
-
-    public static function getTableauFactureByMoisId($id_mois = 0, $titre = 'Liste des recouvrements: ')
-    {
-        if (/*isset($_GET["id_mois"], $_GET["id_constante"]) ||*/ true) {
-            $mois_lettre = '';
-            $id_mois_actif = MoisFacturation::getIdMoisFacturationActive($_SESSION['id_aep']);
-            $editable = $id_mois == $id_mois_actif || $id_mois == 0;
-            if ($id_mois == 0) {
-                $mois = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
-                $mois = $mois->fetchAll();
-                if(count($mois)){
-                    $id_mois = (int) $mois[0]['id'];
-                    $mois_lettre = getLetterMonth($mois[0]['mois']);
-                }
-            } else {
-
-                $mois = MoisFacturation::getOneById((int)$id_mois);
-                $mois = $mois->fetchAll();
-                //  var_dump($mois);
-                //$id_mois = (int) $mois[0]['id'];
-                $mois_lettre = getLetterMonth($mois[0]['mois']);
-            }
-            $req = Facture::getMonthFacture((int)$id_mois, $_SESSION['id_aep']);
-            //echo 'oooooooooooo';
-            // var_dump($req);
-            $req = $req->fetchAll();
-            $titre = "$titre $mois_lettre";
-            $mes_facture = "";
-            ob_start();
+    public static function creerLigneTableauReleveManuelle($req){
+        foreach ($req as $data) {
+            $circle_bg_color = '';
+            if((float)$data['ancien_index'] > (float)$data['nouvel_index'])
+                $circle_bg_color =  'bg-danger';
+            elseif (((float)$data['ancien_index'] == (float)$data['nouvel_index']))
+                $circle_bg_color =  'bg-warning';
+            elseif((float)$data['ancien_index'] < (float)$data['nouvel_index'])
+                $circle_bg_color =  'bg-success';
             ?>
-            <tr>
-                <th>Id</th>
-                <th>Nom et Prenom</th>
-                <th>Index</th>
-                <th>Conso</th>
-                <th>Impayer</th>
-                <th>Facture</th>
-                <th>Total</th>
-                <th>Reste</th>
-                <th>Versement</th>
-                <th>Date</th>
 
-
+            <tr class="p-0 m-0">
+                <td><?php echo $data['numero_compteur'] ?> </td>
+                <td> <?php echo $data['nom'] ?> </td>
+                <td id="ancien_index<?php  echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
+                <td class="w-auto d-flex justify-content-between align-items-center">
+                    <input type="number" class="form-control w-50 border-0 p-0 ps-2 " style="background-color: rgba(0, 0, 0, 0)"
+                        id="nouvel_index<?php echo $data['id']?>"
+                        min="<?php echo $data['ancien_index']?>"
+                        onclick="this.select()"
+                        onkeyup="handleReleve_pressed_enter(event, this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
+                        onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)" step="0.01"
+                        value="<?php echo ((int) $data['nouvel_index'] == 0 ? '' :  $data['nouvel_index']) ?>"
+                        aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
+                        <div class="color-circle <?php echo $circle_bg_color?>"></div>
+                        <input type="hidden" value="<?php echo $data['nouvel_index'] ?>" id="ex_nouvel_index<?php echo $data['id']?>">
+                </td>
             </tr>
             <?php
-            foreach ($req as $data) {
-//                var_dump($data['impaye']);
-                $conso_mois = Facture::calculeConso(+$data['nouvel_index'], $data['ancien_index']);
-                $montant_conso = Facture::calculeMontantConso(+$data['nouvel_index'], $data['ancien_index'], $data['prix_metre_cube_eau']);
-                $motant_total = Facture::calculeMontantTotal(
-                    $data['nouvel_index'],
-                    $data['ancien_index'],
-                    $data['prix_tva'],
-                    $data['prix_entretient_compteur'],
-                    $data['prix_metre_cube_eau'],
-                    $data['impaye'],
-                    $data['penalite']
-                );
-                $montant_tva = Facture::calculeMontantConsoTva(
-                    $data['nouvel_index'],
-                    $data['ancien_index'],
-                    $data['prix_tva'],
-                    $data['prix_entretient_compteur'],
-                    $data['prix_metre_cube_eau']
-                );
-                $montant_restant = (int)Facture::calculeMontantRestant(
-                    $data['nouvel_index'],
-                    $data['ancien_index'],
-                    $data['prix_tva'],
-                    $data['prix_entretient_compteur'],
-                    $data['prix_metre_cube_eau'],
-                    $data['impaye'],
-                    $data['penalite'],
-                    $data['montant_verse']
-                );
-                ?>
-                <tr <?php ?>>
-                    <td> <?php echo $data['id_abone'] ?> </td>
+        }
+    }
 
-                    <td>
 
-                    <?php  echo make_Modal(''.$data['nom'], ''.Abone_t::afficheInputRecouvrementAbone($data['id_abone']),-1, 'recouvrement_Form_'.$data['id_abone'],'')?>
-                    <a data-bs-toggle="modal" data-bs-target="#<?php echo 'recouvrement_Form_'.$data['id_abone'];?>"> <?php echo strlen($data['nom']) > 28 ? substr($data['nom'], 0, 24) . '...' : $data['nom'] ?></a> </td>
-                    <td> <?php echo $data['ancien_index'] . ' - ' . $data['nouvel_index'] ?></td>
 
-                    <td> <?php echo $conso_mois ?></td>
-                    <td> <?php echo (int) $data['impaye'] ?></td>
-                    <td> <?php echo $montant_tva ?></td>
-                    <td>
-                        <?php echo $motant_total ?>
-                    </td>
-                    <td> <?php echo $montant_restant ?>
-                    </td>
-                    <td class="w-auto">
-                        <input type="number" class="form-control w-0"
-                            onkeyup="handleRecouvrement_pressed_enter(event, this.value, <?php echo $data['id'] ?>)"
-                            onchange="handleRecouvrement(this.value, <?php echo $data['id'] ?>)" step="0.01"
-                            value="<?php echo ((int) $data['montant_verse'] == 0 ? '' : (int) $data['montant_verse']) ?>"
-                            aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
-                    </td>
-                    <td class="">
-                        <div><input type="datetime" id="date_releve_facture_<?php echo $data['id'] ?>" class="form-control mb-0 "
-                                value="<?php echo date('d/m/Y') ?>"><?php echo '' ?></div>
-                    </td>
 
-                    <td><a href="" class="btn btn-info mb-0 ">Valider</a></td>
-                </tr>
-                <?php
-                /*$mes_facture = $mes_facture.'<br>'.self::creerFacture(
-                    $data['nom'],
-                    $data['numero_compteur'],
-                    $data['numero_compte_anticipation'],
-                    $data['reseau'],
-                    $data['ancien_index'],
-                    $data['nouvel_index'],
-                    $conso_mois,
-                    $data['mois'],
-                    $data['impaye'],
-                    $data['penalite'],
-                    $data['prix_metre_cube_eau'],
-                    $data['prix_entretient_compteur'],
-                    $montant_restant,
-                    $montant_conso,
-                    $data['prix_tva'],
-                    $data['date_depot'],
-                    '12/15/28'
-                        );  */
-            }
-//            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
-            $codeHtml = ob_get_clean();
-            self::createTable($codeHtml, $titre, ""/*"<a href='traitement/moisfacturation_t.php?action=export_index' target='_blank'>Telecharger les index</a><br>"*/);
+    /**
+     * Génère un tableau HTML des factures pour un mois donné.
+     *
+     * @param int $idMois Identifiant du mois de facturation (0 pour le mois actif)
+     * @param string $titre Titre du tableau
+     * @param int $idReseau Identifiant du réseau (0 pour tous les réseaux)
+     * @param int $idAep Identifiant AEP depuis la session
+     * @return int Identifiant du mois traité
+     */
+    public static function getTableauFactureByMoisId($idAep,  $idMois = 0,  $titre = 'Liste des recouvrements : ',  $idReseau = 0, $insolvable=false, $bon_payeurs=false, $avanceur=false)
+    {
+        // Récupérer le mois actif si $idMois est 0
+        $idMoisActif = $idMois;
+        $editable = ($idMois === $idMoisActif || $idMois === 0);
+
+        // Déterminer le mois à utiliser
+        $moisData = self::getMoisData($idMois, $idAep);
+        if (empty($moisData)) {
+            return 0; // Retourner 0 si aucune donnée de mois n'est disponible
         }
 
+        $idMois = (int)$moisData['id'];
+        $moisLettre = self::getLetterMonth($moisData['mois']);
+        $titre .= " $moisLettre";
 
+        // Récupérer les factures pour le mois
+        $factures = Facture::getMonthFacture($idMois, $idAep)->fetchAll();
 
+        // Générer le HTML du tableau
+        $html = self::generateTableHtml($factures, $idReseau, $editable, $insolvable, $bon_payeurs, $avanceur);
+
+        // Afficher le tableau
+        self::createTable($html, $titre );
+
+        return $idMois;
+    }
+
+    /**
+     * Récupère les données du mois de facturation.
+     *
+     * @param int $idMois Identifiant du mois
+     * @param int $idAep Identifiant AEP
+     * @return array Données du mois ou tableau vide si non trouvé
+     */
+    private static function getMoisData( $idMois,  $idAep)
+    {
+        $moisQuery = ($idMois === 0)
+            ? MoisFacturation::getMoisFacturationActive($idAep)
+            : MoisFacturation::getOneById($idMois);
+
+        $mois = $moisQuery->fetchAll();
+        return !empty($mois) ? $mois[0] : array();
+    }
+
+    /**
+     * Convertit un numéro de mois en son nom en lettres.
+     *
+     * @param int $mois Numéro du mois
+     * @return string Nom du mois en lettres
+     */
+    private static function getLetterMonth( $mois)
+    {
+        // Assurez-vous que la fonction getLetterMonth est définie ailleurs
+        return getLetterMonth($mois);
+    }
+
+    /**
+     * Génère le HTML du tableau des factures.
+     *
+     * @param array $factures Liste des factures
+     * @param int $idReseau Identifiant du réseau
+     * @param bool $editable Si le tableau est éditable
+     * @return string HTML du tableau
+     */
+    private static function generateTableHtml( $factures,  $idReseau,  $editable, $insolvable=false, $bon_payeurs=false, $avanceur=false)
+    {
+//        var_dump($bon_payeurs, $avanceur, $insolvable);
+        ob_start();
         ?>
+        <table class="table table-striped table-bordered table-hover">
+            <thead class="table-dark">
+                <tr>
+<!--                    <th>Id</th>-->
+                    <th>Nom et Prénom</th>
+                    <th>Index</th>
+                    <th>Conso</th>
+                    <th>Impayé</th>
+                    <th>Facture</th>
+                    <th>Total</th>
+                    <th>Reste</th>
+                    <th>Versement</th>
+                    <th>Avance</th>
+<!--                    <th>Date</th>-->
+<!--                    <th>Action</th>-->
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($factures as $data) {
+                    if ($idReseau !== 0 && $data['id_reseau'] !== $idReseau) {
+                        continue;
+                    }
+
+                    $consoMois = Facture::calculeConso((float)$data['nouvel_index'], (float)$data['ancien_index']);
+                    $montantConso = Facture::calculeMontantConso((int)$data['nouvel_index'], (int)$data['ancien_index'], $data['prix_metre_cube_eau']);
+                    $montantVerse = (int)($data['montant_verse'] + 0.000000001);
+                    $avance = (int)($data['impaye2'] - 0.00001);
+                    $montantTotal = (int)(Facture::calculeMontantTotal(
+                        $data['nouvel_index'],
+                        $data['ancien_index'],
+                        $data['prix_tva'],
+                        $data['prix_entretient_compteur'],
+                        $data['prix_metre_cube_eau'],
+                        $data['impaye'],
+                        $data['penalite']
+                    ) + 0.000001);
+                    $montantTva = Facture::calculeMontantConsoTva(
+                        $data['nouvel_index'],
+                        $data['ancien_index'],
+                        $data['prix_tva'],
+                        $data['prix_entretient_compteur'],
+                        $data['prix_metre_cube_eau']
+                    );
+                    $montantFacture = (int)($montantTva + 0.000000001);
+                    $montantRestant = Facture::calculeMontantRestant(
+                        $data['nouvel_index'],
+                        $data['ancien_index'],
+                        $data['prix_tva'],
+                        $data['prix_entretient_compteur'],
+                        $data['prix_metre_cube_eau'],
+                        $data['impaye'],
+                        $data['penalite'],
+                        $montantVerse
+                    );
 
 
-        <br>
+                    $categorie_payeur = '';
+                    if($montantRestant == 0)
+                        $categorie_payeur = 'bg-success';
+                    if($montantRestant > 0 && $montantRestant < $montantTotal)
+                        $categorie_payeur = 'bg-warning';
+                    if($montantRestant == $montantTotal)
+                        $categorie_payeur = 'bg-danger';
+//                    if($montantRestant == 0)
+//                        $categorie_payeur = '';
 
-        </div>
 
+
+                    if($insolvable && $montantRestant != $montantTotal){
+                        continue;
+                    }
+                    if($bon_payeurs && $montantRestant !=0 ){
+                        continue;
+                    }
+//                    var_dump(($avanceur && ($montantRestant > 0 && $montantRestant < $montantTotal)));
+//                    echo "$montantRestant < $montantTotal";
+                    if($avanceur && !($montantRestant > 0 && $montantRestant < $montantTotal)){
+//                        var_dump($avanceur, 'llllllll');
+                        continue;
+                    }
+                    $disabled = ($montantFacture === $montantVerse || (int)$data['impaye'] > 0) ? 'disabled' : '';
+                    $placeholder = (int)$data['impaye'] > 0 ? 'Veuillez verser les impayés' : '';
+                    ?>
+                    <tr>
+<!--                        <td>--><?php //echo htmlspecialchars($data['id_compteur']); ?><!--</td>-->
+                        <td>
+                            <?php
+                            $modalId = 'recouvrement_Form_' . $data['id_compteur'];
+                            echo make_Modal(
+                                $data['nom'],
+                                Abone_t::afficheInputRecouvrementAbone($data['id_compteur']),
+                                -1,
+                                $modalId,
+                                ''
+                            );
+                            ?>
+                            <a data-bs-toggle="modal" data-bs-target="#<?php echo $modalId; ?>">
+                                <?php echo htmlspecialchars(strlen($data['nom']) > 28 ? substr($data['nom'], 0, 24) . '...' : $data['nom']); ?>
+                            </a>
+                        </td>
+                        <td><?php echo htmlspecialchars($data['ancien_index'] . ' - ' . $data['nouvel_index']); ?></td>
+                        <td><?php echo htmlspecialchars($consoMois); ?></td>
+                        <td><?php echo htmlspecialchars((int)$data['impaye']); ?></td>
+                        <td><?php echo htmlspecialchars($montantTva); ?></td>
+                        <td><?php echo htmlspecialchars($montantTotal); ?></td>
+                        <td class="  <?php echo $categorie_payeur;?> "><?php echo htmlspecialchars($montantRestant); ?></td>
+                        <td class="pt-0 pb-0 ">
+                            <input
+                                type="text"
+                                class="form-control p-1 <?php echo $disabled; ?> feedback-validation"
+                                <?php echo $disabled; ?>
+                                onchange="handleRecouvrement(this.value, <?php echo $placeholder === '' ? $data['id'] : 0; ?>, this.id)"
+                                value="<?php echo $placeholder === '' ? ($montantVerse === 0 ? '' : $montantVerse) : $placeholder; ?>"
+                                id="montant_verse<?php echo $data['id']; ?>"
+                            >
+<!--                            <div class="circle bg-danger "></div>-->
+                        </td>
+                        <td><?php echo htmlspecialchars(min($avance, 0)); ?></td>
+<!--                        <td>--><?php //echo  ?><!--</td>-->
+                        <td class="d-none">
+                            <input
+                                type="text"
+                                class="form-control "
+                                id="date_releve_facture_<?php echo $data['id']; ?>"
+                                value="<?php echo date('d/m/Y'); ?>"
+                            >
+                        </td>
+<!--                        <td><a href="#" class="btn btn-info mb-0">Valider</a></td>-->
+                    </tr>
+                <?php } ?>
+            </tbody>
+        </table>
         <?php
-        //echo $mes_facture;
-         return $id_mois;
+        return ob_get_clean();
+    }
+
+    /**
+     * Affiche le tableau avec le titre.
+     *
+     * @param string $html Contenu HTML du tableau
+     * @param string $titre Titre du tableau
+     */
+    private static function createTable2($html,  $titre)
+    {
+        // Assurez-vous que la méthode createTable est définie ailleurs
+        self::createTable($html, $titre, '');
     }
 
     public static function getListeFactureByMoisId()
@@ -301,7 +410,7 @@ class Facture_t
                     $data['prix_tva'],
                     self::addDaysAndFormat($data['date_depot'], 0),
                     self::addDaysAndFormat($data['date_depot']),
-                    $data['id_abone'],
+                    $data['id_compteur'],
                     $data['id_mois'],
                     addZeros($data['id_facture'], 6)
                 );
@@ -321,10 +430,15 @@ class Facture_t
             return;
         echo 'vous pouver fermer cet onglet';
 
-        $date_debut = htmlspecialchars($_GET['mois_debut']);
-        $date_fin = htmlspecialchars($_GET['mois_fin']);
-        $req = Facture::getPeriodData($date_debut, $date_fin);
+        $date_debut = htmlspecialchars($_GET['mois_debut'])== ''? '2000-01' : htmlspecialchars($_GET['mois_debut']);
+        $date_fin = htmlspecialchars($_GET['mois_fin']) == ''? '2100-12' : htmlspecialchars($_GET['mois_fin']);
+
+        $req = Facture::getPeriodData($_SESSION['id_aep'], $date_debut, $date_fin);
+
         $data = $req->fetchAll();
+        var_dump($date_debut, $date_fin, $_GET);
+        var_dump($data);
+//        exit();
         $tab = array();
         $tab_ligne = array();
 
@@ -380,10 +494,17 @@ class Facture_t
         }
         // alert('erick');
         downloadCSV();
+        window.close();
         // Événement de clic sur le bouton
 
     </script>
         <?php
+//        header("location: ../presentation/index.php");
+//        if (!$res)
+//            header("location: ../presentation/index.php?list=tarif&operation=error");
+//        else
+//            header("location: ../presentation/index.php?list=tarif&operation=succes");
+
 
     }
 
@@ -406,7 +527,7 @@ class Facture_t
         $tva,
         $date_depot,
         $date_max_paiement,
-        $id_abone = 0,
+        $id_compteur = 0,
         $id_mois = 0,
         $id_facture = 0
     ) {
@@ -430,7 +551,7 @@ class Facture_t
                                     $tva,
                                     $date_depot,
                                     $date_max_paiement,
-                                    $id_abone ,
+                                    $id_compteur ,
                                     $id_mois,
                                     $id_facture
                                 );
@@ -454,7 +575,7 @@ class Facture_t
                                     $tva,
                                     $date_depot,
                                     $date_max_paiement,
-                                    $id_abone ,
+                                    $id_compteur ,
                                     $id_mois,
                                     $id_facture
                                 );
@@ -478,7 +599,7 @@ class Facture_t
                                     $tva,
                                     $date_depot,
                                     $date_max_paiement,
-                                    $id_abone ,
+                                    $id_compteur ,
                                     $id_mois,
                                     $id_facture,
                                     '030903699-01-05'
@@ -732,7 +853,7 @@ class Facture_t
                             </tr>
                             <tr>
                                 <th>Facture du mois</th>
-                                <td><?php echo (int)$facture_mois?> FCFA</td>
+                                <td><?php echo (int)($facture_mois+0.0000000001)?> FCFA</td>
                             </tr>
                             <tr>
                                 <th>Dette totale</th>
@@ -844,9 +965,14 @@ class Facture_t
         return $date->format('d/m/Y');
     }
 
+
+
     public static function writeToFile($fileName, $content)
     {
-        return file_put_contents($fileName, $content);
+        $chaine = "";
+        if(file_exists($fileName))
+            $chaine = file_get_contents($fileName);
+        return file_put_contents($fileName, $content.'\n'.$chaine);
     }
 
     public static function updateMontantVerse()
@@ -858,43 +984,59 @@ class Facture_t
             //echo $_POST['recouvrement'];
             //recouvrement: true,  'id_facture': id_facture, 'date_versement': date_recouvrement, 'montant_verse': montant })
             if (isset($request_body['recouvrement'])) {
-                $data = $request_body['recouvrement'];
-                $montant_verse = (int) $request_body['montant_verse'];
+//                $data = $request_body['recouvrement'];
+                $montant_verse = (int) ($request_body['montant_verse']+0.00000001);
                 $date_versement = (int) $request_body['date_recouvrement'];
-                $id_facture = (int) $request_body['id_facture'];
-                $facture = Facture::getOne($id_facture);
-                $impaye = Impaye::getImpaye($id_facture);
-                $impaye = $impaye->fetchAll();
-                $impaye = (int)$impaye['impaye'];
+                $id_indexes = (int) $request_body['id_indexes'];
+                self::writeToFile('../donnees/log.txt', "3 de recouvrement");
+                $facture = Facture::getAllInfoFactureFromIndexesId($id_indexes);
+
                 $facture = $facture->fetchAll();
-                $total = (int)$impaye['impaye'] + (int)$facture['montant_verse'];
+                $nombre = count($facture);
+                $facture = $facture[0];
+                $ancien_index = (float)$facture['ancien_index'];
+                $nouvel_index = (float)$facture['nouvel_index'];
+                $prix_metre_cube_eau = (int)$facture['prix_metre_cube_eau'];
+                $prix_entretient_compteur = (int)$facture['prix_entretient_compteur'];
+                $prix_tva = (float)$facture['prix_tva'];
+                $id_facture = (int)($facture['id']);
+                $impaye = (int)($facture['impaye']+0.000000001);
+                $penalite = (int)$facture['penalite'];
+
+                if($impaye<0){
+                    $montant_verse += -$impaye;
+                    $impaye = 0;
+                }
+                self::writeToFile('../donnees/log_impaye.txt', "on est passee     $impaye    ". $facture['impaye']    );
+
+                // Appel de calculeMontantTotal
+//                $montant_total = Facture::calculeMontantTotal($nouvel_index, $ancien_index, $prix_tva, $prix_entretient_compteur, $prix_metre_cube_eau, $total_montant, $penalite);
+
+                // Appel de calculeMontantRestant
+                $montant_restant = Facture::calculeMontantRestant($nouvel_index, $ancien_index, $prix_tva, $prix_entretient_compteur, $prix_metre_cube_eau, 0, $penalite, $montant_verse);
+                // calcul du montant que l'on doit enregistrer
+                $montant_a_valider = Facture::calculeMontantAValider($nouvel_index, $ancien_index, $prix_tva, $prix_entretient_compteur, $prix_metre_cube_eau, 0, $penalite, $montant_verse);
+
+//                $total = ($impaye+0.0000000001) + (int)($facture['montant_verse']+0.000000000001);
                 $reste = 0;
-                if($impaye != 0){
-                    $reste = $total - $montant_verse;
+
+
+                //on suprime tou les impayer et on fait comme s'il jamais eu de reouvrement.
+                $tot = Facture::deleteImpayeByIdFacture($id_indexes);
+                //on fait le recouvrement en enregistrant un montant qui n'est superieur a celui de la facture
+                $res = Facture::effectuerRecouvrement($id_indexes, $montant_a_valider, $date_versement);
+                self::writeToFile('../donnees/log.txt', "id_indexes=$id_indexes   nombre=$nombre  nouvel_index =$nouvel_index, ancien_index=$ancien_index, prix_tva=$prix_tva, prix_entretient_compteur=$prix_entretient_compteur, prix_metre_cube_eau=$prix_metre_cube_eau, impaye0, penalite=$penalite, montant_verse=$montant_verse);\nmontant_restant: $montant_restant   impayes=$impaye  montant_verse=$montant_verse montant_a_valider=$montant_a_valider" );
+                //si le montant versé est different a celui de la facture, la difference va dans les impayés
+                if($montant_restant != 0){
+                    $impayeObject = new Impaye('', $id_facture, $montant_restant, 0, date('d/m/Y'));
+                    $impayeObject->ajouter();
                 }
-                if($reste == 0 || $impaye == 0){
-                    $res = Facture::effectuerRecouvrement($id_facture, $montant_verse, $date_versement);
-                    Facture::deleteByIdFacture($id_facture);
-                    throw new exception("1 de recouvrement");
-                }
-                else if($reste > 0){
-                    $res = Facture::effectuerRecouvrement($id_facture, $montant_verse, $date_versement);
-                    Facture::deleteByIdFacture($id_facture);
-                    new Impaye('', $id_facture, $reste, 0, date('d/m/Y'));
-                    throw new exception("2 de recouvrement");
-                }else if($reste < 0){
-                    $res = Facture::effectuerRecouvrement($id_facture, $total, $date_versement);
-                    Facture::deleteByIdFacture($id_facture);
-                    new Impaye('', $id_facture, $reste, 0, date('d/m/Y'));
-                    throw new exception("3 de recouvrement");
-                }
-                //echo $res;
 
             }
         }
         }catch (Exception $e){
             echo $e->getMessage();
-            self::writeToFile('log.txt', $e->getMessage());
+            self::writeToFile('log2.txt', $e->getMessage());
         }
     }
 
@@ -909,10 +1051,10 @@ class Facture_t
             //recouvrement: true,  'id_facture': id_facture, 'date_versement': date_recouvrement, 'montant_verse': montant })
             if (isset($request_body['recouvrement'])) {
                 $index = (float) $request_body['nouvel_index'];
-                $id_facture = (int) $request_body['id_facture'];
-                $id_abone = (int) $request_body['id_abone'];
-                $res = Facture::effectuerreleve($id_facture, $index);
-                Abones::updateIndex($id_abone, $index);
+                $id_indexes = (int) $request_body['id_indexes'];
+                $id_compteur = (int) $request_body['id_compteur'];
+                $res = Facture::effectuerreleve($id_indexes, $index);
+                Abones::updateIndexByCompteur_id($id_compteur, $index);
                 echo $res;
 
             }
@@ -923,9 +1065,9 @@ class Facture_t
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
     {
         ?>
-            <table class="table table-striped table-bordered">
+            <table class="table table-striped table-bordered table-hover">
                 <thead>
-                    <h3 style="text-align: center; margin-top: 20px;">
+                    <h3 class="py-3 " style="text-align: center; margin-top: 20px;">
                         <?php echo $titre ?>
                     </h3>
                     <?php echo $autre_entete ?>

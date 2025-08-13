@@ -17,6 +17,7 @@ function imprimer() {
 
 }
 
+
 function recherche(le_input) {
     console.log('je veux savoir  5555 ' + le_input);
     if(!document.getElementById(le_input)) {
@@ -53,4 +54,13 @@ function recherche(le_input) {
     })
 }
 recherche('le_input');
+// animerCard();
 //recherche('le_input_cle');
+
+
+
+
+
+
+
+

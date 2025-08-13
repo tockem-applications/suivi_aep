@@ -13,8 +13,8 @@ class Abone_t
     {
         if (isset($_GET['ajout'])) {
             var_dump($_POST);
-            echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['numero_compte_anticipation'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
-            if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['type_compteur'], $_POST['numero_telephone'], $_POST['numero_compte_anticipation'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
+            echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
+            if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
                 echo "nnnnnnnnnnnnnnnnnnnnnnnnn";
                 echo "ooooooooooo";
                 /*if ($_POST['nom'] == '' || $_POST['prenom'] == '' || $_POST['numero'] == '') {
@@ -24,10 +24,10 @@ class Abone_t
                 $nom = htmlspecialchars($_POST['nom']);
                 $numero_compteur = htmlspecialchars($_POST['numero_compteur']);
                 $numero_telephone = htmlspecialchars($_POST['numero_telephone']);
-                $numero_compte_anticipation = htmlspecialchars($_POST['numero_compte_anticipation']);
+                $numero_compte_anticipation = 100;// htmlspecialchars($_POST['numero_compte_anticipation']);
                 $derniers_index = htmlspecialchars($_POST['derniers_index']);
                 $id_reseau = htmlspecialchars($_POST['id_reseau']);
-                $type_compteur = htmlspecialchars($_POST['type_compteur']);
+//                $type_compteur = htmlspecialchars($_POST['type_compteur']);
                 $etat = htmlspecialchars($_POST['etat']);
 
                 $nouvel_abone = new Abones(
@@ -40,8 +40,7 @@ class Abone_t
                     $etat,
                     0,
                     $id_reseau,
-                    $derniers_index,
-                    $type_compteur
+                    $derniers_index
                 );
 
                 $res = $nouvel_abone->save_abone();
@@ -167,14 +166,15 @@ class Abone_t
         $res = Abones::getAllAboneInfoByid($id_abone);
         if (!$res) {
             echo "<h1>Erreur !</h1>";
-            return;
+            return 0;
         }
         $res = $res->fetchAll();
         if (!count($res)) {
             echo "<h1>Aucun Abone Retrouvé </h1/";
-            return;
+            return 0;
         }
         $data = $res[0];
+        $idCompteur = $data['id_compteur'];
         //var_dump($data);
         ?>
                 
@@ -226,11 +226,11 @@ class Abone_t
                             <th><?php echo $data['etat'] ?></th>
                             <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $id_abone?>" class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a></th>
                         </tr>
-                        <tr>
-                            <th>Type</th>
-                            <th><?php echo strtoupper($data['type_compteur']) ?></th>
-                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=<?php echo $data['type_compteur']=='distribution'?'production':'distribution'?>&id_abone=<?php echo $id_abone?>" class="btn form-control <?php echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?>"> <?php echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production')?></a></th>
-                        </tr>
+<!--                        <tr>-->
+<!--                            <th>Type</th>-->
+<!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
+<!--                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=--><?php //echo $data['type_compteur']=='distribution'?'production':'distribution'?><!--&id_abone=--><?php //echo $id_abone?><!--" class="btn form-control --><?php //echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?><!--"> --><?php //echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production')?><!--</a></th>-->
+<!--                        </tr>-->
                         <tr>
                             <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0" data-bs-toggle="tooltip"data-bs-placement="right" data-bs-title="Modifiez le nom de l'aboné"
                              onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)"></th>
@@ -264,6 +264,7 @@ class Abone_t
                     </tbody>
                 </table>
                 <?php
+        return $idCompteur;
     }
 
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
@@ -334,8 +335,11 @@ class Abone_t
     {
         $req = Abones::getSimpleAbone( $_SESSION['id_aep']);
         $req = $req->fetchAll();
-        if($type_compteur == '')
-            $titre_page ='Liste de tout les compteurs (production et distribution)';
+        if($type_compteur == 'compteur_reseau'){
+            $titre_page ='Liste de tout les compteurs reseau';
+            $req =  Abones::getSimpleCompteurReseau($_SESSION['id_aep']);
+            $req = $req->fetchAll();
+        }
         elseif ($type_compteur == 'distribution')
             $titre_page = "Liste des abonés";
         elseif ( $type_compteur == 'production')
@@ -343,22 +347,22 @@ class Abone_t
         ob_start();
         ?>
             <tr>
-                <th>Id</th>
+<!--                <th>Id</th>-->
                 <th>Nom et Prenom</th>
                 <th>N° Telephone</th>
                 <th>N° Compteur</th>
                 <th>Reseau</th>
                 <th>Index</th>
                 <th>Etat</th>
-                <th>Type</th>
+<!--                <th>Type</th>-->
 
             </tr>
             <?php
             foreach ($req as $data) {
                 ?>
                 <tr <?php ?> class=<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>>
-                    <td> <?php echo $data['id'] ?></td>
-                    <td class="table_link"> <a href="?page=info_abone&id=<?php echo $data['id'] ?>"
+<!--                    <td> --><?php //echo $data['id'] ?><!--</td>-->
+                    <td class="table_link"> <a href="<?php echo $type_compteur=='distribution'? '?page=info_abone&id='.$data['id']:'#'?>"
                             style="color:black;"><?php echo $data['nom'] ?></a></td>
                     <td> <?php echo $data['numero_telephone'] ?></td>
                     <td> <?php echo $data['numero_compteur'] ?></td>
@@ -368,7 +372,7 @@ class Abone_t
                         <?php echo $data['etat'] == 'actif' ? 'ACTIF' : 'NON ACTIF' ?>
                         <!-- <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $data['id']?>" class="btn form-control m-0 p-0"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a> -->
                     </td>
-                    <td> <?php echo strtoupper($data['type_compteur']) ?></td>
+<!--                    <td> --><?php //echo strtoupper($data['type_compteur']) ?><!--</td>-->
                 </tr>
             <?php
             }
@@ -471,7 +475,9 @@ class Abone_t
             return;
         elseif ($_GET['action'] != 'export_index')
             return;
+//        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
         $req = Abones::getLastmonthIndex($_SESSION['id_aep']);
+//        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
         //var_dump($req);
         $date_export = new DateTime();
         $data = json_encode($req);
@@ -479,6 +485,7 @@ class Abone_t
             "releve" => array(array("nom_feuille" => "nom_aep", "data" => $req)),
             "info_reseau" => array(
                 "nom_reseau" => $_SESSION['libele_aep'],
+                "id_reseau" => $_SESSION['id_aep'],
                 "agent_export" => "Non Disponible",
                 "date_export" => $date_export->format('d/m/Y:H/i/s')
             )
@@ -493,24 +500,26 @@ class Abone_t
         $fileName = '../donnees/exports/export_index_nom_AEP_' . $date_export->format('d-m-Y_H-i-s') . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
-        unlink($fileName);
+        header('location: '.$_SESSION['PREVIOUS_REQUEST_HEADER']);
         exit;
+//        unlink($fileName);
     }
 
-    public static function afficheInputRecouvrementAbone($id_abone){
+    public static function afficheInputRecouvrementAbone($id_compteur){
         ob_start();
-        $req = Abones::getRecouvrementData($id_abone);
+        $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
         $resultats = $req->fetchAll();
 
     // Affichage des résultats dans un tableau HTML
     if ($resultats) {
-        echo '<table class="table table-striped table-bordered table-hover">';
+        echo '<table class="table table-bordered table-hover">';
         echo '<thead> <div class="d-flex justify-content-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
         echo '<tr>';
         echo '<th>Mois</th>';
         echo '<th>Penalité</th>';
         echo '<th>Montant Restant</th>';
         echo '<th>Montant Versé</th>';
+        echo '<th>Avance</th>';
         echo '</tr>';
 
 
@@ -520,8 +529,14 @@ class Abone_t
             $impaye = (int)$row['impaye'];
             $prix_tva = $row['prix_tva'];
             $prix_entretient_compteur = $row['prix_entretient_compteur'];
+            $avance = ($row['impaye2'])<0?$row['impaye2']:'0';
             $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
-            $montant_restant = (int) Facture::calculeMontantRestant(
+            $montant_factue = (int)(Facture::calculeMontantConsoTva($row['nouvel_index'],
+                    $row['ancien_index'],
+                    $row['prix_tva'],
+                    $row['prix_entretient_compteur'],
+                    $row['prix_metre_cube_eau']) + 0.000001);
+            $montant_restant = Facture::calculeMontantRestant(
                     $row['nouvel_index'],
                     $row['ancien_index'],
                     $row['prix_tva'],
@@ -531,15 +546,34 @@ class Abone_t
                     $row['penalite'],
                     $row['montant_verse']
                 );
-            $desabled = $montant_restant == 0?'disabled':'';
-            echo '<tr>';
+
+            $placeholder = "";
+            $bg = "";
+            $desabled = '';
+            if($montant_factue == (int)($montant_verse +0.00000001)){
+                $bg = "bg-success-subtle text-success";
+//                $desabled = 'disabled';
+            }
+            if((int)$row['impaye'] > 0){
+//                    $desabled = 'disabled';
+                    $bg = "bg-danger-subtle text-danger";
+                    $placeholder = "Veillez verser les impayé";
+            }
+//echo $montant_factue.'<br>';
+
+            echo "<tr class='  border border-dark' >";
             echo '<td>' . htmlspecialchars($mois) . '</td>';
             echo '<td>' . htmlspecialchars((int)$row['penalite']) . '</td>';
             echo '<td>' . htmlspecialchars($montant_restant) . '</td>';
-            echo '<td> <input class="form-control"'.$desabled.' value="' . htmlspecialchars($montant_verse) . '" onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
-                            onchange="handleRecouvrement(this.value, '.$row['id'].')"> 
-                            <input type="datetime" id="date_releve_facture_'.$row['id'].'" class="form-control mb-0 " hidden value="'.date('d/m/Y').'">';
+            echo '<td> <input class="form-control border-0 '.$bg.'" '.$desabled.' value="' . ($placeholder==""?htmlspecialchars($montant_verse):$placeholder) .'" 
+            
+                            onchange="handleRecouvrement(this.value, '.($placeholder==""?$row['id']:0).' , this.id)" 
+                            id="montant_verse2'.$row['id'].'" type="text"> 
+                            <input type="datetime" id="date_releve_facture_'.$row['id'].'" 
+                            class="form-control mb-0 " hidden value="'.date('d/m/Y').'">';
+            echo '<td>' . htmlspecialchars($avance) . '</td>';
             echo '</tr>';
+//            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
         }
         echo '</table>';
     }

@@ -40,12 +40,28 @@ class Compteur extends Manager
                 FROM compteur c
                    inner join compteur_reseau cr on c.id = cr.id_compteur
                    inner join reseau r on r.id = cr.id_reseau
-                   inner join indexes i on i.id_compteur = r.id
+                   left join indexes i on i.id_compteur = r.id
                 WHERE r.id = ? 
                 group by i.id",
             array($id_reseau));
 
 
+    }
+
+    public static function estFacturable($id_compteur)
+    {
+        $res = self::prepare_query("select ca.id_abone as id_abone from compteur c 
+                    inner join compteur_abone ca on c.id = ca.id_compteur
+                    where c.id=? limit 1;", array($id_compteur));
+        $res = $res->fetchAll();
+        var_dump('est facturable donne ');
+        var_dump($res);
+        if (count($res) == 1) {
+            if($res[0]["id_abone"]){
+                return $res[0]["id_abone"];
+            }
+        }
+        return false;
     }
 
     public function delete()
@@ -82,5 +98,17 @@ class Compteur extends Manager
         $this->latitude = $latitude;
         $this->derniers_index = $dernier_index;
         $this->description = $description;
+    }
+
+    public function save_compteur_reseau($id_reseau)
+    {
+        try {
+
+            $this->ajouter();
+            return self::prepare_query("insert into compteur_reseau(id_compteur, id_reseau) values(?, ?)", array($this->id, $id_reseau));
+        }catch (Exception $e){
+            echo $e->getMessage();
+            throw $e;
+        }
     }
 }

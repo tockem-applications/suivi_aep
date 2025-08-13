@@ -1,7 +1,37 @@
 <?php
 //H&*nh9w%nw+JU
 //require_once("connexion.php");
-session_start();
+function startSessionWithTimeout() {
+    // Vérifier si une session est déjà active
+    $duree = 60*60*1.5;
+    if (session_id() === '') {
+        // Définir la durée de vie du cookie de session à 1h30 minutes (1800 secondes)
+        ini_set('session.cookie_lifetime', $duree);
+        // Définir la durée de vie du garbage collector à 1h30 minutes
+        ini_set('session.gc_maxlifetime', $duree);
+
+        // Démarrer la session
+        session_start();
+
+        // Vérifier si la session a expiré
+        if (isset($_SESSION['LAST_ACTIVITY']) &&
+            (time() - $_SESSION['LAST_ACTIVITY'] > $duree)) {
+            // Session expirée, détruire la session
+            session_unset();
+            session_destroy();
+            // Redémarrer une nouvelle session
+            session_start();
+        }
+
+        // Mettre à jour le timestamp de la dernière activité
+        $_SESSION['LAST_ACTIVITY'] = time();
+
+        return true;
+    }
+    return false;
+}
+startSessionWithTimeout();
+//session_start();
 //session_
 @include_once("../donnees/connexion.php");
 @include_once("donnees/connexion.php");
@@ -18,7 +48,7 @@ function getLetterMonth($mois){
         '04'=>'Avril',
         '05'=>'Mai',
         '06'=>'Juin',
-        '07'=>'juiller',
+        '07'=>'Juillet',
         '08'=>'Aout',
         '09'=>'Septembre',
         '10'=>'Octobre',
@@ -263,30 +293,6 @@ abstract class Manager{
 
     }
 
-    public static function deleteObject2($nomTable, $index)
-    {
-        self::$bdXml =Connexion::connectXml();
-        //self::$bd = Connexion::connect();
-        echo '<br>'.$nomTable.'<br>';
-        if($nomTable == 'Admin')
-             unset(self::$bdXml->Admins->Admin[$index]);
-        else if($nomTable == 'Proprietaire')
-             unset(self::$bdXml->Proprieataires->Proprietaire[$index]);
-        else if($nomTable == 'Locataire')
-            unset(self::$bdXml->Locataires->Locataire[$index]);
-        else if($nomTable == "Tarif") {
-            var_dump(self::$bdXml->Tarifs->Tarif[$index]);
-            echo '<br>'.self::$bdXml->Tarifs.'<br>'. $index;
-            unset(self::$bdXml->Tarifs->Tarif[$index]);
-        }
-        else if($nomTable == 'Appartement')
-             unset(self::$bdXml->Appartements->Appartement[$index]);
-        return null;
-
-
-
-    }
-
 
 
     public function ajouter(){
@@ -326,6 +332,7 @@ abstract class Manager{
 
         }catch (Exception $e){
             echo "echec dajout du(de la) $nomTable <br>";
+            throw $e;
             echo $e;
             return false;
         }
@@ -352,6 +359,9 @@ abstract class Manager{
         try {
             if(self::$bd == null)
                 self::$bd = Connexion::connect();
+//            var_dump($data);
+//            echo($query);
+
             $req = self::$bd->prepare($query);
             $res = $req->execute($data);
 //        var_dump($data);
@@ -359,7 +369,7 @@ abstract class Manager{
         }catch (Exception $e){
             echo $e."<br>";
             echo $query;
-//            throw new Exception($e);
+            throw new Exception($e);
         }
         return false;
     }
@@ -412,17 +422,6 @@ abstract class Manager{
         $req = self::$bd->prepare("select * from $nomTable where email=?;");
         $req->execute(array( $email));
         return $req;
-    }
-    public static function getOneByEmailXml($nomTable, $email){
-        if(self::$bdXml == null)
-            self::$bdXml = Connexion::connectXml();
-        $liste = self::$bdXml[$nomTable.'s'];
-        $element =null;
-        foreach ($liste as $cle=>$valeur){
-            if ($valeur[$nomTable]== $email)
-                $element = $valeur;
-        }
-        return $element;
     }
 }
 
