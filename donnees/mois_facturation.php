@@ -77,6 +77,11 @@ class MoisFacturation extends Manager
         return $number == 0;
     }
 
+    public static function getMoisById($selected_moi_id)
+    {
+        return self::prepare_query("select m.* from mois_facturation m where m.id = ?", array($selected_moi_id));
+    }
+
 
     function getconstraint()
     {
@@ -131,9 +136,9 @@ class MoisFacturation extends Manager
             array($id_aep));
     }
 
-    public static function updateDateDepot($id_mois, $date_depot)
+    public static function updateDateDepot($id_mois, $date_depot, $date_releve)
     {
-        return self::query("update mois_facturation set date_depot='$date_depot' where id='$id_mois';");
+        return self::query("update mois_facturation set date_depot='$date_depot', date_releve='$date_releve' where id='$id_mois';");
     }
 
     public function ajouternouvelleListeFacture($tab_index, $id_aep)

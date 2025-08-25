@@ -118,6 +118,7 @@ if (isset($_GET['list'])) {
         Abone_t::getListeAboneSimple('production');
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
+//        var_dump($_GET);
         require_once("traitement/facture_t.php");
 //        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))

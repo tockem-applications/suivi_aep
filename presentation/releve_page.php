@@ -24,6 +24,9 @@
                 @include_once("../donnees/mois_facturation.php");
                 @include_once("donnees/mois_facturation.php");
                 $result = MoisFacturation::getAllMois('', '', $_SESSION['id_aep']); // Assumer que cette méthode existe
+//                if(!count($result->fetchAll()))
+//                    exit();
+//                var_dump(count($result->fetchAll()));
                 $selected_moi_id = '';
                 $first_mois_selected = true;
 
@@ -56,7 +59,8 @@
 
         <!-- Contenu principal -->
         <div class="col-md-9 p-4 overflow-y-auto">
-            <div class="d-flex justify-content-between"><h2 class="mb-4 text-primary fw-bold">Relevés d'index compteur</h2>
+            <div class="d-flex justify-content-between"><h2 class="mb-4 text-primary fw-bold">Relevés d'index
+                    compteur</h2>
                 <a href="#" class="text-decoration-none text-primary" data-bs-toggle="modal"
                    data-bs-target="#distributionModal<?php echo $id; ?>">
                     <i class="fas fa-calendar-check me-1"></i>Facturer
@@ -65,7 +69,7 @@
             <?php
             @include_once("../traitement/facture_t.php");
             @include_once("traitement/facture_t.php");
-            Facture_t::getTableauFactureactiveForReleve(isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0, $titre='');
+            $id_current_mois = Facture_t::getTableauFactureactiveForReleve(isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0, $titre = '');
 
             include('traitement/constante_reseau_t.php');
             $constante_reseau = ConstanteReseau_t::getConstanteActive();
@@ -78,6 +82,10 @@
                 $constante_reseau_idest_actif = $constante_reseau['est_actif'];
                 $constante_reseau_iddescription = $constante_reseau['description'];
             }
+
+            $curentMoisQuery = MoisFacturation::getMoisById($id_current_mois);
+            $currentMoisData = $curentMoisQuery->fetchAll();
+//            var_dump($currentMoisData, $selected_moi_id);
             ?>
 
             <div class="modal fade" id="distributionModal<?php echo $id; ?>" tabindex="-1"
@@ -94,16 +102,31 @@
                             <form action="traitement/mois_facturation_t.php?get_mois_facturation=true" method="post">
                                 <div class="mb-3">
                                     <label for="distribution_date_<?php echo $id; ?>" class="form-label fw-bold">Date de
-                                        distribution <span class="text-danger">*</span></label>
+                                        Releve <span class="text-danger">*</span></label>
                                     <div class="input-group">
-                                        <input type="hidden" name="mois_facturation" value="<?php echo htmlspecialchars($id)?>">
+                                        <!--                                        <input type="hidden" name="date_releve_mois_facturation" value="date_releve_mois_facturation_-->
+                                        <?php //echo htmlspecialchars($id)?><!--">-->
                                         <span class="input-group-text bg-light"><i
                                                     class="fas fa-calendar-day"></i></span>
-                                        <input type="date" class="form-control shadow-sm"
+                                        <input type="date" class=
+                                        "form-control shadow-sm" value="<?php echo isset($currentMoisData[0]['date_releve'])? htmlspecialchars($currentMoisData[0]['date_releve']):''; ?>"
+                                               id="releve_date_<?php echo $id; ?>" name="date_releve" required>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="distribution_date_<?php echo $id; ?>" class="form-label fw-bold">Date de
+                                        distribution <span class="text-danger">*</span></label>
+                                    <div class="input-group">
+                                        <input type="hidden" name="mois_facturation"
+                                               value="<?php echo htmlspecialchars($id) ?>">
+                                        <span class="input-group-text bg-light"><i
+                                                    class="fas fa-calendar-day"></i></span>
+                                        <input type="date" class="form-control shadow-sm" value="<?php echo isset($currentMoisData[0]['date_depot'])? htmlspecialchars($currentMoisData[0]['date_depot']):''; ?>"
                                                id="distribution_date_<?php echo $id; ?>" name="date_depot"
                                                required>
                                     </div>
                                 </div>
+<!--                                --><?php //echo htmlspecialchars($id); ?>
                                 <input type="hidden" name="mois_id" value="<?php echo htmlspecialchars($id); ?>">
                                 <button type="submit" class="btn btn-success w-100 shadow-sm">Facturer</button>
                             </form>

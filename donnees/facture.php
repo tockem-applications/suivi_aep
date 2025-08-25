@@ -23,6 +23,14 @@ class Facture extends Manager
 
     public $indexes;
 
+    public static function formatFinancier($nombre) {
+        // Convertir en float pour gérer les chaînes ou entiers
+        $nombre = floatval($nombre);
+
+        // Formater avec 2 décimales, point décimal, et espace comme séparateur de milliers
+        return number_format($nombre, 2, '.', ' ');
+    }
+
     public static function deleteImpayeByIdFacture($id_indexes)
     {
         return self::prepare_query("DELETE FROM impaye WHERE id_facture in (select f.id from facture f where f.id_indexes=?)", array($id_indexes));
@@ -182,7 +190,7 @@ class Facture extends Manager
             return false;
         return self::prepare_query("
                 select id.id, co.id as id_compteur, a.id_reseau,  m.id id_mois, f.id id_facture, a.nom, m.mois, ancien_index, nouvel_index, c.prix_entretient_compteur, co.numero_compteur, a.numero_compte_anticipation,
-                c.prix_metre_cube_eau, c.prix_tva, penalite, sum(i.montant) as impaye, sum(impe.montant) as impaye2, f.montant_verse, f.date_paiement, date_depot, date_facturation, r.nom reseau
+                c.prix_metre_cube_eau, c.prix_tva, penalite, sum(i.montant) as impaye, sum(impe.montant) as impaye2, f.montant_verse, f.date_paiement, date_depot, date_facturation, r.nom reseau, m.date_releve, numero_compte, nom_banque, total_verse, premier_index
                 from facture f 
                     inner join indexes id on id.id = f.id_indexes
                     inner join abone as a on a.id = f.id_abone
@@ -196,10 +204,93 @@ class Facture extends Manager
                     inner join mois_facturation m on id.id_mois_facturation =m.id 
                     inner join  constante_reseau c on c.id=m.id_constante
                     inner join reseau r on r.id = a.id_reseau
+                    inner join aep ae on ae.id = c.id_aep and ae.id = r.id_aep
+                    inner join (
+                                select sum(montant_verse) total_verse, id_abone from facture 
+                                group by id_abone
+                                ) as fact on fact.id_abone = a.id
+                    inner join (select min(ancien_index) premier_index, id_compteur from indexes  group by id_compteur) as premier_index on premier_index.id_compteur = co.id 
                 where  m.id=? and c.id_aep=? and r.id_aep=?
                 group by a.id
                 order by a.id
+                
             ", array($id_mois, $id_mois, $id_aep, $id_aep));
+        //select f.id from abone a2
+        //                                                                            inner join facture f2 on a2.id = f2.id_abone
+        //                                                                            inner join indexes id2 on id2.id = f2.id_indexes
+        //                                                                       where a.id=a2.id and id2.id_mois_facturation<?)
+    }
+    public static function getMonthFacture2($id_mois, $id_aep)
+    {
+//        var_dump($id_mois, $id_aep);
+        if (!is_int($id_mois))
+            return false;
+        $mois = self::prepare_query("select mois from mois_facturation where id = ?", array($id_mois));
+        $mois = $mois->fetch();
+        $mois = $mois['mois'];
+
+        return self::prepare_query("
+          
+            SELECT 
+                vaf.*, 
+                COALESCE(impayer_cumule, 0) impayer_cumule, 
+                montant_total + COALESCE(impayer_cumule, 0) as total_cumule,
+                montant_total + COALESCE(impayer_cumule, 0) - montant_verse as restant_cumule
+            FROM 
+                vue_abones_facturation vaf
+                left join ( 
+                    SELECT SUM(montant_total - montant_verse) as impayer_cumule, id_abone
+                    FROM vue_abones_facturation vaf2
+                    WHERE vaf2.mois < ?
+                    group by id_abone
+                    ) as vaf_imp on vaf_imp.id_abone = vaf.id_abone
+            WHERE 
+                vaf.id_mois = ? 
+                AND vaf.id_aep = ?
+            ORDER BY 
+                vaf.mois, vaf.id_abone
+
+                
+            ", array($mois, $id_mois, $id_aep));
+    }
+
+    public static function getMonthAllFactureData($id_mois, $id_aep)
+    {
+//        var_dump($id_mois, $id_aep);
+        if (!is_int($id_mois))
+            return false;
+        $mois = self::prepare_query("select mois from mois_facturation where id = ?", array($id_mois));
+        $mois = $mois->fetch();
+        $mois = $mois['mois'];
+
+        return self::prepare_query("
+          
+            SELECT 
+                vaf.*, 
+                COALESCE(impayer_cumule, 0) impayer_cumule, numero_compteur, r.nom AS reseau, nom_banque , numero_compte ,
+                montant_total + COALESCE(impayer_cumule, 0) as total_cumule,
+                montant_total + COALESCE(impayer_cumule, 0) - montant_verse as restant_cumule
+            FROM 
+                vue_abones_facturation vaf
+                left join ( 
+                    SELECT SUM(montant_total - montant_verse) as impayer_cumule, id_abone
+                    FROM vue_abones_facturation vaf2
+                    WHERE vaf2.mois < ?
+                    group by id_abone
+                    ) as vaf_imp on vaf_imp.id_abone = vaf.id_abone
+                inner join compteur c on c.id = vaf.id_compteur
+                inner join reseau r on r.id = vaf.id_reseau
+                inner join aep on aep.id = vaf.id_aep
+            
+            
+            WHERE 
+                vaf.id_mois = ? 
+                AND vaf.id_aep = ?
+            ORDER BY 
+                vaf.mois, vaf.id_abone
+
+                
+            ", array($mois, $id_mois, $id_aep));
         //select f.id from abone a2
         //                                                                            inner join facture f2 on a2.id = f2.id_abone
         //                                                                            inner join indexes id2 on id2.id = f2.id_indexes

@@ -308,16 +308,21 @@ class MoisFacturation_t
 
     public static function handelGetListmoisFacturation()
     {
-        if (isset($_GET["get_mois_facturation"], $_POST["mois_facturation"], $_POST['date_depot'])) {
+        if (isset($_GET["get_mois_facturation"], $_POST["mois_facturation"], $_POST['date_depot'], $_POST['date_releve'])) {
 
             $month = htmlspecialchars($_POST["mois_facturation"]);
             $date_depot = htmlspecialchars($_POST["date_depot"]);
+            $date_releve = htmlspecialchars($_POST["date_releve"]);
+            if($date_depot < $date_releve) {
+                header("location: ".$_SERVER['HTTP_REFERER']."&operation=error&message=la dade depot est anterieur a celle de releve");
+            }
+//            exit();
             $tab = explode("-", $month);
             $id_mois = (int)$tab[0];
             $id_constante = (int)$tab[1];
             //var_dump($_POST);
             if ($date_depot != '')
-                MoisFacturation::updateDateDepot($id_mois, $date_depot);
+                MoisFacturation::updateDateDepot($id_mois, $date_depot, $date_releve);
             //header("location: ../index.php?list=facture_month&operation=succes&id_mois=$id_mois&id_constante=$id_constante&id_selected_month=$id_mois");
             header("location: ../index.php?list=liste_facture_month&id_mois=$id_mois&id_constante=$id_constante&id_selected_month=$id_mois");
 

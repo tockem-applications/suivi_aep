@@ -114,7 +114,7 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                                         <label for="description" class="form-label">Description <span
                                                     class="text-danger">*</span></label>
                                         <textarea class="form-control" id="description" name="description" rows="3"
-                                                  placeholder="Décrivez votre AEP" required>Mon AEP</textarea>
+                                                  placeholder="Décrivez votre AEP" required><?php echo htmlspecialchars($aep['description']); ?></textarea>
                                         <div class="error-message">La description doit contenir au moins 10
                                             caractères.
                                         </div>

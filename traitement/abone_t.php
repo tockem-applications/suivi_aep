@@ -509,7 +509,7 @@ class Abone_t
         ob_start();
         $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
         $resultats = $req->fetchAll();
-
+        $sum = 0;
     // Affichage des résultats dans un tableau HTML
     if ($resultats) {
         echo '<table class="table table-bordered table-hover">';
@@ -522,7 +522,7 @@ class Abone_t
         echo '<th>Avance</th>';
         echo '</tr>';
 
-
+//        var_dump($resultats);
         foreach ($resultats as $row) {
             $mois = getLetterMonth($row['mois']);
             $montant_verse = $row['montant_verse'] != '0'? (int)$row['montant_verse']:'';
@@ -530,6 +530,7 @@ class Abone_t
             $prix_tva = $row['prix_tva'];
             $prix_entretient_compteur = $row['prix_entretient_compteur'];
             $avance = ($row['impaye2'])<0?$row['impaye2']:'0';
+            $sum += $montant_verse;
             $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
             $montant_factue = (int)(Facture::calculeMontantConsoTva($row['nouvel_index'],
                     $row['ancien_index'],
@@ -575,6 +576,7 @@ class Abone_t
             echo '</tr>';
 //            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
         }
+        echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
         echo '</table>';
     }
     return ob_get_clean();
