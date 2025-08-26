@@ -58,12 +58,13 @@
         </div>
 
         <!-- Contenu principal -->
-        <div class="col-md-9 p-4 overflow-y-auto">
-            <div class="d-flex justify-content-between"><h2 class="mb-4 text-primary fw-bold">Relevés d'index
+        <div id="a_imprimer" class="col-md-9 p-4 overflow-y-auto">
+            <div class="d-flex justify-content-around"><h2 class="mb-4 text-primary fw-bold">Relevés d'index
                     compteur</h2>
                 <a href="#" class="text-decoration-none text-primary" data-bs-toggle="modal"
                    data-bs-target="#distributionModal<?php echo $id; ?>">
-                    <i class="fas fa-calendar-check me-1"></i>Facturer
+                    <i class="bi bi-file-earmark-text me-1"> Facturer</i>
+<!--                    <i class="bi bi-currency-dollar me-1"> Facturer</i>-->
                 </a></div>
 
             <?php

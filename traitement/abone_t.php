@@ -334,19 +334,26 @@ class Abone_t
     public static function getListeAboneSimple($type_compteur = '')
     {
         $req = Abones::getSimpleAbone( $_SESSION['id_aep']);
-        $req = $req->fetchAll();
+        $req = $req->fetchAll(PDO::FETCH_ASSOC);
+//        var_dump($req);
+
         if($type_compteur == 'compteur_reseau'){
             $titre_page ='Liste de tout les compteurs reseau';
             $req =  Abones::getSimpleCompteurReseau($_SESSION['id_aep']);
-            $req = $req->fetchAll();
+            $req = $req->fetchAll(PDO::FETCH_ASSOC);
+
         }
+
         elseif ($type_compteur == 'distribution')
             $titre_page = "Liste des abonés";
         elseif ( $type_compteur == 'production')
             $titre_page = "Liste des compteurs de production";
         ob_start();
+        $json_data = json_encode($req);
+        create_csv_exportation_button($json_data, "liste_abones.csv",
+        "Exporter la liste des abonés au format csv");
         ?>
-            <tr>
+            <tr class="mt-3">
 <!--                <th>Id</th>-->
                 <th>Nom et Prenom</th>
                 <th>N° Telephone</th>
@@ -508,7 +515,14 @@ class Abone_t
     public static function afficheInputRecouvrementAbone($id_compteur){
         ob_start();
         $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
-        $resultats = $req->fetchAll();
+        $resultats = $req->fetchAll(PDO::FETCH_ASSOC);
+
+        $facture_json = json_encode($resultats);
+        create_csv_exportation_button($facture_json,
+                     'facturation-abone-'.$_SESSION["libele_aep"].'.csv',
+                "Vous allez exporter les donnees de facturation d'un aboné au format csv"
+                );
+
         $sum = 0;
     // Affichage des résultats dans un tableau HTML
     if ($resultats) {
@@ -517,9 +531,9 @@ class Abone_t
         echo '<tr>';
         echo '<th>Mois</th>';
         echo '<th>Penalité</th>';
-        echo '<th>Montant Restant</th>';
+        echo '<th>Total</th>';
         echo '<th>Montant Versé</th>';
-        echo '<th>Avance</th>';
+        echo '<th>Reste</th>';
         echo '</tr>';
 
 //        var_dump($resultats);
@@ -529,24 +543,11 @@ class Abone_t
             $impaye = (int)$row['impaye'];
             $prix_tva = $row['prix_tva'];
             $prix_entretient_compteur = $row['prix_entretient_compteur'];
-            $avance = ($row['impaye2'])<0?$row['impaye2']:'0';
+            $avance = $row['montant_restant'];// ($row['montant_restant'])<0?$row['montant_restant']:'0';
             $sum += $montant_verse;
             $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
-            $montant_factue = (int)(Facture::calculeMontantConsoTva($row['nouvel_index'],
-                    $row['ancien_index'],
-                    $row['prix_tva'],
-                    $row['prix_entretient_compteur'],
-                    $row['prix_metre_cube_eau']) + 0.000001);
-            $montant_restant = Facture::calculeMontantRestant(
-                    $row['nouvel_index'],
-                    $row['ancien_index'],
-                    $row['prix_tva'],
-                    $row['prix_entretient_compteur'],
-                    $row['prix_metre_cube_eau'],
-                    $row['impaye'],
-                    $row['penalite'],
-                    $row['montant_verse']
-                );
+            $montant_factue = $row['montant_total'];
+            $montant_restant = $row['montant_restant'];
 
             $placeholder = "";
             $bg = "";
@@ -555,24 +556,29 @@ class Abone_t
                 $bg = "bg-success-subtle text-success";
 //                $desabled = 'disabled';
             }
-            if((int)$row['impaye'] > 0){
+            if((int)$row['montant_restant'] > 0){
 //                    $desabled = 'disabled';
                     $bg = "bg-danger-subtle text-danger";
-                    $placeholder = "Veillez verser les impayé";
+                    $placeholder = "";
             }
 //echo $montant_factue.'<br>';
 
             echo "<tr class='  border border-dark' >";
             echo '<td>' . htmlspecialchars($mois) . '</td>';
-            echo '<td>' . htmlspecialchars((int)$row['penalite']) . '</td>';
-            echo '<td>' . htmlspecialchars($montant_restant) . '</td>';
-            echo '<td> <input class="form-control border-0 '.$bg.'" '.$desabled.' value="' . ($placeholder==""?htmlspecialchars($montant_verse):$placeholder) .'" 
-            
+            echo '<td class="text-end"> ' . htmlspecialchars(Facture::formatFinancier((int)$row['penalite'])) . '</td>';
+            echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($montant_factue)) . '</td>';
+//            echo '<td>';
+
+            if((int)$row['mois_actif']){
+                echo '<td><input class="form-control border-0 m-0 py-0 '.$bg.'" '.$desabled.'
+                            value="' . ($placeholder==""?htmlspecialchars($montant_verse):$placeholder) .'" 
                             onchange="handleRecouvrement(this.value, '.($placeholder==""?$row['id']:0).' , this.id)" 
                             id="montant_verse2'.$row['id'].'" type="text"> 
-                            <input type="datetime" id="date_releve_facture_'.$row['id'].'" 
-                            class="form-control mb-0 " hidden value="'.date('d/m/Y').'">';
-            echo '<td>' . htmlspecialchars($avance) . '</td>';
+                            <input type="datetime" id="date_releve_facture_'.$row['id'].'class="form-control mb-0 " hidden value="'.date('d/m/Y').'"></td>';
+            }else
+                echo '<td class="text-end '.$bg.'">'.htmlspecialchars(Facture::formatFinancier($montant_verse)).'</td>';
+
+            echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($avance)) . '</td>';
             echo '</tr>';
 //            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
         }

@@ -1,8 +1,21 @@
 <?php
 
+function display_printing_button($button_text = "Imprimer", $tooltip_message = "")
+{
+    ?>
+    <button id="printing_button" data-bs-toggle="tooltip" data-bs-placement="left"
+            data-bs-title="<?php echo $tooltip_message ?>"
+            class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed"
+            onclick="imprimer(this)" type="button"
+            style="background-color: #28a745; border: none; transition: background-color 0.3s ease; display: block">
+        <i class="bi bi-printer"></i> <?php echo $button_text?>
+    </button>
+    <?php
+}
 
 function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form', $action = '', $close_color = 'danger')
 {
+
     ob_start()
     ?>
     <div class="modal fade  " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
@@ -110,7 +123,9 @@ if (isset($_GET['list'])) {
     }
     if ($_GET['list'] == 'distribution_simple') {
         require_once('traitement/abone_t.php');
+        echo "<div class='container-fluid'>";
         Abone_t::getListeAboneSimple('distribution');
+        echo "</div>";
 
     }
     if ($_GET['list'] == 'production_simple') {
@@ -119,16 +134,19 @@ if (isset($_GET['list'])) {
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
 //        var_dump($_GET);
+        echo "<div class='container-fluid'><div id='a_imprimer'>";
         require_once("traitement/facture_t.php");
+        display_printing_button("", 'Cette action enclancher l\'impression des factures');
 //        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
+        echo "</div></div>";
     } elseif ($_GET['list'] == 'ajout_abones') {
         require_once("traitement/abone_t.php");
         $data = Abone_t::getData();
         var_dump($data);
 
-    }  elseif ($_GET['list'] == 'insolvables') {
+    } elseif ($_GET['list'] == 'insolvables') {
         require_once("traitement/facture_t.php");
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
@@ -218,7 +236,7 @@ if (isset($_GET['list'])) {
             Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
         }
         //echo $id_mois_listing;
-    }else if ($_GET['list'] == 'mois_facturation') {
+    } else if ($_GET['list'] == 'mois_facturation') {
         include_once("traitement/mois_facturation_t.php");
         //echo $id_mois_listing;
         MoisFacturation_t::getListeMoisFacture();
@@ -261,7 +279,7 @@ if (isset($_GET['list'])) {
 
             <aside class=" col-xl-7">
                 <?php
-                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
+                echo Abone_t::afficheInputRecouvrFementAbone($id_compteur);
                 ?>
                 <!--                <div class="col-12 h-5"> Est ce aue tout le meonde va bien</div>-->
             </aside>
@@ -300,10 +318,11 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'login') {
         require_once 'presentation/login_component.php';
     } else if ($_GET['page'] == 'releves') {
+        display_printing_button("", 'Cette action enclancher l\'impression des index compteur');
         include "presentation/releve_page.php";
-    }else if ($_GET['page'] == 'aep') {
+    } else if ($_GET['page'] == 'aep') {
         require_once 'presentation/aep_page.php';
-    }else if ($_GET['page'] == 'aep_dashboard') {
+    } else if ($_GET['page'] == 'aep_dashboard') {
         require_once 'presentation/aep_dashbord.php';
     } else if ($_GET['page'] == 'register') {
         require_once 'presentation/register_component.php';

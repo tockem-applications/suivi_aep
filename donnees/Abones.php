@@ -29,7 +29,17 @@ class Abones extends Manager
      */
     public static function getRecouvrementData($id_compteur, $id_aep){
         return self::prepare_query("
-        select f.id id_facture, m.mois, montant_verse, id.id as id,  nouvel_index, ancien_index, penalite, SUM(i.montant) as impaye ,
+        SELECT
+            vaf.*, 
+            coalesce(montant_conso_tva - montant_verse, 0) as impayer_cumule,
+            est_actif as mois_actif
+        FROM 
+            vue_abones_facturation as vaf
+        inner join mois_facturation on mois_facturation.id = vaf.id_mois_facturation
+        where id_compteur = ? and id_aep = ? order by mois desc ;
+        ", array($id_compteur, $id_aep));
+        /*"
+        select nom as nom_abone, f.id id_facture, m.mois, montant_verse, id.id as id,  nouvel_index, ancien_index, penalite, SUM(i.montant) as impaye ,
                prix_tva, prix_entretient_compteur, prix_metre_cube_eau, SUM(impe.montant) as impaye2
             from abone a
             inner join facture f on a.id = f.id_abone
@@ -44,7 +54,7 @@ class Abones extends Manager
             where id.id_compteur = ? and c.id_aep=? 
             group by m.id
             order by mois desc;
-        ", array($id_compteur, $id_aep));
+        ";
         "select *
             from abone a
             inner join facture f on a.id = f.id_abone
@@ -52,7 +62,7 @@ class Abones extends Manager
             inner join mois_facturation m on id.id_mois_facturation = m.id
             left join impaye i on i.id_facture in (select f2.id from facture f2 inner join indexes id2 on f2.id_indexes = id2.id inner join mois_facturation m2 on id2.id_mois_facturation=m2.id where m2.mois < m.mois and id_abone = a.id)
             inner join constante_reseau c on m.id_constante = c.id
-            where id.id_compteur = 1 order by mois desc;";
+            where id.id_compteur = 1 order by mois desc;";*/
     }
 
 

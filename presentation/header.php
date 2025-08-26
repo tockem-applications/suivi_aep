@@ -104,9 +104,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                     <span class="h3 text-white me-3"><a class="" style="color: white" href="?page=aep_dashboard&aep_id=<?php echo htmlspecialchars($_SESSION['id_aep']); ?>"><?php echo htmlspecialchars($_SESSION['libele_aep']); ?></a></span>
                     <form class="d-flex">
                         <input class="form-control me-2 rounded-pill" type="search" id="le_input" placeholder="Rechercher..." aria-label="Search" style="border: 1px solid #ced4da;">
-                        <button class="btn btn-success rounded-pill px-4" onclick="imprimer()" type="button" style="background-color: #28a745; border: none; transition: background-color 0.3s ease;">
-                            Imprimer
-                        </button>
+
                     </form>
                 </div>
             </div>

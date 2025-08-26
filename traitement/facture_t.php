@@ -39,12 +39,16 @@ class Facture_t
         }
         //recuperation des index des abones
         $req = Facture::getAboneMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
-        $req = $req->fetchAll();
+        $req = $req->fetchAll(PDO::FETCH_ASSOC);
 
         // recperation des index des reseaux
         $req2 = Facture::getReseauMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
-        $req2 = $req2->fetchAll();
-
+        $req2 = $req2->fetchAll(PDO::FETCH_ASSOC);
+//        var_dump($req2);
+        $facture_json = json_encode($req);
+        create_csv_exportation_button($facture_json,
+        'Releve-'.$_SESSION["libele_aep"].'-'.$mois_lettre.'.csv',
+        'Vous allez exporter les donnees de releve de '.$mois_lettre.'au format csv');
 
         $titre = "$titre $mois_lettre";
         $mes_facture = "";
@@ -110,7 +114,7 @@ class Facture_t
                         onclick="this.select()"
                         onkeyup="handleReleve_pressed_enter(event, this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
                         onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)" step="0.01"
-                        value="<?php echo ((int) $data['nouvel_index'] == 0 ? '' :  $data['nouvel_index']) ?>"
+                        value="<?php echo ((int) $data['nouvel_index'] == 0 || (int) $data['nouvel_index'] == (int) $data['ancien_index'] ? '' :  $data['nouvel_index']) ?>"
                         aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
                         <div class="color-circle <?php echo $circle_bg_color?>"></div>
                         <input type="hidden" value="<?php echo $data['nouvel_index'] ?>" id="ex_nouvel_index<?php echo $data['id']?>">
@@ -151,7 +155,12 @@ class Facture_t
 
         // Récupérer les factures pour le mois
 //        $factures = Facture::getMonthFacture($idMois, $idAep)->fetchAll();
-        $factures2 = Facture::getMonthFacture2($idMois, (int)$idAep)->fetchAll();
+        $factures2 = Facture::getMonthFacture2($idMois, (int)$idAep)->fetchAll(PDO::FETCH_ASSOC);
+        $facture_json = json_encode($factures2);
+//        var_dump($_SESSION);
+        create_csv_exportation_button($facture_json,
+        'facturation-'.$_SESSION["libele_aep"].'-'.self::getLetterMonth($moisData["mois"]).'.csv',
+        "Vous allez exporter les donnees de facturation de ".self::getLetterMonth($moisData["mois"]).'au format csv');
 
         // Générer le HTML du tableau
 //        $html = self::generateTableHtml($factures, $idReseau, $editable, $insolvable, $bon_payeurs, $avanceur);
@@ -606,7 +615,7 @@ class Facture_t
                     $data['prix_metre_cube_eau'],
                     $data['prix_entretient_compteur'],
                     $montant_total,
-                    $data['montant_total'],
+                    $data['montant_conso'],
                     $data['prix_tva'],
                     self::addDaysAndFormat($data['date_depot'], 0),
                     self::addDaysAndFormat($data['date_depot']),
@@ -1003,11 +1012,11 @@ class Facture_t
         ?>
         <div class="facture_abone mt-0">
             <div class="row">
-                <div class="logo_commune col d-flex align-items-end text-center justify-content-between text-success">
+                <div class="logo_commune col d-flex align-items-center text-center justify-content-between text-success">
                     <img src="presentation/assets/images/logo_tockem.png" height="" style="height: 25vh" class="col-12"
                         alt="IMAGE DU LOGO DE L'ASSOCIATION TOCKEM">
  <!--                        alt="IMAGE DU LOGO DE LA COMMUNE DE FOKOUE">-->
-                    <h2 class="ps-2 fw-bold" style="font-family: Calibri,serif"><?php echo getLetterMonth($mois)?></h2>
+                    <h3 class="ps-2 fw-bold float-none" style="font-family: Calibri,serif"><?php echo getLetterMonth($mois)?></h3>
                 </div>
                 <div class="logo_commune text-center align-self-center col-9 ">
                     <div class="h3 fs-2 fw-bold m-0">FACTURE D’EAU POTABLE</div>
@@ -1069,11 +1078,11 @@ class Facture_t
                         <tbody>
                             <tr>
                                 <th>Impayés</th>
-                                <td><?php echo (int)$impaye?> FCFA</td>
+                                <td><?php echo self::moneyFormatter($impaye)?> FCFA</td>
                             </tr>
                             <tr>
                                 <th>Facture du mois</th>
-                                <td><?php echo (int)($facture_mois+0.0000000001)?> FCFA</td>
+                                <td><?php echo self::moneyFormatter($facture_mois+$prix_entretient_compteur)?> FCFA</td>
                             </tr>
                             <tr>
                                 <th>Dette totale</th>
@@ -1135,7 +1144,7 @@ class Facture_t
                         <td class=""><?php echo $conso_mois ?></td>
                         <td class=""><?php echo $prix_eau ?></td>
                         <td class="">m <sup>3</sup></td>
-                        <td class=""><?php echo $facture_mois ?></td>
+                        <td class=""><?php echo self::moneyFormatter($facture_mois) ?></td>
                     </tr>
                     <tr class="text-start" style="background-color: #eaeff7">
                         <th>Entretient compteur</th>

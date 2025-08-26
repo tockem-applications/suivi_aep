@@ -67,7 +67,11 @@
                             $montant_min = isset($_POST['montant_min']) ? (int)$_POST['montant_min'] : 0;
                             $id_aep = isset($_SESSION['id_aep']) ? $_SESSION['id_aep'] : 1;
                             $res = FluxFinancier::getFinanceData($mois, $type, $montant_min, $id_aep);
-                            $fluxFinanciers = $res->fetchAll();
+                            $fluxFinanciers = $res->fetchAll(PDO::FETCH_ASSOC);
+                            $facture_json = json_encode($fluxFinanciers);
+                            create_csv_exportation_button($facture_json,
+                                'flux_financier-'.$_SESSION["libele_aep"].'-'.$mois.'.csv',
+                                "Vous allez exporter les donnees financiere de ".$mois.'au format csv');
                             $somme = 0;
 
                             foreach ($fluxFinanciers as $flux) {

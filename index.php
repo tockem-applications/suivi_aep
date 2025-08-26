@@ -15,6 +15,7 @@ session_start();
     <!-- <link rel="stylesheet" href="presentation/assets/css/styles.css"> -->
 
     <!-- <script src="presentation/js.js"></script> -->
+     
     <script src="presentation/assets/@canvasjs/charts/canvasjs.min.js"></script>
     <script src="presentation/assets/jquery.js"></script>
     <script src="presentation/assets/js/bs-init.js"></script>
@@ -24,6 +25,7 @@ session_start();
     <script src="presentation/assets/jquery.js"></script>
     <!--<script src="presentation/bootstrap/js/bootstrap.js"></script>-->
     <script src="presentation/assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="presentation/assets/js/download_csv.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -275,7 +277,39 @@ session_start();
             border-radius: 50%;
             margin-right: 5px;
         }
+        /* Style du bouton d'exportation */
+        .export-button {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            background-color: #28a745; /* Vert pour une apparence moderne */
+            color: white;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px; /* Espace entre l'icône et le texte */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s, transform 0.2s;
+            z-index: 1000; /* S'assurer que le bouton est au-dessus des autres éléments */
+        }
 
+        .export-button:hover {
+            background-color: #218838; /* Couleur plus foncée au survol */
+            transform: translateY(-2px); /* Léger effet de soulèvement */
+        }
+
+        .export-button:active {
+            transform: translateY(0); /* Retour à la position initiale au clic */
+        }
+
+        .export-button i {
+            font-size: 18px; /* Taille de l'icône */
+        }
 
     </style>
 </head>
@@ -291,9 +325,20 @@ include_once("presentation/header.php");
     <!-- <aside class="left_side_body" style="border-right: solid white 1px;">
         <img src="presentation/assets/images/aside_image.png" alt="tockem image" style="width: 100%; height: 50%;">
     </aside> -->
-    <article class="rigth_side_body overflow-x-hidden content" id="a_imprimer" style="">
+    <article class="rigth_side_body overflow-x-hidden content" id="" style="">
         <?php
         ob_start();
+
+        function create_csv_exportation_button($data, $filename, $tooltip_message)
+        {
+            ?>
+            <button class="float-sm-end btn btn-dark" data-bs-placement="top" data-bs-toggle="tooltip"
+                    data-bs-title="<?php echo $tooltip_message;?>"
+                    onclick='downloadCSV2(<?php echo $data;?>, "<?php echo $filename?>")'>
+                <i class="bi bi-arrow-down-circle-fill"></i> Exporter</button>
+            <?php
+        }
+
         include_once("donnees/page.php");
         include_once("traitement/role_t.php");
         $request = explode('?', $_SERVER['REQUEST_URI']);
