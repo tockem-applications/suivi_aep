@@ -12,6 +12,8 @@ class Aep extends Manager
     public $date;
     public $fichier_facture;
     public $description;
+    public $numero_compte;
+    public $nom_banque;
 
     function getConstraint()
     {
@@ -24,6 +26,8 @@ class Aep extends Manager
             'libele' => $this->libele,
             'fichier_facture' => $this->fichier_facture,
             'date'=> $this->date,
+            'numero_compte'=> $this->numero_compte,
+            'nom_banque'=> $this->nom_banque,
             'description' => $this->description
         );
     }
@@ -33,12 +37,14 @@ class Aep extends Manager
         return "aep";
     }
 
-    public function __construct($id, $libele, $fichier_facture, $date, $description)
+    public function __construct($id, $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte)
     {
         $this->id = $id;
         $this->libele = $libele;
         $this->date = $date;
         $this->description = $description;
+        $this->nom_banque = $nom_banque;
+        $this->numero_compte = $numero_compte;
         $this->fichier_facture = $fichier_facture;
     }
 }

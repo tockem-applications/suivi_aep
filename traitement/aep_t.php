@@ -14,6 +14,8 @@ class Aep_t
                 var_dump($_POST);
                 // Récupérer et sécuriser les données
                 $libele = htmlspecialchars(trim($_POST['libele']));
+                $numero_compte = htmlspecialchars(trim($_POST['numero_compte']));
+                $nom_banque = htmlspecialchars(trim($_POST['nom_banque']));
                 $date = htmlspecialchars(trim($_POST['date']));
                 $description = htmlspecialchars(trim($_POST['description']));
                 $fichier_facture = htmlspecialchars(trim($_POST['fichier_facture']));
@@ -23,7 +25,7 @@ class Aep_t
 //                    die("Tous les champs sont requis.");
                     header("location: ../index.php?form=aep&operation=error&message=veuillez saisir tout les champs");
                 }
-                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description);
+                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte);
                 var_dump($date);
                 var_dump($nouvel_aep->getDonnee());
                 $res = $nouvel_aep->ajouter();
@@ -94,7 +96,7 @@ class Aep_t
                 $_SESSION['id_aep'] = $id_aep; // Placer l'ID dans la session
                 $_SESSION['libele_aep'] = $res['libele'];
                 $_SESSION['PREVIOUS_REQUEST_HEADER'] = isset($_SESSION['PREVIOUS_REQUEST_HEADER'])?$_SESSION['PREVIOUS_REQUEST_HEADER']:'';
-                header('Location: ../index.php?'.$_SESSION['PREVIOUS_REQUEST_HEADER'].'&operation=succes&message=l\'aep a bien été selectionné'); // Changez ceci pour l'URL que vous souhaitez
+                header('Location: ../index.php?page=aep_dashboard&aep_id='.$id_aep); // Changez ceci pour l'URL que vous souhaitez
                 return true;
             }else
                 header("Location: ../index.php?page=home&operation=error&message=Cet Aep est innexistant"); // Changez ceci pour l'URL que vous souhaitez

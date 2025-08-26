@@ -6,7 +6,9 @@ const tooltpList = [...tooltipTriggerList].map(tooltipTriggerElement=>new bootst
 
 
 
-function imprimer() {
+function imprimer(self) {
+    const  print_button = document.getElementById('printing_button');
+    print_button.style.display = 'none';
     var contenu = document.getElementById("a_imprimer").innerHTML;
     var header = document.getElementsByTagName("head")[0].innerHTML;
     var fenetre_impression = window.open('', '', 'height=900, width=1000');
@@ -14,8 +16,10 @@ function imprimer() {
     fenetre_impression.focus();
     fenetre_impression.print();
     fenetre_impression.focus();
+    print_button.style.display = 'block';
 
 }
+
 
 function recherche(le_input) {
     console.log('je veux savoir  5555 ' + le_input);
@@ -53,4 +57,13 @@ function recherche(le_input) {
     })
 }
 recherche('le_input');
+// animerCard();
 //recherche('le_input_cle');
+
+
+
+
+
+
+
+

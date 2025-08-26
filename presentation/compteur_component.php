@@ -26,17 +26,36 @@ function  display_compteur_list($id_selected_reseau){
     $req = Compteur_t::getAllCompteurFromIdReseau($id_selected_reseau);
     echo "<div class='list-group'>";
     $selected_reseau = null;
-    foreach ($req as $line){
-        echo "${line['numero']} <br>";
+    if(count($req) == 0){
+        makeFullCompteurFomrForReseau($id_selected_reseau);
+
+    }else {
+        foreach ($req as $line) {
+            echo $line['numero_compteur']." <br>";
 //        $reseau = new Reseau($line['id'], $line['nom'], $line['abreviation'], $line['date_creation'], $line['description_reseau'], $line['id_aep']);
 //
 //        $selected_reseau_class = $reseau->id == $id_selected_reseau?"disabled active":"";
 //        $selected_reseau_class == ""? :$selected_reseau =$reseau;
 //        echo "<a class='list-group-item list-group-item-action list-group-item-primary $selected_reseau_class' href='?page=reseau&id_reseau=$reseau->id'>$reseau->nom ($reseau->abreviation)</a>";
-    }
-    echo "</div>";
+        }
+        echo "</div>";
+        return $selected_reseau;
 //    var_dump($selected_reseau);
-    return $selected_reseau;
+    }
+}
+
+function makeFullCompteurFomrForReseau($id_reseau)
+{
+    echo "<form class='col-12 col-md-6' method='post' action='traitement/compteur_t.php?ajouter_compteur_reseau=true&id_reseau=$id_reseau'>
+            <h2 class='text-center'>Ajouter un compteur</h2>
+        ";
+
+    make_formulaire_compteur();
+    echo "<div class='d-flex justify-content-end p-2 btn-group'>
+            <button class='btn btn-danger col-6 ' type='reset'>Vider</button> 
+            <button class='btn btn-success col-6' type='submit'>Enregistrer</button>
+        </div>
+            </form>";
 }
 
 function make_formulaire_compteur($compteur=null){

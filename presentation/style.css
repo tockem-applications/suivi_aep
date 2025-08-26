@@ -3,7 +3,7 @@
 
 
 body{
-    background-color: grey; 
+    /*background-color: grey; */
 }
 .my_body{
     display: flex;
@@ -14,7 +14,7 @@ body{
     background-color: white;
     width: 25%;
     height: 900px;
-    border-left: solid gray 1px;
+    /*border-left: solid gray 1px;*/
 }
 
 main{
@@ -38,4 +38,18 @@ main{
 
 option{
     text-align: left;
+}
+
+.feedback-validation {
+    font-size: 0.8em;
+    margin-top: 5px;
+    padding: 3px;
+}
+
+.feedback-validation.valide {
+    color: green;
+}
+
+.feedback-validation.invalide {
+    color: red;
 }

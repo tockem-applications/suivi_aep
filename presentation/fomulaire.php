@@ -1,6 +1,7 @@
 <?php
 
 $is_aep_in_session = Aep_t::isAepIdInSession();
+$formId = 'my-form';
 if (isset($_GET['form'])) {
     $nom_formulaire = htmlspecialchars($_GET['form']);
     $valide = true;
@@ -53,15 +54,15 @@ if (isset($_GET['form'])) {
                 </div>
             </div>
         </div>
-        <div class="input-group mb-3">
-            <span class="input-group-text w-25" id="inputGroup-sizing-default">type</span>
-            <select class="form-select" name="type_compteur" aria-label="Sizing example input"
-                    aria-describedby="inputGroup-sizing-default" id="">
-                <option value="distribution">Distribution</option>
-                <option value="production">Production</option>
-                <!-- <option value="non_actif">Non Actif</option> -->
-            </select>
-        </div>
+<!--        <div class="input-group mb-3">-->
+<!--            <span class="input-group-text w-25" id="inputGroup-sizing-default">type</span>-->
+<!--            <select class="form-select" name="type_compteur" aria-label="Sizing example input"-->
+<!--                    aria-describedby="inputGroup-sizing-default" id="">-->
+<!--                <option value="distribution">Distribution</option>-->
+<!--                <option value="production">Production</option>-->
+<!--                 <option value="non_actif">Non Actif</option> -->
+<!--            </select>-->
+<!--        </div>-->
 
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Nom</span>
@@ -81,13 +82,13 @@ if (isset($_GET['form'])) {
                    aria-describedby="inputGroup-sizing-default">
         </div>
 
-        <div class="input-group mb-3">
+        <!--<div class="input-group mb-3">
             <span class="input-group-text w-50" id="inputGroup-sizing-default">N°Compte anticipation</span>
             <input type="text" class="form-control"
-                   value="<?php echo isset($numero_compte_anticipation) ? $numero_compte_anticipation : '' ?>"
+                   value="<?php /*echo isset($numero_compte_anticipation) ? $numero_compte_anticipation : '' */?>"
                    name="numero_compte_anticipation" aria-label="Sizing example input"
                    aria-describedby="inputGroup-sizing-default">
-        </div>
+        </div>-->
         <div class="input-group mb-3">
             <span class="input-group-text w-50" id="inputGroup-sizing-default">Dernier index</span>
             <input type="number" step="0.01" class="form-control"
@@ -166,6 +167,7 @@ if (isset($_GET['form'])) {
     }elseif ($nom_formulaire == 'aep') {
 
         $titre = 'Nouvel Aep';
+        $formId = 'aepForm';
         //require_once ("../traitement/tarif_t.php");
         if (isset($_GET['id'])) {
             $re = tarif_t::getOne(htmlspecialchars($_GET['id']));
@@ -179,39 +181,166 @@ if (isset($_GET['form'])) {
             }
         } else {
             $traitement = $traitement . "aep_t.php?ajout=true";
+
         }
         ?>
-        <div class="text-start m-3">
-            Ce formulaire vous permet de créer un Aep. Une fois sa creation terminee, vous pourez y ajouter des reseaux, des abonés et les facturer.
+        <div class="alert alert-info text-start mb-4" role="alert">
+            Remplissez ce formulaire pour créer un AEP. Vous pourrez ensuite ajouter des réseaux, des abonnés et gérer la facturation.
         </div>
-        <div class="input-group mb-2">
-            <label for="libele" class="input-group-text w-25">Libelé:</label>
-            <input type="text" class="form-control" id="libele" value="aep" name="libele" required>
-        </div>
-        <div class="input-group mb-2">
-            <label for="date" class="input-group-text w-25">Date:</label>
-            <input type="date" class="form-control" id="date" value="2024-12-12" name="date" required>
-        </div>
-        <div class="form-group mb-2">
-<!--            <label for="description" class="input-group-text">Description:</label>-->
-            <textarea class="form-control" placeholder="@Description" id="description" name="description" rows="3" required>Mon Aep</textarea>
-        <div class="form-group">
-                <p class="m-2">Selectionnez le model de facture que vous souhaitez pour votre Aep</p>
-                <div class="form-check ">
-                    <input class="form-check-input" type="radio" name="fichier_facture" id="facture1" value="model_fokoue" required>
-                    <label class="image-radio text-start my-2" for="facture1">
-                        <span>Model de Fokoue</span>
-                        <img src="presentation/assets/images/model_fokoue.png"  alt="Image image du model de facture de Fokoue" class="img-fluid my-2">
-                    </label>
+        <div class="form-section">
+            <h5>Informations générales</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="libele" class="form-label">Libellé <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="libele" name="libele" required>
+                    <div class="error-message">Le libellé doit contenir au moins 3 caractères.</div>
                 </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="fichier_facture" id="facture2" value="model_nkongzem">
-                    <label class="image-radio text-start" for="facture2">
-                        <span>Model de Nkongzem</span>
-                        <img src="presentation/assets/images/model_nkongzem.png" alt="Image du model de facture de Nkongzem" class="img-fluid my-2">
-                    </label>
+                <div class="col-md-6 mb-3">
+                    <label for="date" class="form-label">Date <span class="text-danger">*</span></label>
+                    <input type="date" class="form-control" id="date" name="date"  required>
+                    <div class="error-message">Veuillez sélectionner une date valide.</div>
                 </div>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Décrivez votre AEP" required></textarea>
+                <div class="error-message">La description doit contenir au moins 10 caractères.</div>
+            </div>
         </div>
+
+        <!-- Section : Détails bancaires -->
+        <div class="form-section">
+            <h5>Détails bancaires (optionnel)</h5>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="nom_banque" class="form-label">Nom de la banque</label>
+                    <input type="text" class="form-control" id="nom_banque" name="nom_banque">
+                    <div class="error-message">Le nom de la banque ne peut pas dépasser 100 caractères.</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="numero_compte" class="form-label">Numéro de compte</label>
+                    <input type="text" class="form-control" id="numero_compte" name="numero_compte">
+                    <div class="error-message">Le numéro de compte doit être alphanumérique et ne pas dépasser 50 caractères.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section : Modèle de facture -->
+        <div class="form-section">
+            <h5>Modèle de facture <span class="text-danger">*</span></h5>
+            <input type="hidden" id="fichier_facture" name="fichier_facture" required>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="model-option" data-value="model_fokoue" data-img="presentation/assets/images/model_fokoue.png">
+                        <span class="d-block mb-2">Modèle de Fokoué</span>
+                        <img src="presentation/assets/images/model_fokoue.png" alt="Modèle de facture Fokoué" class="img-fluid">
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="model-option" data-value="model_nkongzem" data-img="presentation/assets/images/model_nkongzem.png">
+                        <span class="d-block mb-2">Modèle de Nkongzem</span>
+                        <img src="presentation/assets/images/model_nkongzem.png" alt="Modèle de facture Nkongzem" class="img-fluid">
+                    </div>
+                </div>
+            </div>
+            <div class="error-message">Veuillez sélectionner un modèle de facture.</div>
+            <div class="preview-container" id="previewContainer" style="display: none;">
+                <h6>Prévisualisation</h6>
+                <img id="previewImage" src="" alt="Prévisualisation du modèle" class="img-fluid">
+            </div>
+
+        </div>
+
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const form = document.getElementById('aepForm');
+                const inputs = form.querySelectorAll('input:not([type="hidden"]), textarea');
+                const modelOptions = form.querySelectorAll('.model-option');
+                const fichierFactureInput = document.getElementById('fichier_facture');
+                const previewContainer = document.getElementById('previewContainer');
+                const previewImage = document.getElementById('previewImage');
+
+                // Validation en temps réel
+                inputs.forEach(input => {
+                    input.addEventListener('input', () => validateField(input));
+                });
+
+                // Sélection des modèles de facture
+                modelOptions.forEach(option => {
+                    option.addEventListener('click', () => {
+                        modelOptions.forEach(opt => opt.classList.remove('selected'));
+                        option.classList.add('selected');
+                        fichierFactureInput.value = option.dataset.value;
+                        previewImage.src = option.dataset.img;
+                        previewContainer.style.display = 'block';
+                        validateModelSelection();
+                    });
+                });
+
+                // Soumission du formulaire
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    let isValid = true;
+
+                    inputs.forEach(input => {
+                        if (!validateField(input)) {
+                            isValid = false;
+                        }
+                    });
+
+                    if (!validateModelSelection()) {
+                        isValid = false;
+                    }
+
+                    if (isValid) {
+                        form.submit();
+                    }
+                });
+
+                // Réinitialisation du formulaire
+                form.addEventListener('reset', () => {
+                    modelOptions.forEach(opt => opt.classList.remove('selected'));
+                    fichierFactureInput.value = '';
+                    previewContainer.style.display = 'none';
+                    inputs.forEach(input => {
+                        input.classList.remove('is-invalid');
+                        const errorMessage = input.nextElementSibling;
+                        if (errorMessage && errorMessage.classList.contains('error-message')) {
+                            errorMessage.style.display = 'none';
+                        }
+                    });
+                });
+
+                function validateField(input) {
+                    const errorMessage = input.nextElementSibling;
+                    let isValid = true;
+
+                    if (input.required && !input.value.trim()) {
+                        isValid = false;
+                    } else if (input.id === 'libele' && input.value.trim().length < 3) {
+                        isValid = false;
+                    } else if (input.id === 'description' && input.value.trim().length < 10) {
+                        isValid = false;
+                    } else if (input.id === 'nom_banque' && input.value.trim().length > 100) {
+                        isValid = false;
+                    } else if (input.id === 'numero_compte' && input.value.trim() && !/^[a-zA-Z0-9-]{1,50}$/.test(input.value.trim())) {
+                        isValid = false;
+                    }
+
+                    input.classList.toggle('is-invalid', !isValid);
+                    return isValid;
+                }
+
+                function validateModelSelection() {
+                    const errorMessage = form.querySelectorAll('.form-section')[2].querySelector('.error-message');
+                    // console.log(errorMessage);
+                    const isSelected = fichierFactureInput.value !== '';
+                    errorMessage.style.display = isSelected ? 'none' : 'block';
+                    return isSelected;
+                }
+            });
+        </script>
         <?php
 //        ob_start();
 //        tarif_t::getAll('Liste des Tarifs');
@@ -355,35 +484,9 @@ if (isset($_GET['form'])) {
         } else {
             $traitement = $traitement . "reseau_t.php?ajout=true";
         }
-        ?>
-        <div class="input-group mb-3">
-            <!-- <span class="input-group-text w-50 new-width" id="inputGroup-sizing-default">Nom</span> -->
-            <input type="text" required size="32" class="form-control" placeholder="Nom"
-                   value="<?php echo isset($nom) ? $nom : '' ?>" name="nom" aria-label="Sizing example input"
-                   aria-describedby="inputGroup-sizing-default">
-        </div>
-        <div class="input-group mb-3">
-            <!-- <span class="input-group-text w-50" id="inputGroup-sizing-default">Abbreviation</span> -->
-            <input type="text" class="form-control" placeholder="Abbreviation"
-                   value="<?php echo isset($PrixsemBS) ? $PrixsemBS : '' ?>" name="abreviation"
-                   aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
-        </div>
-        <div class="input-group mb-3">
-            <!-- <span class="input-group-text w-50"  id="inputGroup-sizing-default">Date de cration</span> -->
-            <input type="date" required class="form-control" id="date_creation" placeholder="Date de creation"
-                   value="<?php echo isset($date_creation) ? $date_creation : date('Y-m-d') ?>" name="date_creation"
-                   aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
-        </div>
-        <div class="input-group mb-3">
-            <!-- <span class="input-group-text w-25" id="inputGroup-sizing-default">PrixsemBS</span> -->
-            <textarea type="number" class="form-control"
-                      value="<?php isset($description_reseau) ? $description_reseau : '' ?>" name="description_reseau"
-                      aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default"
-                      placeholder="decrivez le reseau"></textarea>
-        </div>
-
-        <?php
-        make_formulaire_compteur_colapse();
+        include_once ("reseau_component.php");
+        make_formulaire_reseau();
+//        make_formulaire_compteur_colapse();
 //        ob_start();
 //        tarif_t::getAll('Liste des Tarifs');
 //        $liste = ob_get_clean();
@@ -612,7 +715,7 @@ if (isset($_GET['form'])) {
 
         <div class=" d-flex align-items-center justify-content-center pt-5 ">
             <div class="text-center col-12 col-md-7 col-lg-6 col-xl-5 ">
-                <form method="post" action="<?php echo $traitement ?>" enctype="multipart/form-data">
+                <form method="post" action="<?php echo $traitement ?>" id="<?php echo $formId?>" enctype="multipart/form-data">
                     <h2><?php echo $titre ?></h2>
                     <hr>
                     <?php

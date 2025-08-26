@@ -16,22 +16,37 @@ class MoisFacturation extends Manager
     public $est_actif;
     public $description;
 
-    public static function getAllMois($mois_debut, $mois_fin, $id_aep)
+    public static function getAllMois($mois_debut, $mois_fin, $id_aep, $id_reseau = 0)
     {
+//        var_dump($id_reseau);
         if ($mois_debut == '') {
             $mois_debut = '1900-01';
         }
         if ($mois_fin == '') {
             $mois_fin = '2200-01';
         }
-        return self::prepare_query('select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
-                           sum(nouvel_index-ancien_index) conso
+        $reseau_joining  = '';
+//        var_dump($mois_fin);
+        if ($id_reseau == 0) {
+            // si l'id du reseau est null, il ne faut prendre toute les donnees sur les mois de facturation
+            // mais aussi avec celle de tout les reseau
+            $reseau_joining  = 'left join';
+        } else {
+            //sinon on recupere les donnees des du reseau en question
+            $reseau_joining  = 'inner join';
+        }
+
+        return self::prepare_query("select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
+
+                           sum(nouvel_index-ancien_index) conso, prix_metre_cube_eau, prix_entretient_compteur, prix_tva, r.nom as reseau
                         from mois_facturation m 
                             inner join constante_reseau c on m.id_constante = c.id
                             inner join indexes id on m.id = id.id_mois_facturation
                             inner join facture f on id.id = f.id_indexes
+                            inner join abone a on a.id = f.id_abone
+                            $reseau_joining reseau r on a.id_reseau=r.id and ( r.id = ? and r.id!=0)
                         where m.mois>=? and m.mois <=? and c.id_aep=?
-                        group by m.id order by mois desc ;', array($mois_debut, $mois_fin, $id_aep)
+                        group by m.id order by mois desc ;", array($id_reseau, $mois_debut, $mois_fin, $id_aep)
         );
     }
 
@@ -60,6 +75,11 @@ class MoisFacturation extends Manager
             return false;
         $number = count($res->fetchAll());
         return $number == 0;
+    }
+
+    public static function getMoisById($selected_moi_id)
+    {
+        return self::prepare_query("select m.* from mois_facturation m where m.id = ?", array($selected_moi_id));
     }
 
 
@@ -116,9 +136,9 @@ class MoisFacturation extends Manager
             array($id_aep));
     }
 
-    public static function updateDateDepot($id_mois, $date_depot)
+    public static function updateDateDepot($id_mois, $date_depot, $date_releve)
     {
-        return self::query("update mois_facturation set date_depot='$date_depot' where id='$id_mois';");
+        return self::query("update mois_facturation set date_depot='$date_depot', date_releve='$date_releve' where id='$id_mois';");
     }
 
     public function ajouternouvelleListeFacture($tab_index, $id_aep)
@@ -180,6 +200,7 @@ class MoisFacturation extends Manager
 //                echo"*****************************************************************<br>";
 //                echo"*****************************************************************<br>";
 //                echo"*****************************************************************<br>";
+                $impaye = 0;
                 var_dump(count($tab_ancienne_facture));
                 var_dump(count($tab_ancienne_facture));
                 var_dump(count($tab_ancienne_facture));
@@ -191,8 +212,8 @@ class MoisFacturation extends Manager
                         $id_ancienne_facture = $ligne_ancienne_facture['id'];
                         $prix_entretien = (int)$ligne_ancienne_facture['prix_entretient_compteur'];
                         $montant_verse = (int)$ligne_ancienne_facture['montant_verse'];
-//                        $impaye = (int)$ligne_ancienne_facture['impaye'];
-                        $impaye = 0;
+                        $impaye = (int)$ligne_ancienne_facture['impaye'];
+//                        $impaye = 0;
                         $penalite = (int)$ligne_ancienne_facture['penalite'];
                         $prix_tva = (float)$ligne_ancienne_facture['prix_tva'];
                         $ex_nouvel_index = (float)$ligne_ancienne_facture['nouvel_index'];
@@ -218,20 +239,27 @@ class MoisFacturation extends Manager
 
                 echo "bonjour la famille <br>";
                 // ace stade les index sont valides donc onsere le nouvel index dans la table de l'abone
-                $res = Abones::updateIndex($id_abone, $nouvel_index);
+                $res = Abones::updateIndexByCompteur_id($id_compteur, $nouvel_index);
                 var_dump("eriidkddndndndndnndnd");
                 if (!$res) {
                     self::$bd->rollBack();
                     return 0;
                 }
 
+//                $estFacturable = Compteur::estFacturable($id_compteur);
+
                 $nouvelle_facture = new Facture(0, $ancien_index
                     , $nouvel_index
-                    , 0.00, '00/00/0000'
+                    , $impaye <0? -$impaye:0 // si l'ipaye est negatif on alors l'abonee avait verse plus du montant de la facture alors il fau reporter au mois suivant
+                    , '00/00/0000'
                     , $nouvelle_penalite, $id_mois_facturation
                     , $id_abone, '', $id_compteur);
                 $res = $nouvelle_facture->save_facture();
-                if ((int)$nouvel_impaye != 0) {
+                //maintenant, si on reporte l'impaye negatif au mois suivant alors il doit etre suprimee
+                if ($impaye < 0) {
+                    Impaye::deleteByIdCacture((int)$id_ancienne_facture);
+                }
+                else if ((int)$nouvel_impaye > 0) {
                     $impaye_object = new Impaye('', (int)$id_ancienne_facture, (int)$nouvel_impaye, 0, '00/00/0000');
                     $impaye_object->ajouter();
                 }
@@ -243,6 +271,7 @@ class MoisFacturation extends Manager
 
         } catch (Exception $e) {
             self::$bd->rollBack();
+            var_dump($e);
             $res = 0;
             return 0;
         }

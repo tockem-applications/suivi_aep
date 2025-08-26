@@ -8,6 +8,8 @@
 @include_once("traitement/facture_t.php");
 @include_once("../donnees/impaye.php");
 @include_once("donnees/impaye.php");
+@include_once("../donnees/aep.php");
+@include_once("donnees/aep.php");
 
 /*$lettreMonth = array(
     '01'=>'Janvier',
@@ -99,6 +101,20 @@ class MoisFacturation_t
 //                    var_dump($data['releve']['data']);
                     $id_constante = ConstanteReseau::getIdConstanteActive($_SESSION['id_aep']);
                     var_dump($data['releve'][0]['data']);
+                    if(isset($data['info_reseau']['id_reseau'], $data['info_reseau']['nom_reseau'])){
+                        $id_reseau_input = $data['info_reseau']['id_reseau'];
+                        $nom_reseau_input = $data['info_reseau']['nom_reseau'];
+                        $aep_value = Aep::getOne($id_reseau_input, 'aep');
+                        $aep_value = $aep_value->fetchAll();
+                        if(count($aep_value) != 1 || $id_reseau_input != $_SESSION['id_aep']){
+                            header("location: ../index.php?form=export_index&operation=error&message=Les données que vous souhaitez enregistrer ne sont pas celles de ce reseau");    
+                            exit();
+                        }                    
+                    }else{
+                        header("location: ../index.php?form=export_index&operation=error&message=Veuillez importer un fichier de releve valide");
+                        exit();
+                    }
+                    
                     $res = $nouveau_mois_facturation->ajouternouvelleListeFacture($data['releve'][0]['data'], $_SESSION['id_aep']);
                     var_dump($id_constante);
                     if (!$res)
@@ -292,16 +308,21 @@ class MoisFacturation_t
 
     public static function handelGetListmoisFacturation()
     {
-        if (isset($_GET["get_mois_facturation"], $_POST["mois_facturation"], $_POST['date_depot'])) {
+        if (isset($_GET["get_mois_facturation"], $_POST["mois_facturation"], $_POST['date_depot'], $_POST['date_releve'])) {
 
             $month = htmlspecialchars($_POST["mois_facturation"]);
             $date_depot = htmlspecialchars($_POST["date_depot"]);
+            $date_releve = htmlspecialchars($_POST["date_releve"]);
+            if($date_depot < $date_releve) {
+                header("location: ".$_SERVER['HTTP_REFERER']."&operation=error&message=la dade depot est anterieur a celle de releve");
+            }
+//            exit();
             $tab = explode("-", $month);
             $id_mois = (int)$tab[0];
             $id_constante = (int)$tab[1];
             //var_dump($_POST);
             if ($date_depot != '')
-                MoisFacturation::updateDateDepot($id_mois, $date_depot);
+                MoisFacturation::updateDateDepot($id_mois, $date_depot, $date_releve);
             //header("location: ../index.php?list=facture_month&operation=succes&id_mois=$id_mois&id_constante=$id_constante&id_selected_month=$id_mois");
             header("location: ../index.php?list=liste_facture_month&id_mois=$id_mois&id_constante=$id_constante&id_selected_month=$id_mois");
 
@@ -371,7 +392,7 @@ class MoisFacturation_t
         }
     }
 
-    public static function getListeMoisFacture()
+    public static function getListeMoisFacture($id_reseau=0)
     {
         $mois_debut = '';
         $mois_fin = '';
@@ -384,7 +405,7 @@ class MoisFacturation_t
 //            var_dump($_POST);
 //            $type_graphique = htmlspecialchars($_POST['type_graphique']);
         }
-            $req = MoisFacturation::getAllMois($mois_debut, $mois_fin, $_SESSION['id_aep']);
+            $req = MoisFacturation::getAllMois($mois_debut, $mois_fin, $_SESSION['id_aep'], $id_reseau);
 //        $req = MoisFacturation::getOrderedMonthList();
         $req = $req->fetchAll();
         $mois_en_lettre_selectionne = "";
@@ -393,7 +414,7 @@ class MoisFacturation_t
         $expanded = 'false';
         ?>
         <div class="row mb-5">
-        <div class=" col-lg-3 col-md-4 col-12 accordion overflow-y-auto p-0 m-0 fixed-div" id="accordionExample" >
+        <div class=" col-lg-3 col-md-4 col-12 accordion p-0 m-0" id="accordionExample" >
         <div class="accordion-item">
             <h2 class="accordion-header">
                 <button class="accordion-button" type="button" data-bs-toggle="collapse"
@@ -518,10 +539,12 @@ class MoisFacturation_t
                             <?php echo generateOptionGraphique($type_graphique)?>
                         </select>
                     </div>
-                    <div id="container2" class="h-50 mt-3"></div>
-                    <div id="container1" class="h-50 mt-3"></div>
-                    <div id="container3" class="h-50 mt-3"></div>
-                    <div id="container4" class=""></div>
+                    <div class="row">
+                        <div id="container2" class="col-12 col-lg-6 mt-3" style="min-height: 250px"></div>
+                        <div id="container1" class="col-12 col-lg-6 mt-3" style="min-height: 250px"></div>
+                        <div id="container3" class="col-12 col-lg-6 mt-3" style="min-height: 250px"></div>
+                        <div id="container4" class=""></div>
+                    </div>
                 <?php else: ?>
                     <?php echo $mois_facturaation ?>
                 <?php endif; ?>
@@ -559,7 +582,7 @@ class MoisFacturation_t
     public static function display_mois_facturation($id_mois_selectionne, $mois_en_lettre)
     {
         ob_start();
-        Facture_t::getTableauFactureByMoisId($id_mois_selectionne);
+        Facture_t::getTableauFactureByMoisId( $_SESSION['id_aep'], $id_mois_selectionne);
         $table_abone = ob_get_clean();
         $result = '
             <nav style="--bs-breadcrumb-divider: \'>\';" aria-label="breadcrumb">
