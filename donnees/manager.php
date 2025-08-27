@@ -399,12 +399,8 @@ abstract class Manager{
         return $req;
     }
     public static function delete_by_id($nom_table, $id_delete){
-        if(self::$bd == null)
-            self::$bd = Connexion::connect();
 //        $this->deleteXml($id_delete);
-        $req = self::$bd->prepare('delete from '.$nom_table.' where id=?;');
-        $request = $req->execute(array($id_delete));
-        return $req;
+        return self::prepare_query('delete from '.$nom_table.' where id=?;', array($id_delete));
     }
 
    

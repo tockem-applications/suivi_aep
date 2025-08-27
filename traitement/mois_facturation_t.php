@@ -72,7 +72,7 @@ class MoisFacturation_t
     {
         if (isset($_GET['ajout'])) {
             if (!isset($_FILES['fichier_index'])) {
-                header("location: ../index.php?form=export_index&operation=error&message=Veillez selectionner le fichier des index");
+                header("location: ../index.php?page=releves&operation=error&message=Veillez selectionner le fichier des index");
             }
             echo 'ppppppppppppppppppppppppppp' . $_POST['description'];
             if (isset($_POST['mois'], $_POST['id_constante'], $_POST['description'])) {
@@ -82,12 +82,12 @@ class MoisFacturation_t
                 $mois_en_lettre = getLetterMonth($mois);
                 $est_dernier = MoisFacturation::mois_est_dernier($mois, $_SESSION['id_aep']);
                 if (!$est_dernier) {
-                    header("location: ../index.php?form=import_index&operation=error&message=le mois << $mois_en_lettre >> à déjà été traversé.");
+                    header("location: ../index.php?page=releves&operation=error&message=le mois << $mois_en_lettre >> à déjà été traversé.");
                     exit();
                 }
                 $mois_exist = MoisFacturation::mois_exist($mois, $_SESSION['id_aep']);
                 if (!$mois_exist) {
-                    header("location: ../index.php?form=import_index&operation=error&message=le mois de << $mois_en_lettre >> est deja present.");
+                    header("location: ../index.php?page=releves&operation=error&message=le mois de << $mois_en_lettre >> est deja present.");
                     exit();
                 }
                 $nouveau_mois_facturation = new MoisFacturation(0, $mois
@@ -107,51 +107,78 @@ class MoisFacturation_t
                         $aep_value = Aep::getOne($id_reseau_input, 'aep');
                         $aep_value = $aep_value->fetchAll();
                         if(count($aep_value) != 1 || $id_reseau_input != $_SESSION['id_aep']){
-                            header("location: ../index.php?form=export_index&operation=error&message=Les données que vous souhaitez enregistrer ne sont pas celles de ce reseau");    
+                            header("location: ../index.php?page=releves&operation=error&message=Les données que vous souhaitez enregistrer ne sont pas celles de ce reseau");
                             exit();
                         }                    
                     }else{
-                        header("location: ../index.php?form=export_index&operation=error&message=Veuillez importer un fichier de releve valide");
+                        header("location: ../index.php?page=releves&operation=error&message=Veuillez importer un fichier de releve valide");
                         exit();
                     }
                     
                     $res = $nouveau_mois_facturation->ajouternouvelleListeFacture($data['releve'][0]['data'], $_SESSION['id_aep']);
                     var_dump($id_constante);
                     if (!$res)
-                        header("location: ../index.php?form=export_index&operation=error&message=le mois << $mois_en_lettre >> a deja été ajouté");
+                        header("location: ../index.php?page=releves&operation=error&message=le mois << $mois_en_lettre >> a deja été ajouté");
                     else
-                        header("location: ../index.php?list=facture_month&operation=succes&id_selected_month=$mois&id_constante=$id_constante&id_mois=$res");
+                        header("location: ../index.php?page=releves&operation=succes&id_selected_month=$mois&id_constante=$id_constante&id_mois=$res");
 
                 }
-                /*var_dump($nouveau_mois_facturation);
-                var_dump($_FILES);
-                $res = $nouveau_mois_facturation->ajouterEtActiver();
-                var_dump($res);*/
-                /*if (!$res)
-                    header("location: ../index.php?form=export_index&operation=error&message=le mois <<$mois>> a deja été ajouté");
-                else
-                    header("location: ../index.php?list=facture_month&operation=succes&id_selected_month=$res");
-                */
             }
         }
     }
 
+
+    /**
+     * Met à jour un mois de facturation à partir des données du formulaire.
+     * @param int $id ID du mois à mettre à jour
+     * @param string $mois_input Mois au format YYYY-MM
+     * @param string $description Nouvelle description
+     * @return array Résultat avec succès et message
+     */
     public static function update()
     {
-        if (isset($_GET['update'])) {
-            if (isset($_POST['prixsemHS'], $_GET['id_updates'], $_POST['prixSemBS'])) {
-                $prixsemHS = htmlspecialchars($_POST['prixsemHS']);
-                $id = htmlspecialchars($_GET['id_updates']);
-                $prixSemBS = htmlspecialchars($_POST['prixSemBS']);
-                /*$res = (new MoisFacturation($id, $prixsemHS, $prixSemBS))->update();
-                if (!$res)
-                    header("location: ../presentation/index.php?list=tarif&operation=error");
-                else
-                    header("location: ../presentation/index.php?list=tarif&operation=succes");
-*/
-                // TODO verification d'erreur sur $res
+        //traitement/mois_facturation_t.php?update_mois=true&id_update=<?php echo $id;
+//        var_dump($_POST);
+//        var_dump(isset($_GET['update_mois'], $_GET['id_update_mois'], $_POST['mois'], $_POST['description']));
+        if (!isset($_GET['update_mois'], $_GET['id_update_mois'], $_POST['mois'], $_POST['description']))
+            return;
+        $id = $_GET['id_update_mois'];
+        $mois_input = htmlspecialchars($_POST['mois']);
+        $description = htmlspecialchars($_POST['description']);
 
+        try {
+            // Validation des paramètres
+            if (!is_numeric($id) || $id <= 0) {
+                header("location: ../index.php?list=mois_facturation&operation=error&message=ID du mois invalide.");
+//                throw new Exception("ID du mois invalide.");
             }
+            if (empty($mois_input) || !preg_match('/^\d{4}-\d{2}$/', $mois_input)) {
+                header("location: ../index.php?list=mois_facturation&operation=error&message=Format du mois invalide (attendu : YYYY-MM).");
+//                throw new Exception("Format du mois invalide (attendu : YYYY-MM).");
+            }
+            if (empty($description)) {
+                header("location: ../index.php?list=mois_facturation&operation=error&message=La description ne peut pas être vide.");
+//                throw new Exception("La description ne peut pas être vide.");
+            }
+
+
+            // Nettoyer la description
+            $description = trim(strip_tags($description));
+            if (strlen($description) > 255) {
+                header("location: ../index.php?list=mois_facturation&operation=error&message=La description ne doit pas dépasser 255 caractères.");
+//                throw new Exception("La description ne doit pas dépasser 255 caractères.");
+            }
+
+            $res = MoisFacturation::updateMois($id, $mois_input, $description, $_SESSION['id_aep']);
+
+            if (!$res)
+                header("location: ../index.php?list=mois_facturation&operation=error&message=le mois  a deja été ajouté");
+            else
+                header("location: ../index.php?list=mois_facturation&operation=succes&message=modification effectué avec succes");
+
+        } catch (Exception $e) {
+
+
         }
     }
 
@@ -480,7 +507,7 @@ class MoisFacturation_t
 
                 <!--                <div class="card">-->
                 <!--                  <div class="card-body">-->
-                <p class="card-text"><?php echo $description ?></p>
+                <p class="card-text"><?php echo htmlspecialchars($description) ?></p>
                 <table class="table table table-striped table-active table-bordered">
                     <tr>
                         <th>element</th>
@@ -500,14 +527,103 @@ class MoisFacturation_t
                     </tr>
                 </table>
                 <div class="btn-group">
-                    <a href="?id_mois=<?php echo $id ?>&" class="btn btn-warning">Modifier</a>
+
+                    <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#update_<?php echo $id ?>">
+                        Modifier
+                    </button>
                     <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete_<?php echo $id ?>">
                         Suprimer
                     </button>
                     <a href="?list=mois_facturation&id_mois=<?php echo $id ?>" class="btn btn-primary">Afficher</a>
                 </div>
-                <!-- </div> -->
-                <!--                </div>-->
+
+                <!-- Modal Bootstrap pour la modification d'un mois -->
+
+                <!-- Modal pour modifier un mois -->
+                <div class="modal fade" id="update_<?php echo $id; ?>" tabindex="-1" role="dialog" aria-labelledby="updateModalLabel_<?php echo $id; ?>" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title" id="updateModalLabel_<?php echo $id; ?>">Modifier le mois de <?php echo htmlspecialchars($mois_en_lettre); ?></h5>
+                                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <form id="update_form_<?php echo $id; ?>" method="post" action="traitement/mois_facturation_t.php?update_mois=true&id_update_mois=<?php echo $id; ?>">
+                                    <div class="form-group">
+                                        <label for="mois_<?php echo $id; ?>" class="font-weight-bold text-primary">Mois et Année</label>
+                                        <input type="month" class="form-control" id="mois_<?php echo $id; ?>" name="mois" value="<?php echo htmlspecialchars($mois); ?>" required>
+
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="description_<?php echo $id; ?>" class="font-weight-bold text-primary">Description</label>
+                                        <textarea type="text" class="form-control" id="description_<?php echo $id; ?>" name="description" value="<?php echo htmlspecialchars($description); ?>" placeholder="Entrez une description" required><?php echo htmlspecialchars($description)?></textarea>
+                                    </div>
+                                </form>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-primary" id="confirm_update_<?php echo $id; ?>">Modifier</button>
+                            </div>
+                            <script>
+                                // JavaScript intégré pour soumettre le formulaire
+                                (function() {
+                                    var confirmButton = document.getElementById('confirm_update_<?php echo $id; ?>');
+                                    var form = document.getElementById('update_form_<?php echo $id; ?>');
+                                    confirmButton.addEventListener('click', function() {
+                                        form.submit();
+                                    });
+                                })();
+                            </script>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal pour supprimer un mois -->
+                <div class="modal fade" id="delete_<?php echo $id; ?>" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel_<?php echo $id; ?>" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="deleteModalLabel_<?php echo $id; ?>">Suppression de <?php echo htmlspecialchars($mois_en_lettre); ?></h5>
+                                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <p class="font-weight-bold">Voulez-vous vraiment supprimer le mois de <?php echo htmlspecialchars($mois_en_lettre); ?> ?</p>
+                                <p class="text-danger font-weight-bold">Cette action sera irréversible.</p>
+                                <div class="form-group">
+                                    <label for="confirmation_text_<?php echo $id; ?>" class="font-weight-bold text-danger">Veuillez taper <strong>SUPPRIMER</strong> pour confirmer :</label>
+                                    <input type="text" class="form-control" id="confirmation_text_<?php echo $id; ?>" placeholder="Tapez SUPPRIMER">
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="button" class="btn btn-danger" id="confirm_delete_<?php echo $id; ?>">Supprimer</button>
+                            </div>
+                            <script>
+                                // JavaScript intégré pour gérer la confirmation
+                                (function() {
+                                    var confirmButton = document.getElementById('confirm_delete_<?php echo $id; ?>');
+                                    var inputText = document.getElementById('confirmation_text_<?php echo $id; ?>');
+                                    var modal = document.getElementById('delete_<?php echo $id; ?>');
+                                    confirmButton.addEventListener('click', function() {
+                                        if (inputText.value.trim().toUpperCase() === 'SUPPRIMER') {
+                                            window.location.href = 'traitement/mois_facturation_t.php?delete_mois=true&id_delete=<?php echo $id; ?>';
+                                        } else {
+                                            alert('Veuillez taper exactement "SUPPRIMER" pour confirmer.');
+                                            inputText.focus();
+                                        }
+                                    });
+                                    modal.addEventListener('hidden.bs.modal', function() {
+                                        inputText.value = '';
+                                    });
+                                })();
+                            </script>
+                        </div>
+                    </div>
+                </div>
 
                 <?php
                 echo make_form("traitement/mois_facturation_t.php?delete_mois=true&id_delete=$id",
@@ -574,7 +690,7 @@ class MoisFacturation_t
             return;
         var_dump($_GET);
         $id = htmlspecialchars($_GET['id_delete']);
-        $res = MoisFacturation::delete_by_id('mois_facturation', $id);
+        $res = MoisFacturation::deleteMonth($id, $_SESSION['id_aep']);
         var_dump($res);
         header("location: ../index.php?list=mois_facturation");
     }
@@ -599,10 +715,10 @@ class MoisFacturation_t
 
 
 }
-
 //var_dump($_POST);
 MoisFacturation_t::ajout();
 MoisFacturation_t::update();
+//exit();
 MoisFacturation_t::delete();
 MoisFacturation_t::delete_mois();
 MoisFacturation_t::findUpadate();;

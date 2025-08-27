@@ -74,10 +74,11 @@ function handleReleve(index, id_indexes, id_compteur = 0) {
     const ancien_index = parseFloat(document.getElementById('ancien_index' + id_indexes).innerText);
     console.log(ancien_index);
     // verifyIndex(index, ancien_index, 'ancien_index'+id_facture, true);
-    console.log('tout va bien');
+    // console.log('tout va bien');
     const data = {recouvrement: true, 'id_indexes': id_indexes, 'nouvel_index': index, 'id_compteur': id_compteur};
     if (ancien_index <= index) {
         sentDatat('facture_t.php?releve_manuelle=true', data);
+        // alert(data);
         document.getElementById('nouvel_index' + id_indexes).classList.add('is-valid');
         document.getElementById('nouvel_index' + id_indexes).classList.remove('is-invalid');
     } else {

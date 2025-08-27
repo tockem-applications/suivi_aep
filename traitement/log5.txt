@@ -1,0 +1,46 @@
+recouvrement: 1
+id_indexes: 78
+nouvel_index: 30
+id_compteur: 1\nrecouvrement: 1
+id_indexes: 85
+nouvel_index: 43
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 77
+nouvel_index: 45
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 68
+nouvel_index: 5
+id_compteur: 9\nrecouvrement: 1
+id_indexes: 65
+nouvel_index: 5
+id_compteur: 8\nrecouvrement: 1
+id_indexes: 67
+nouvel_index: 10
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 66
+nouvel_index: 13
+id_compteur: 6\nrecouvrement: 1
+id_indexes: 64
+nouvel_index: 29
+id_compteur: 4\nrecouvrement: 1
+id_indexes: 63
+nouvel_index: 22
+id_compteur: 2\nrecouvrement: 1
+id_indexes: 62
+nouvel_index: 31
+id_compteur: 1\nrecouvrement: 1
+id_indexes: 69
+nouvel_index: 44
+id_compteur: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 55
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\n

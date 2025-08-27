@@ -112,13 +112,14 @@ class Facture_t
                         id="nouvel_index<?php echo $data['id']?>"
                         min="<?php echo $data['ancien_index']?>"
                         onclick="this.select()"
-                        onkeyup="handleReleve_pressed_enter(event, this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
+
                         onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)" step="0.01"
                         value="<?php echo ((int) $data['nouvel_index'] == 0 || (int) $data['nouvel_index'] == (int) $data['ancien_index'] ? '' :  $data['nouvel_index']) ?>"
                         aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
                         <div class="color-circle <?php echo $circle_bg_color?>"></div>
                         <input type="hidden" value="<?php echo $data['nouvel_index'] ?>" id="ex_nouvel_index<?php echo $data['id']?>">
                 </td>
+                    <!--  onkeyup="handleReleve_pressed_enter(event, this.value, <?php echo $data['id'] ?>//, <?php echo $data['id_compteur'] ?>//)"              -->
             </tr>
             <?php
         }
@@ -1269,6 +1270,14 @@ class Facture_t
         }
     }
 
+    // Fonction pour convertir le tableau associatif en chaîne de caractères
+    function convertirEnString($tableau) {
+        $result = '';
+        foreach ($tableau as $cle => $valeur) {
+            $result .= "$cle: $valeur\n";
+        }
+        return trim($result); // Retirer les espaces inutiles
+    }
 
 
     public static function updateNouvelIndex()
@@ -1284,6 +1293,7 @@ class Facture_t
                 $id_compteur = (int) $request_body['id_compteur'];
                 $res = Facture::effectuerreleve($id_indexes, $index);
                 Abones::updateIndexByCompteur_id($id_compteur, $index);
+                self::writeToFile('log5.txt', self::convertirEnString($request_body));
                 echo $res;
 
             }

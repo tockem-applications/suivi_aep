@@ -2,18 +2,23 @@
     <div class="row">
         <!-- Menu à gauche -->
         <div class="col-md-3 bg-light sidebar p-3">
-            <div class="d-flex justify-content-between"><h4 class="mb-3 text-primary fw-bold">Mois de Facturation</h4>
+            <div class="d-flex justify-content-between">
+                <h4 class="mb-3 text-primary fw-bold">Mois de Facturation</h4>
                 <div class="d-flex">
-                    <button type="button" class="btn btn-primary mb-3 shadow-sm me-1" data-bs-toggle="modal"
-                            data-bs-target="#importIndexModal">
-                        <i class="bi bi-file-earmark-arrow-up"></i>
-                    </button>
-                    <a href="?page=download_index&action=export_index" type="button"
-                       class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip" data-bs-placement="top"
-                       data-bs-title="exporter les index compteurs du derniers mois"
-                    >
-                        <i class="bi bi-file-earmark-arrow-down"></i>
-                    </a>
+                    <div class="p-0 m-0" data-bs-toggle="tooltip" data-bs-placement="top"
+                         data-bs-title="Importer les index de votre machine dans l'application">
+                        <button type="button" class="btn btn-primary mb-3 shadow-sm me-1" data-bs-toggle="modal"
+                                data-bs-target="#importIndexModal">
+                            <i class="bi bi-file-earmark-arrow-up"></i>
+                        </button>
+                    </div>
+                    <div class="m-0 p-0"><a href="?page=download_index&action=export_index" type="button"
+                                            class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
+                                            data-bs-placement="top"
+                                            data-bs-title="exporter les index compteurs du derniers mois"
+                        >
+                            <i class="bi bi-file-earmark-arrow-down"></i>
+                        </a></div>
                     <!--                <li><a class="dropdown-item" href="" target="_blank">Exporter vers mobile</a></li>-->
                 </div>
             </div>
@@ -24,9 +29,9 @@
                 @include_once("../donnees/mois_facturation.php");
                 @include_once("donnees/mois_facturation.php");
                 $result = MoisFacturation::getAllMois('', '', $_SESSION['id_aep']); // Assumer que cette méthode existe
-//                if(!count($result->fetchAll()))
-//                    exit();
-//                var_dump(count($result->fetchAll()));
+                //                if(!count($result->fetchAll()))
+                //                    exit();
+                //                var_dump(count($result->fetchAll()));
                 $selected_moi_id = '';
                 $first_mois_selected = true;
 
@@ -64,7 +69,7 @@
                 <a href="#" class="text-decoration-none text-primary" data-bs-toggle="modal"
                    data-bs-target="#distributionModal<?php echo $id; ?>">
                     <i class="bi bi-file-earmark-text me-1"> Facturer</i>
-<!--                    <i class="bi bi-currency-dollar me-1"> Facturer</i>-->
+                    <!--                    <i class="bi bi-currency-dollar me-1"> Facturer</i>-->
                 </a></div>
 
             <?php
@@ -86,8 +91,19 @@
 
             $curentMoisQuery = MoisFacturation::getMoisById($id_current_mois);
             $currentMoisData = $curentMoisQuery->fetchAll();
-//            var_dump($currentMoisData, $selected_moi_id);
+            //            var_dump($currentMoisData, $selected_moi_id);
+
             ?>
+
+<!--            <div class="d-flex justify-content-center mb-3">-->
+<!--                <button class="btn btn-danger" data-bs-toggle="modal"-->
+<!--                        data-bs-target="#delete_--><?php //echo $id_current_mois ?><!--">-->
+<!--                    Suprimer-->
+<!--                </button>-->
+<!---->
+<!--                Modal Bootstrap pour la confirmation de suppression -->-->
+<!--                -->
+<!--            </div>-->
 
             <div class="modal fade" id="distributionModal<?php echo $id; ?>" tabindex="-1"
                  aria-labelledby="distributionModalLabel<?php echo $id; ?>" aria-hidden="true">
@@ -110,7 +126,8 @@
                                         <span class="input-group-text bg-light"><i
                                                     class="fas fa-calendar-day"></i></span>
                                         <input type="date" class=
-                                        "form-control shadow-sm" value="<?php echo isset($currentMoisData[0]['date_releve'])? htmlspecialchars($currentMoisData[0]['date_releve']):''; ?>"
+                                        "form-control shadow-sm"
+                                               value="<?php echo isset($currentMoisData[0]['date_releve']) ? htmlspecialchars($currentMoisData[0]['date_releve']) : ''; ?>"
                                                id="releve_date_<?php echo $id; ?>" name="date_releve" required>
                                     </div>
                                 </div>
@@ -122,12 +139,13 @@
                                                value="<?php echo htmlspecialchars($id) ?>">
                                         <span class="input-group-text bg-light"><i
                                                     class="fas fa-calendar-day"></i></span>
-                                        <input type="date" class="form-control shadow-sm" value="<?php echo isset($currentMoisData[0]['date_depot'])? htmlspecialchars($currentMoisData[0]['date_depot']):''; ?>"
+                                        <input type="date" class="form-control shadow-sm"
+                                               value="<?php echo isset($currentMoisData[0]['date_depot']) ? htmlspecialchars($currentMoisData[0]['date_depot']) : ''; ?>"
                                                id="distribution_date_<?php echo $id; ?>" name="date_depot"
                                                required>
                                     </div>
                                 </div>
-<!--                                --><?php //echo htmlspecialchars($id); ?>
+                                <!--                                --><?php //echo htmlspecialchars($id); ?>
                                 <input type="hidden" name="mois_id" value="<?php echo htmlspecialchars($id); ?>">
                                 <button type="submit" class="btn btn-success w-100 shadow-sm">Facturer</button>
                             </form>
@@ -170,7 +188,7 @@
                                             <span class="input-group-text bg-light"><i
                                                         class="fas fa-file-upload"></i></span>
                                             <input type="file" class="form-control shadow-sm" id="fichier_index"
-                                                   name="fichier_index" accept=".csv,.xls,.xlsx" required>
+                                                   name="fichier_index" accept=".json" required>
                                         </div>
                                     </div>
                                 </div>

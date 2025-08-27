@@ -25,15 +25,15 @@ class MoisFacturation extends Manager
         if ($mois_fin == '') {
             $mois_fin = '2200-01';
         }
-        $reseau_joining  = '';
+        $reseau_joining = '';
 //        var_dump($mois_fin);
         if ($id_reseau == 0) {
             // si l'id du reseau est null, il ne faut prendre toute les donnees sur les mois de facturation
             // mais aussi avec celle de tout les reseau
-            $reseau_joining  = 'left join';
+            $reseau_joining = 'left join';
         } else {
             //sinon on recupere les donnees des du reseau en question
-            $reseau_joining  = 'inner join';
+            $reseau_joining = 'inner join';
         }
 
         return self::prepare_query("select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
@@ -80,6 +80,63 @@ class MoisFacturation extends Manager
     public static function getMoisById($selected_moi_id)
     {
         return self::prepare_query("select m.* from mois_facturation m where m.id = ?", array($selected_moi_id));
+    }
+
+    public static function deleteMonth($id, $id_aep)
+    {
+        //on fais que les anciens index deviennent les derniers pour le compteurs (mf.est_actif=1 and mf.id = ?)
+        // si le mois est le mois actif. On suprime le mois
+        // et definit le mois le plus rescent comme le moi actif dans le meme aep (id_constante = (SELECT id FROM constante_reseau WHERE id_aep=?);).
+        try {
+
+
+            if (self::$bd == null)
+                self::$bd = Connexion::connect();
+            self::$bd->beginTransaction();
+            self::prepare_query("
+                update 
+                    (
+                        select ancien_index, id_compteur 
+                         from indexes as i 
+                             inner join mois_facturation as mf on i.id_mois_facturation= mf.id
+                         where mf.est_actif=1 and mf.id = ?
+                    ) as indexes, compteur as co
+                 set derniers_index = ancien_index where co.id = indexes.id_compteur; ",
+                array($id));
+
+            self::prepare_query("delete from mois_facturation where id=? and est_actif=1", array($id));
+
+            self::prepare_query("UPDATE mois_facturation 
+                                    SET est_actif = 1 
+                                    WHERE mois = (SELECT max_mois FROM 
+                                        (SELECT MAX(mois) AS max_mois FROM mois_facturation) AS temp)
+                                        and id_constante = (SELECT id FROM constante_reseau WHERE id_aep=?);",
+                array($id_aep));
+            self::$bd->commit();
+            return true;
+        } catch (Exception $e) {
+            // Annuler la transaction en cas d'erreur
+            self::$bd->rollBack();
+            return false;
+        }
+    }
+
+    public static function updateMois($id, $mois_input, $description, $id_aep)
+    {
+        // On verifie si il y'a pas deja un mois de facturation ayant cette meme valeur de mois. s'il y'en pas on effectue la modification
+        $res = self::prepare_query("
+                select id from mois_facturation
+                where mois = ?  and id not in (
+                    select mf.id from mois_facturation mf 
+                        inner join constante_reseau as cr on cr.id=mf.id_constante 
+                    where cr.id_aep=? and mf.id<=>?)", array($mois_input, $id_aep, $id));
+        $res=$res->fetchAll();
+        if (empty($res))
+        return self::prepare_query("
+                update mois_facturation 
+                set mois=?, description=? 
+                where id=?", array($mois_input, $description, $id));
+        return false;
     }
 
 
@@ -250,7 +307,7 @@ class MoisFacturation extends Manager
 
                 $nouvelle_facture = new Facture(0, $ancien_index
                     , $nouvel_index
-                    , $impaye <0? -$impaye:0 // si l'ipaye est negatif on alors l'abonee avait verse plus du montant de la facture alors il fau reporter au mois suivant
+                    , $impaye < 0 ? -$impaye : 0 // si l'ipaye est negatif on alors l'abonee avait verse plus du montant de la facture alors il fau reporter au mois suivant
                     , '00/00/0000'
                     , $nouvelle_penalite, $id_mois_facturation
                     , $id_abone, '', $id_compteur);
@@ -258,8 +315,7 @@ class MoisFacturation extends Manager
                 //maintenant, si on reporte l'impaye negatif au mois suivant alors il doit etre suprimee
                 if ($impaye < 0) {
                     Impaye::deleteByIdCacture((int)$id_ancienne_facture);
-                }
-                else if ((int)$nouvel_impaye > 0) {
+                } else if ((int)$nouvel_impaye > 0) {
                     $impaye_object = new Impaye('', (int)$id_ancienne_facture, (int)$nouvel_impaye, 0, '00/00/0000');
                     $impaye_object->ajouter();
                 }
