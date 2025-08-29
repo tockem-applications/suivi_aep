@@ -1,5 +1,5 @@
 <?php
-session_start();
+//session_start();
 @include_once("../donnees/flux_financier.php");
 @include_once("donnees/flux_financier.php");
 

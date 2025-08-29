@@ -10,7 +10,7 @@ class AuthManager
 {
     public static function logout(){
         var_dump("ototo");
-        session_start();
+//        session_start();
         // Supprimer toutes les variables de session
         $_SESSION = array();
         // Si un cookie de session existe, le supprimer
@@ -18,7 +18,7 @@ class AuthManager
             setcookie(session_name(), '', time() - 3600, '/');
         }
         // Détruire la session
-        session_destroy();
+//        session_destroy();
         // Rediriger vers la page de connexion
         header('Location: ?page=home');
         exit;

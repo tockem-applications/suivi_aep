@@ -4,11 +4,10 @@ function display_printing_button($button_text = "Imprimer", $tooltip_message = "
 {
     ?>
     <button id="printing_button" data-bs-toggle="tooltip" data-bs-placement="left"
-            data-bs-title="<?php echo $tooltip_message ?>"
-            class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed"
-            onclick="imprimer(this)" type="button"
-            style="background-color: #28a745; border: none; transition: background-color 0.3s ease; display: block">
-        <i class="bi bi-printer"></i> <?php echo $button_text?>
+        data-bs-title="<?php echo $tooltip_message ?>"
+        class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed" onclick="imprimer(this)" type="button"
+        style="background-color: #28a745; border: none; transition: background-color 0.3s ease; display: block">
+        <i class="bi bi-printer"></i> <?php echo $button_text ?>
     </button>
     <?php
 }
@@ -17,10 +16,9 @@ function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form'
 {
 
     ob_start()
-    ?>
+        ?>
     <div class="modal fade  " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
-         aria-labelledby="deleteModalLabel"
-         aria-hidden="true">
+        aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
@@ -49,10 +47,9 @@ function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form'
 function make_form($traitement, $titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form')
 {
     ob_start()
-    ?>
+        ?>
     <div class="modal fade" tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
-         aria-labelledby="deleteModalLabel"
-         aria-hidden="true">
+        aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <form method="post" action="<?php echo $traitement ?>" enctype="multipart/form-data">
@@ -101,10 +98,10 @@ function create_accordeon($titre, $html_body, $expande, $id)
 }
 
 if (!isset($_SESSION['user_id'])) {
-//    var_dump((isset($_GET['form']) || isset($_GET['list'])));
+    //    var_dump((isset($_GET['form']) || isset($_GET['list'])));
     //l'utilisateur n'est pas connecte et il ne veux que la page de login ou d'enregistrment
     if (isset($_GET['page'])) {
-//        var_dump("lllllllllllllllllllllllllllllll");
+        //        var_dump("lllllllllllllllllllllllllllllll");
         if ($_GET['page'] != 'login' && $_GET['page'] != 'register' && $_GET['page'] != 'logout')
             header("location: ?page=login");
     } else {
@@ -115,7 +112,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 if (isset($_GET['list'])) {
-//    var_dump($_SESSION);
+    //    var_dump($_SESSION);
     if ($_GET['list'] == 'compteur_reseau') {
         require_once('traitement/abone_t.php');
         Abone_t::getListeAboneSimple('compteur_reseau');
@@ -133,11 +130,11 @@ if (isset($_GET['list'])) {
         Abone_t::getListeAboneSimple('production');
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
-//        var_dump($_GET);
+        //        var_dump($_GET);
         echo "<div class='container-fluid'><div id='a_imprimer'>";
         require_once("traitement/facture_t.php");
         display_printing_button("", 'Cette action enclancher l\'impression des factures');
-//        echo  "ooooooooooooooooooooooooooooooooooooo";
+        //        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
         echo "</div></div>";
@@ -158,83 +155,82 @@ if (isset($_GET['list'])) {
         require_once("traitement/mois_facturation_t.php");
         require_once("traitement/facture_t.php");
         ?>
-        <div class="container d-flex align-items-center justify-content-center pt-5 ">
-            <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
-                <form method="post" action="traitement/mois_facturation_t.php?&get_mois_facturation=true">
-                    <h2>Selectionner le mois de facturation</h2>
-                    <hr>
-                    <div class="">
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
-                            <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
+            <div class="container d-flex align-items-center justify-content-center pt-5 ">
+                <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
+                    <form method="post" action="traitement/mois_facturation_t.php?&get_mois_facturation=true">
+                        <h2>Selectionner le mois de facturation</h2>
+                        <hr>
+                        <div class="">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
+                                <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
                                     aria-describedby="inputGroup-sizing-default" id="">
-                                <option value="">Choisissez une option...</option>
-                                <?php
-                                if (isset($_GET["id_selected_month"]))
-                                    MoisFacturation_t::getoption($_GET["id_selected_month"]);
-                                else
-                                    MoisFacturation_t::getoption();
-                                ?>
-                                <!-- <option value="non_actif">Non Actif</option> -->
-                            </select>
-                        </div>
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25">Date de depot</span>
-                            <input type="date" value="<?php echo date('Y-m-d') ?>" name="date_depot"
-                                   data-bs-toggle="tooltip"
-                                   data-bs-placement="right" class="form-control"
-                                   data-bs-title="Il s'agit de la date du jour ou vous deposerez les facture. Ce cera aujourd'hui ci vous ne le replissez pas.">
-                        </div>
+                                    <option value="">Choisissez une option...</option>
+                                    <?php
+                                    if (isset($_GET["id_selected_month"]))
+                                        MoisFacturation_t::getoption($_GET["id_selected_month"]);
+                                    else
+                                        MoisFacturation_t::getoption();
+                                    ?>
+                                    <!-- <option value="non_actif">Non Actif</option> -->
+                                </select>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text w-25">Date de depot</span>
+                                <input type="date" value="<?php echo date('Y-m-d') ?>" name="date_depot" data-bs-toggle="tooltip"
+                                    data-bs-placement="right" class="form-control"
+                                    data-bs-title="Il s'agit de la date du jour ou vous deposerez les facture. Ce cera aujourd'hui ci vous ne le replissez pas.">
+                            </div>
 
 
-                        <div style="display:flex;">
-                            <button type="submit" class="btn btn-primary">Facturer</button>
+                            <div style="display:flex;">
+                                <button type="submit" class="btn btn-primary">Facturer</button>
+                            </div>
                         </div>
-                    </div>
 
-                </form>
+                    </form>
+                </div>
             </div>
-        </div>
-        <?php
-        //if(isset($_GET["id_selected_month"]))
-        if (isset($_GET["id_selected_month"])) {
-            //Facture_t::getTableauFactureByMoisId();
-        }
+            <?php
+            //if(isset($_GET["id_selected_month"]))
+            if (isset($_GET["id_selected_month"])) {
+                //Facture_t::getTableauFactureByMoisId();
+            }
 
     } else if ($_GET['list'] == 'releve_manuelle') {
         include_once("traitement/facture_t.php");
         require_once("traitement/mois_facturation_t.php");
         ?>
-        <div class="container d-flex align-items-center justify-content-center pt-5 ">
-            <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
-                <form method="post" action="?list=releve_manuelle">
-                    <h2>Selectionner le mois de facturation</h2>
-                    <hr>
-                    <div class="">
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
-                            <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
-                                    aria-describedby="inputGroup-sizing-default" id="">
-                                <option value="">Choisissez une option...</option>
-                                <?php
-                                if (isset($_GET["id_selected_month"]))
-                                    MoisFacturation_t::getoption($_GET["id_selected_month"]);
-                                else
-                                    MoisFacturation_t::getoption();
-                                ?>
-                                <!-- <option value="non_actif">Non Actif</option> -->
-                            </select>
-                            <button type="submit" class="input-group-text btn btn-primary">Afficher</button>
-                        </div>
-                    </div>
+                <div class="container d-flex align-items-center justify-content-center pt-5 ">
+                    <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
+                        <form method="post" action="?list=releve_manuelle">
+                            <h2>Selectionner le mois de facturation</h2>
+                            <hr>
+                            <div class="">
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
+                                    <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
+                                        aria-describedby="inputGroup-sizing-default" id="">
+                                        <option value="">Choisissez une option...</option>
+                                    <?php
+                                    if (isset($_GET["id_selected_month"]))
+                                        MoisFacturation_t::getoption($_GET["id_selected_month"]);
+                                    else
+                                        MoisFacturation_t::getoption();
+                                    ?>
+                                        <!-- <option value="non_actif">Non Actif</option> -->
+                                    </select>
+                                    <button type="submit" class="input-group-text btn btn-primary">Afficher</button>
+                                </div>
+                            </div>
 
-                </form>
-            </div>
-        </div>
-        <?php
-        if (isset($_POST["mois_facturation"])) {
-            Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
-        }
+                        </form>
+                    </div>
+                </div>
+            <?php
+            if (isset($_POST["mois_facturation"])) {
+                Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
+            }
         //echo $id_mois_listing;
     } else if ($_GET['list'] == 'mois_facturation') {
         include_once("traitement/mois_facturation_t.php");
@@ -263,23 +259,24 @@ if (isset($_GET['list'])) {
         include_once('traitement/abone_t.php');
         $id_abone = 0;
         if (isset($_GET['id'])) {
-            $id_abone = (int)$_GET['id'];
+            $id_abone = (int) $_GET['id'];
         }
 
 
         ?>
         <div class="row">
-            <article
-                    class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
-                <a href="?list=abone_simple" class="btn btn-primary ">< Liste des abones </a>
-                <div class="me-2">
-                    <?php $id_compteur = Abone_t::afficheInfoAbone($id_abone); ?>
-                </div>
+            <article class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
+                <a href="?list=abone_simple" class="btn btn-primary ">
+                    < Liste des abones </a>
+                        <div class="me-2">
+                            <?php $id_compteur = Abone_t::afficheInfoAbone($id_abone); ?>
+                        </div>
             </article>
 
             <aside class=" col-xl-7">
                 <?php
-                echo Abone_t::afficheInputRecouvrFementAbone($id_compteur);
+                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
+                //                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
                 ?>
                 <!--                <div class="col-12 h-5"> Est ce aue tout le meonde va bien</div>-->
             </aside>
@@ -291,7 +288,7 @@ if (isset($_GET['list'])) {
 
         include_once('traitement/constante_reseau_t.php');
         ?>
-        <a href="?form=constante_reseau">modifier les tarifs</a>
+            <a href="?form=constante_reseau">modifier les tarifs</a>
         <?php
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
@@ -301,7 +298,7 @@ if (isset($_GET['list'])) {
         $code_html = ob_get_clean();
         afficherPageReseau($id_reseau, $statistiqueReseau, $code_html);
 
-//        echo "<div class='row d-flex'> ";
+        //        echo "<div class='row d-flex'> ";
 //        echo "<div class='col-12 col-md-4'>".$code_html. "</div>";
 //        echo "<div class='col-12 col-md-8'>";
 //                echo "</div>";
@@ -342,6 +339,10 @@ if (isset($_GET['list'])) {
         require_once 'presentation/redevance_page.php';
     } else if ($_GET['page'] == 'versement') {
         require_once 'presentation/versments_page.php';
+    } else if ($_GET['page'] == 'ressources') {
+        require_once 'presentation/ressources_page.php';
+    } else if ($_GET['page'] == 'interventions') {
+        require_once 'presentation/interventions_page.php';
     } else if ($_GET['page'] == 'user_details') {
         require_once 'presentation/user_detail_component.php';
     } elseif ($_GET['page'] == 'transaction') {

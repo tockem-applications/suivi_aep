@@ -3,7 +3,7 @@
 //require_once("connexion.php");
 function startSessionWithTimeout() {
     // Vérifier si une session est déjà active
-    $duree = 60*60*1.5;
+    $duree = 60*60*10;
     if (session_id() === '') {
         // Définir la durée de vie du cookie de session à 1h30 minutes (1800 secondes)
         ini_set('session.cookie_lifetime', $duree);
@@ -31,6 +31,7 @@ function startSessionWithTimeout() {
     return false;
 }
 startSessionWithTimeout();
+
 //session_start();
 //session_
 @include_once("../donnees/connexion.php");
