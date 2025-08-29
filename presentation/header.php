@@ -4,15 +4,18 @@ require("traitement/aep_t.php");
 $is_aep_selected = Aep_t::isAepIdInSession();
 
 ?>
-<nav class="navbar navbar-expand-lg position-fixed z-3 w-100 shadow-sm" style="min-height: 10vh; background: linear-gradient(90deg, #2c9D11, #34495e);">
+<nav class="navbar navbar-expand-lg position-fixed z-3 w-100 shadow-sm"
+    style="min-height: 10vh; background: linear-gradient(90deg, #2c9D11, #34495e);">
     <div class="container-fluid">
         <!-- Logo/Brand -->
-        <a class="navbar-brand text-white fw-bold fs-4" href="index.php?page=home" style="font-family: 'Segoe UI', sans-serif;">
+        <a class="navbar-brand text-white fw-bold fs-4" href="index.php?page=home"
+            style="font-family: 'Segoe UI', sans-serif;">
             Tockem SPE
         </a>
         <!-- Toggler Button -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
-                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -21,34 +24,40 @@ $is_aep_selected = Aep_t::isAepIdInSession();
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <!-- AEP Selection -->
-<!--                    --><?php //display_li_aep_to_select(); ?>
-<!--                    --><?php //display_li_aep_to_select(); ?>
+                    <!--                    --><?php //display_li_aep_to_select(); ?>
+                    <!--                    --><?php //display_li_aep_to_select(); ?>
                     <!-- Dropdown: Structure -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownStructure" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" style="transition: color 0.3s ease;">
+                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownStructure"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="transition: color 0.3s ease;">
                             Structure
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
                             <li><a class="dropdown-item" href="?page=reseau">Réseaux</a></li>
                             <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <li><a class="dropdown-item" href="?list=compteur_reseau">Liste des compteurs réseau</a></li>
                             <li><a class="dropdown-item" href="?list=distribution_simple">Liste des abonnés</a></li>
-<!--                            <li><a class="dropdown-item" href="?list=production_simple">Liste des compteurs de production</a></li>-->
-                            <li><hr class="dropdown-divider"></li>
+                            <!--                            <li><a class="dropdown-item" href="?list=production_simple">Liste des compteurs de production</a></li>-->
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                         </ul>
                     </li>
                     <!-- Dropdown: Facturation -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownFacturation" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" style="transition: color 0.3s ease;">
+                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownFacturation"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="transition: color 0.3s ease;">
                             Facturation
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFacturation">
                             <li><a class="dropdown-item" href="index.php?list=recouvrement">Recouvrement</a></li>
-<!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
+                            <!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
                             <li><a class="dropdown-item" href="index.php?page=releves">Relèves</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation">Mois Facturés</a></li>
                             <li><a class="dropdown-item" href="index.php?form=constante_reseau">Tarifs AEP</a></li>
@@ -59,15 +68,18 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                     </li>
                     <!-- Dropdown: Finances -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownFinances" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" style="transition: color 0.3s ease;">
+                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownFinances"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="transition: color 0.3s ease;">
                             Finances
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFinances">
                             <li><a class="dropdown-item" href="?page=transaction">Entrée/Sortie</a></li>
-<!--                            <li><a class="dropdown-item" href="?list=transaction">Liste des dépenses</a></li>-->
-<!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Liste des entrées</a></li>-->
-                            <li><hr class="dropdown-divider"></li>
+                            <!--                            <li><a class="dropdown-item" href="?list=transaction">Liste des dépenses</a></li>-->
+                            <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Liste des entrées</a></li>-->
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
                             <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
                             <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
                             <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
@@ -76,8 +88,9 @@ $is_aep_selected = Aep_t::isAepIdInSession();
 
                     <!-- Dropdown: Opération -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownOperation" role="button"
-                           data-bs-toggle="dropdown" aria-expanded="false" style="transition: color 0.3s ease;">
+                        <a class="nav-link dropdown-toggle text-white fw-medium" href="#" id="navbarDropdownOperation"
+                            role="button" data-bs-toggle="dropdown" aria-expanded="false"
+                            style="transition: color 0.3s ease;">
                             Administration
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownOperation">
@@ -88,22 +101,27 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li><a class="dropdown-item" href="?page=role">Gestion des roles</a></li>
                             <li><a class="dropdown-item" href="?page=clefs">Gestion des clefs</a></li>
                             <li><a class="dropdown-item" href="?page=aep">Gestion des AEP</a></li>
-                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="?page=backup">Sauvegarde & Restauration</a></li>
                         </ul>
                     </li>
                     <!-- Connexion/Déconnexion -->
-<!--                    <li class="nav-item">-->
-<!--                        <a class="nav-link text-white fw-medium" href="--><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? '../traitement/admin_t.php?deconnecter=true' : 'index.php?form=login'; ?><!--" style="transition: color 0.3s ease;">-->
-<!--                            --><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? 'Se déconnecter' : 'Se connecter'; ?>
-<!--                        </a>-->
-<!--                    </li>-->
+                    <!--                    <li class="nav-item">-->
+                    <!--                        <a class="nav-link text-white fw-medium" href="--><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? '../traitement/admin_t.php?deconnecter=true' : 'index.php?form=login'; ?><!--" style="transition: color 0.3s ease;">-->
+                    <!--                            --><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? 'Se déconnecter' : 'Se connecter'; ?>
+                    <!--                        </a>-->
+                    <!--                    </li>-->
                 </ul>
 
                 <!-- AEP Label et Formulaire de recherche -->
                 <div class="d-flex align-items-center">
-                    <span class="h3 text-white me-3"><a class="" style="color: white" href="?page=aep_dashboard&aep_id=<?php echo htmlspecialchars($_SESSION['id_aep']); ?>"><?php echo htmlspecialchars($_SESSION['libele_aep']); ?></a></span>
+                    <span class="h3 text-white me-3"><a class="" style="color: white"
+                            href="?page=aep_dashboard&aep_id=<?php echo htmlspecialchars($_SESSION['id_aep']); ?>"><?php echo htmlspecialchars($_SESSION['libele_aep']); ?></a></span>
                     <form class="d-flex">
-                        <input class="form-control me-2 rounded-pill" type="search" id="le_input" placeholder="Rechercher..." aria-label="Search" style="border: 1px solid #ced4da;">
+                        <input class="form-control me-2 rounded-pill" type="search" id="le_input"
+                            placeholder="Rechercher..." aria-label="Search" style="border: 1px solid #ced4da;">
 
                     </form>
                 </div>
