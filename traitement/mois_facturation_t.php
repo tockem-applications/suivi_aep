@@ -6,6 +6,8 @@
 @include_once("../donnees/constante_reseau.php");
 @include_once("donnees/constante_reseau.php");
 @include_once("traitement/facture_t.php");
+@include_once("traitement/backup_t.php");
+@include_once("backup_t.php");
 @include_once("../donnees/impaye.php");
 @include_once("donnees/impaye.php");
 @include_once("../donnees/aep.php");
@@ -699,8 +701,17 @@ class MoisFacturation_t
     {
         if (!isset($_GET['delete_mois'], $_GET['id_delete']))
             return;
+        $mois = MoisFacturation::getMoisById($_GET['id_delete']);
+        $mois = $mois->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($mois))
+            return;
+        $mois = $mois[0]['mois'];
+        $mois = getLetterMonth($mois);
+        $aep_name = $_SESSION['libele_aep'];
+        Backup_t::phpSqlDump(Connexion::connect(), Connexion::$db_name ,__DIR__."/../backups/Backup_Avant_Aupression_mois_$aep_name-$mois.sql");
         var_dump($_GET);
         $id = htmlspecialchars($_GET['id_delete']);
+
         $res = MoisFacturation::deleteMonth($id, $_SESSION['id_aep']);
         var_dump($res);
         header("location: ../index.php?list=mois_facturation");

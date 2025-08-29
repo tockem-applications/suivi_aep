@@ -327,6 +327,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/role_component.php';
     } else if ($_GET['page'] == 'logout') {
         AuthManager::logout();
+    }else if ($_GET['page'] == 'backup') {
+        include("presentation/backup_page.php");
     } else if ($_GET['page'] == 'download_index') {
         header("location: traitement/abone_t.php?action=export_index");
     } else if ($_GET['page'] == 'role_detail') {
