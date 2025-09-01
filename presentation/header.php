@@ -85,6 +85,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
+                            <li><a class="dropdown-item" href="?page=tarif_aep">Tarifs</a></li>
                             <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
                             <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
                         </ul>

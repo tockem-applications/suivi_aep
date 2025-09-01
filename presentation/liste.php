@@ -327,9 +327,9 @@ if (isset($_GET['list'])) {
         require_once 'presentation/role_component.php';
     } else if ($_GET['page'] == 'logout') {
         AuthManager::logout();
-    }else if ($_GET['page'] == 'backup') {
+    } else if ($_GET['page'] == 'backup') {
         include("presentation/backup_page.php");
-    }else if ($_GET['page'] == 'fokoue_data') {
+    } else if ($_GET['page'] == 'fokoue_data') {
         include("presentation/import_fokoue_data.php");
     } else if ($_GET['page'] == 'download_index') {
         header("location: traitement/abone_t.php?action=export_index");
@@ -341,6 +341,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/redevance_deatails_page.php';
     } else if ($_GET['page'] == 'redevance') {
         require_once 'presentation/redevance_page.php';
+    } else if ($_GET['page'] == 'tarif_aep') {
+        require_once 'presentation/tarif_page.php';
     } else if ($_GET['page'] == 'versement') {
         require_once 'presentation/versments_page.php';
     } else if ($_GET['page'] == 'ressources') {

@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Récupérer l'AEP actuel
-$aepId = isset($_SESSION['id_aep']) ? (int)$_SESSION['id_aep'] : 0;
+$aepId = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
 if (!$aepId) {
     $message = '<div class="alert alert-danger">Aucun AEP sélectionné. Veuillez sélectionner un AEP.</div>';
     $redevances = array();
@@ -75,267 +75,149 @@ if (isset($_GET['success'])) {
     <?php echo $message; ?>
     <a href="dashboard.php" class="btn btn-secondary mb-3">Retour au tableau de bord</a>
 
-    <!-- Bouton pour ajouter une redevance -->
-    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal"
-            data-bs-target="#addRedevanceModal" <?php echo $aepId ? '' : 'disabled'; ?>>Ajouter une redevance
-    </button>
+    <!-- Section des Redevances -->
+    <div class="card">
+        <div class="card-header bg-warning text-dark">
+            <h4 class="mb-0"><i class="bi bi-percent"></i> Redevances</h4>
+        </div>
+        <div class="card-body">
+            <!-- Bouton pour ajouter une redevance -->
+            <button type="button" class="btn btn-warning mb-3" data-bs-toggle="modal"
+                data-bs-target="#addRedevanceModal" <?php echo $aepId ? '' : 'disabled'; ?>>
+                <i class="bi bi-plus-circle"></i> Ajouter une redevance
+            </button>
 
-    <!-- Tableau des redevances -->
-    <div class="table-responsive">
-        <table class="table table-striped table-bordered">
-            <thead class="table-dark">
-            <tr>
-<!--                <th>ID</th>-->
-                <th>Libellé</th>
-                <th>Pourcentage</th>
-                <th>Type</th>
-                <th>Mois de debut</th>
-                <th>Description</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php if (count($redevances) > 0): ?>
-                <?php foreach ($redevances as $redevance): ?>
-                    <tr>
-<!--                        <td>--><?php //echo htmlspecialchars($redevance['id']); ?><!--</td>-->
-                        <td>
-                            <a href="?page=redevance_details&id=<?php echo htmlspecialchars($redevance['id']); ?>"><?php echo htmlspecialchars($redevance['libele']); ?></a>
-                        </td>
-
-                        <td><?php echo htmlspecialchars($redevance['pourcentage']); ?>%</td>
-                        <td><?php echo htmlspecialchars($redevance['type']); ?></td>
-                        <td><?php echo getLetterMonth(htmlspecialchars($redevance['mois_debut'])); ?></td>
-                        <td><?php echo htmlspecialchars($redevance['description'] ?: 'Aucune'); ?></td>
-                        <td>
-                            <button type="button" class="btn btn-warning btn-sm action-btn" data-bs-toggle="modal"
-                                    data-bs-target="#editRedevanceModal"
-                                    data-id="<?php echo $redevance['id']; ?>"
-                                    data-libele="<?php echo htmlspecialchars($redevance['libele']); ?>"
-                                    data-type="<?php echo $redevance['type']; ?>"
-                                    data-pourcentage="<?php echo $redevance['pourcentage']; ?>"
-                                    data-mois_debut="<?php echo $redevance['mois_debut']; ?>"
-                                    data-description="<?php echo htmlspecialchars($redevance['description']); ?>">
-                                Modifier
-                            </button>
-                            <button type="button" class="btn btn-danger btn-sm action-btn" data-bs-toggle="modal"
-                                    data-bs-target="#deleteRedevanceModal" data-id="<?php echo $redevance['id']; ?>"
-                                    data-libele="<?php echo htmlspecialchars($redevance['libele']); ?>">Supprimer
-                            </button>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <tr>
-                    <td colspan="6" class="text-center">Aucune redevance trouvée.</td>
-                </tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
+            <!-- Tableau des redevances -->
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Libellé</th>
+                            <th>Pourcentage</th>
+                            <th>Type</th>
+                            <th>Mois de debut</th>
+                            <th>Description</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($redevances) > 0): ?>
+                            <?php foreach ($redevances as $redevance): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($redevance['libele']); ?></td>
+                                    <td><?php echo $redevance['pourcentage']; ?>%</td>
+                                    <td>
+                                        <span
+                                            class="badge <?php echo $redevance['type'] === 'Entree' ? 'bg-success' : 'bg-danger'; ?>">
+                                            <?php echo $redevance['type']; ?>
+                                        </span>
+                                    </td>
+                                    <td><?php echo $redevance['mois_debut']; ?></td>
+                                    <td><?php echo htmlspecialchars($redevance['description']); ?></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                                onclick="editRedevance(<?php echo $redevance['id']; ?>)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                                onclick="deleteRedevance(<?php echo $redevance['id']; ?>)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Aucune redevance configurée</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Modal pour ajouter une redevance -->
-<div class="modal fade" id="addRedevanceModal" tabindex="-1" aria-labelledby="addRedevanceModalLabel"
-     aria-hidden="true">
+<div class="modal fade" id="addRedevanceModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addRedevanceModalLabel">Ajouter une redevance</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Ajouter une Redevance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="addRedevanceForm" method="POST" action="traitement/redevance_t.php">
-                    <div class="mb-3">
-                        <label for="add_libele" class="form-label">Libellé</label>
-                        <input type="text" class="form-control" id="add_libele" name="libele" required maxlength="64">
-                        <div class="invalid-feedback">Veuillez entrer un libellé (1 à 64 caractères).</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_pourcentage" class="form-label">Pourcentage (%)</label>
-                        <input type="number" step="0.01" class="form-control" id="add_pourcentage" name="pourcentage"
-                               required min="0" max="100">
-                        <div class="invalid-feedback">Veuillez entrer un pourcentage entre 0 et 100.</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="mois_debut" class="form-label">Mois de Debut</label>
-                        <input type="month" class="form-control" id="mois_debut" name="mois_debut" required>
-                        <div class="invalid-feedback">Veuillez selectionner le mois de debut</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="type_redevance" class="form-label">Type de redevance</label>
-                        <select class="form-select" name="type" id="type_redevance">
-                            <option value="sortie">Sortie</option>
-                            <option value="entree">Entrée</option>
-                        </select>
-                        <div class="invalid-feedback">Veuillez selectionner le type de redevance</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="add_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="add_description" name="description" rows="3"></textarea>
-                    </div>
+                <form id="addRedevanceForm" method="post" action="traitement/redevance_t.php">
                     <input type="hidden" name="action" value="add_redevance">
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-primary" form="addRedevanceForm"
-                        onclick="return validateAddRedevanceForm()">Ajouter
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
+                    <input type="hidden" name="id_aep" value="<?php echo $aepId; ?>">
 
-<!-- Modal pour modifier une redevance -->
-<div class="modal fade" id="editRedevanceModal" tabindex="-1" aria-labelledby="editRedevanceModalLabel"
-     aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="editRedevanceModalLabel">Modifier une redevance</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="editRedevanceForm" method="POST" action="traitement/redevance_t.php">
                     <div class="mb-3">
-                        <label for="edit_libele" class="form-label">Libellé</label>
-                        <input type="text" class="form-control" id="edit_libele" name="libele" required maxlength="64">
-                        <div class="invalid-feedback">Veuillez entrer un libellé (1 à 64 caractères).</div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_pourcentage" class="form-label">Pourcentage (%)</label>
-                        <input type="number" step="0.01" class="form-control" id="edit_pourcentage" name="pourcentage"
-                               required min="0" max="100">
-                        <div class="invalid-feedback">Veuillez entrer un pourcentage entre 0 et 100.</div>
+                        <label for="libele" class="form-label">Libellé</label>
+                        <input type="text" class="form-control" id="libele" name="libele" required maxlength="64">
                     </div>
 
                     <div class="mb-3">
-                        <label for="mois_debut" class="form-label">Mois de Debut</label>
-                        <input type="month" class="form-control" id="mois_debut" name="mois_debut" required>
-                        <div class="invalid-feedback">Veuillez selectionner le mois de debut</div>
+                        <label for="pourcentage" class="form-label">Pourcentage</label>
+                        <input type="number" class="form-control" id="pourcentage" name="pourcentage" required min="0"
+                            max="100" step="0.01">
                     </div>
+
                     <div class="mb-3">
-                        <label for="type_redevance" class="form-label">Type de redevance</label>
-                        <select class="form-select" name="type" id="type_redevance">
-                            <option value="sortie">Sortie</option>
-                            <option value="entree">Entrée</option>
+                        <label for="type" class="form-label">Type</label>
+                        <select class="form-select" id="type" name="type" required>
+                            <option value="">Sélectionner un type</option>
+                            <option value="Entree">Entrée</option>
+                            <option value="Sortie">Sortie</option>
                         </select>
-                        <div class="invalid-feedback">Veuillez selectionner le type de redevance</div>
                     </div>
+
                     <div class="mb-3">
-                        <label for="edit_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                        <label for="mois_debut" class="form-label">Mois de début (YYYY-MM)</label>
+                        <input type="month" class="form-control" id="mois_debut" name="mois_debut" required>
                     </div>
-                    <input type="hidden" name="id" id="edit_id">
-                    <input type="hidden" name="action" value="update_redevance">
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-primary" form="editRedevanceForm"
-                        onclick="return validateEditRedevanceForm()">Enregistrer
-                </button>
+                <button type="submit" form="addRedevanceForm" class="btn btn-primary">Ajouter</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal pour supprimer une redevance -->
-<div class="modal fade" id="deleteRedevanceModal" tabindex="-1" aria-labelledby="deleteRedevanceModalLabel"
-     aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteRedevanceModalLabel">Confirmer la suppression</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Veuillez confirmer la suppression de la redevance :</p>
-                <p><strong id="delete_libele"></strong></p>
-                <form id="deleteRedevanceForm" method="POST" action="traitement/redevance_t.php">
-                    <input type="hidden" name="id" id="delete_id">
-                    <input type="hidden" name="action" value="delete_redevance">
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-danger" form="deleteRedevanceForm">Supprimer</button>
-            </div>
-        </div>
-    </div>
-</div>
 <script>
-    function validateAddRedevanceForm() {
-        const form = document.getElementById('addRedevanceForm');
-        const libele = document.getElementById('add_libele');
-        const pourcentage = document.getElementById('add_pourcentage');
-        let isValid = true;
-
-        libele.classList.remove('is-invalid');
-        pourcentage.classList.remove('is-invalid');
-
-        if (libele.value.trim().length < 1 || libele.value.trim().length > 64) {
-            libele.classList.add('is-invalid');
-            isValid = false;
-        }
-        if (pourcentage.value <= 0 || pourcentage.value > 100) {
-            pourcentage.classList.add('is-invalid');
-            isValid = false;
-        }
-
-        return isValid;
+    function editRedevance(id) {
+        // Implémenter l'édition des redevances
+        alert('Fonctionnalité d\'édition à implémenter');
     }
 
-    function validateEditRedevanceForm() {
-        const form = document.getElementById('editRedevanceForm');
-        const libele = document.getElementById('edit_libele');
-        const pourcentage = document.getElementById('edit_pourcentage');
-        let isValid = true;
+    function deleteRedevance(id) {
+        if (confirm('Êtes-vous sûr de vouloir supprimer cette redevance ?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = 'traitement/redevance_t.php';
 
-        libele.classList.remove('is-invalid');
-        pourcentage.classList.remove('is-invalid');
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'delete_redevance';
 
-        if (libele.value.trim().length < 1 || libele.value.trim().length > 64) {
-            libele.classList.add('is-invalid');
-            isValid = false;
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'id';
+            idInput.value = id;
+
+            form.appendChild(actionInput);
+            form.appendChild(idInput);
+            document.body.appendChild(form);
+            form.submit();
         }
-        if (pourcentage.value <= 0 || pourcentage.value > 100) {
-            pourcentage.classList.add('is-invalid');
-            isValid = false;
-        }
-
-        return isValid;
     }
-
-    // Remplir le modal de modification
-    document.addEventListener('click', function (event) {
-        const button = event.target.closest('button[data-bs-target="#editRedevanceModal"]');
-        if (button) {
-            const id = button.getAttribute('data-id');
-            const libele = button.getAttribute('data-libele');
-            const pourcentage = button.getAttribute('data-pourcentage');
-            const description = button.getAttribute('data-description');
-            // const type_redevance = button.getAttribute('data-description');
-            const mois_debut = button.getAttribute('data-mois_debut');
-            alert(mois_debut);
-            document.getElementById('edit_id').value = id;
-            document.getElementById('edit_libele').value = libele;
-            document.getElementById('edit_pourcentage').value = pourcentage;
-            // document.getElementById('edit_type').value = pourcentage;
-            document.getElementById('edit_mois_debut').value = mois_debut;
-            document.getElementById('edit_description').value = description || '';
-        }
-    });
-
-    // Remplir le modal de suppression
-    document.addEventListener('click', function (event) {
-        const button = event.target.closest('button[data-bs-target="#deleteRedevanceModal"]');
-        if (button) {
-            const id = button.getAttribute('data-id');
-            const libele = button.getAttribute('data-libele');
-            document.getElementById('delete_id').value = id;
-            document.getElementById('delete_libele').textContent = libele;
-        }
-    });
 </script>
