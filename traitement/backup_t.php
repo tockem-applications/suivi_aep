@@ -8,7 +8,7 @@ class Backup_t
     public static function phpSqlDump($pdo, $db, $filePath)
     {
         $fh = fopen($filePath, 'w');
-//        var_dump(__DIR__.'/../donnees/');
+        //        var_dump(__DIR__.'/../donnees/');
         if (!$fh) {
             throw new Exception('Impossible de créer le fichier d\'export');
         }
@@ -74,6 +74,7 @@ class Backup_t
             throw new Exception('Le fichier généré est vide');
         }
     }
+
     public static function exportSql()
     {
         $success = 'ok';
@@ -83,13 +84,34 @@ class Backup_t
             $user = 'root';
             $pass = '';
 
-            $timestamp = date('Ymd_His');
+            // Récupérer le nom personnalisé de la backup
+            $backupName = isset($_POST['backup_name']) ? trim($_POST['backup_name']) : '';
+            if (empty($backupName)) {
+                $backupName = 'backup_' . date('Y-m-d_H-i-s');
+            }
+
+            // Nettoyer le nom du fichier
+            $backupName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $backupName);
+            if (substr($backupName, -4) !== '.sql') {
+                $backupName .= '.sql';
+            }
+
             $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
-//            var_dump($backupDir);
+            //            var_dump($backupDir);
             if (!is_dir($backupDir)) {
                 @mkdir($backupDir, 0777, true);
             }
-            $fileName = 'backup_' . $timestamp . '.sql';
+
+            // Vérifier si le nom existe déjà et ajouter un suffixe si nécessaire
+            $fileName = $backupName;
+            $counter = 1;
+            while (file_exists($backupDir . DIRECTORY_SEPARATOR . $fileName)) {
+                $nameWithoutExt = pathinfo($backupName, PATHINFO_FILENAME);
+                $ext = pathinfo($backupName, PATHINFO_EXTENSION);
+                $fileName = $nameWithoutExt . '_' . $counter . '.' . $ext;
+                $counter++;
+            }
+
             $filePath = $backupDir . DIRECTORY_SEPARATOR . $fileName;
 
             // Détecter le chemin mysqldump (WAMP Windows)
@@ -138,15 +160,15 @@ class Backup_t
             if ($returnVar !== 0 || !file_exists($filePath) || filesize($filePath) === 0) {
                 $pdo = Connexion::connect();
                 self::phpSqlDump($pdo, $db, $filePath);
-//                header('Location: ..?page=backup&success=backup_created_php');
-//                exit;
+                header('Location: ..?page=backup&success=backup_created_php&filename=' . urlencode($fileName));
+                exit;
             }
 
-//            header('Location: ..?page=backup&success=backup_created');
-            return;
+            header('Location: ..?page=backup&success=backup_created&filename=' . urlencode($fileName));
+            exit;
         } catch (Exception $e) {
             header('Location: ..?page=backup&error=backup_failed&message=' . urlencode($e->getMessage()));
-            return;
+            exit;
         }
     }
 
@@ -158,7 +180,7 @@ class Backup_t
             }
 
             // 1) Sauvegarde préalable
-            self::exportSql(); // redirige, on veut éviter la redirection ici => on factoriserait normalement.
+            self::exportSql(); // redirige, on veut éviter la redirection ici => on factoriserait normalement. 
         } catch (Exception $e) {
             // Si exportSql redirige, on ne passe pas ici. Pour éviter la redirection, on duplique l'export minimal:
         }
@@ -178,7 +200,7 @@ class Backup_t
             $pdo = Connexion::connect();
             self::phpSqlDump($pdo, $db, $preFile);
         } catch (Exception $e) {
-//            header('Location: ..?page=backup&error=prebackup_failed&message=' . urlencode($e->getMessage()));
+            header('Location: ..?page=backup&error=prebackup_failed&message=' . urlencode($e->getMessage()));
             exit;
         }
 
@@ -186,7 +208,7 @@ class Backup_t
         $tmp = $_FILES['sql_file']['tmp_name'];
         $content = file_get_contents($tmp);
         if ($content === false || $content === '') {
-//            header('Location: ..?page=backup&error=empty_file');
+            header('Location: ..?page=backup&error=empty_file');
             exit;
         }
 
@@ -236,7 +258,6 @@ class Backup_t
                 $handle = fopen($tmp, 'r');
                 if ($handle) {
                     while (($line = fgets($handle)) !== false) {
-                        echo $line;
                         $trim = trim($line);
                         if ($trim === '' || substr($trim, 0, 2) === '--')
                             continue;
@@ -261,15 +282,204 @@ class Backup_t
         header('Location: ..?page=backup&success=applied&prebackup=' . urlencode(basename($preFile)));
         exit;
     }
+
+    public static function renameBackup()
+    {
+        try {
+            if (!isset($_POST['old_name']) || !isset($_POST['new_name'])) {
+                throw new Exception('Paramètres manquants');
+            }
+
+            $oldName = trim($_POST['old_name']);
+            $newName = trim($_POST['new_name']);
+
+            if (empty($oldName) || empty($newName)) {
+                throw new Exception('Noms de fichiers invalides');
+            }
+
+            // Nettoyer le nouveau nom
+            $newName = preg_replace('/[^a-zA-Z0-9._-]/', '_', $newName);
+            if (substr($newName, -4) !== '.sql') {
+                $newName .= '.sql';
+            }
+
+            $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+            $oldPath = $backupDir . DIRECTORY_SEPARATOR . $oldName;
+            $newPath = $backupDir . DIRECTORY_SEPARATOR . $newName;
+
+            if (!file_exists($oldPath)) {
+                throw new Exception('Fichier source introuvable');
+            }
+
+            if (file_exists($newPath) && $oldName !== $newName) {
+                throw new Exception('Un fichier avec ce nom existe déjà');
+            }
+
+            if (!rename($oldPath, $newPath)) {
+                throw new Exception('Impossible de renommer le fichier');
+            }
+
+            header('Location: ..?page=backup&success=renamed&old_name=' . urlencode($oldName) . '&new_name=' . urlencode($newName));
+            exit;
+
+        } catch (Exception $e) {
+            header('Location: ..?page=backup&error=rename_failed&message=' . urlencode($e->getMessage()));
+            exit;
+        }
+    }
+
+    public static function deleteBackup()
+    {
+        try {
+            if (!isset($_POST['filename'])) {
+                throw new Exception('Nom de fichier manquant');
+            }
+
+            $filename = trim($_POST['filename']);
+            if (empty($filename)) {
+                throw new Exception('Nom de fichier invalide');
+            }
+
+            $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+            $filePath = $backupDir . DIRECTORY_SEPARATOR . $filename;
+
+            if (!file_exists($filePath)) {
+                throw new Exception('Fichier introuvable');
+            }
+
+            if (!unlink($filePath)) {
+                throw new Exception('Impossible de supprimer le fichier');
+            }
+
+            header('Location: ..?page=backup&success=deleted&filename=' . urlencode($filename));
+            exit;
+
+        } catch (Exception $e) {
+            header('Location: ..?page=backup&error=delete_failed&message=' . urlencode($e->getMessage()));
+            exit;
+        }
+    }
+
+    public static function bulkRename()
+    {
+        try {
+            if (!isset($_POST['filenames']) || !isset($_POST['new_name'])) {
+                throw new Exception('Paramètres manquants');
+            }
+
+            $filenames = $_POST['filenames'];
+            $newName = trim($_POST['new_name']);
+
+            if (empty($filenames) || empty($newName)) {
+                throw new Exception('Paramètres invalides');
+            }
+
+            $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+            $successCount = 0;
+            $errors = array();
+
+            foreach ($filenames as $filename) {
+                try {
+                    $oldPath = $backupDir . DIRECTORY_SEPARATOR . $filename;
+                    if (!file_exists($oldPath)) {
+                        $errors[] = "Fichier $filename introuvable";
+                        continue;
+                    }
+
+                    $ext = pathinfo($filename, PATHINFO_EXTENSION);
+                    $newFilename = $newName . '_' . $successCount . '.' . $ext;
+                    $newPath = $backupDir . DIRECTORY_SEPARATOR . $newFilename;
+
+                    if (rename($oldPath, $newPath)) {
+                        $successCount++;
+                    } else {
+                        $errors[] = "Impossible de renommer $filename";
+                    }
+                } catch (Exception $e) {
+                    $errors[] = "Erreur avec $filename: " . $e->getMessage();
+                }
+            }
+
+            $message = "Renommé avec succès: $successCount fichier(s)";
+            if (!empty($errors)) {
+                $message .= ". Erreurs: " . implode(', ', $errors);
+            }
+
+            header('Location: ..?page=backup&success=bulk_renamed&message=' . urlencode($message));
+            exit;
+
+        } catch (Exception $e) {
+            header('Location: ..?page=backup&error=bulk_rename_failed&message=' . urlencode($e->getMessage()));
+            exit;
+        }
+    }
+
+    public static function bulkDelete()
+    {
+        try {
+            if (!isset($_POST['filenames'])) {
+                throw new Exception('Aucun fichier sélectionné');
+            }
+
+            $filenames = $_POST['filenames'];
+            if (empty($filenames)) {
+                throw new Exception('Aucun fichier sélectionné');
+            }
+
+            $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+            $successCount = 0;
+            $errors = array();
+
+            foreach ($filenames as $filename) {
+                try {
+                    $filePath = $backupDir . DIRECTORY_SEPARATOR . $filename;
+                    if (!file_exists($filePath)) {
+                        $errors[] = "Fichier $filename introuvable";
+                        continue;
+                    }
+
+                    if (unlink($filePath)) {
+                        $successCount++;
+                    } else {
+                        $errors[] = "Impossible de supprimer $filename";
+                    }
+                } catch (Exception $e) {
+                    $errors[] = "Erreur avec $filename: " . $e->getMessage();
+                }
+            }
+
+            $message = "Supprimé avec succès: $successCount fichier(s)";
+            if (!empty($errors)) {
+                $message .= ". Erreurs: " . implode(', ', $errors);
+            }
+
+            header('Location: ..?page=backup&success=bulk_deleted&message=' . urlencode($message));
+            exit;
+
+        } catch (Exception $e) {
+            header('Location: ..?page=backup&error=bulk_delete_failed&message=' . urlencode($e->getMessage()));
+            exit;
+        }
+    }
 }
 
 if (isset($_POST['action']) && $_POST['action'] === 'export_sql') {
     Backup_t::exportSql();
-    header('Location: ..?page=backup&success=backup_created_php');
-    exit();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'apply_sql') {
     Backup_t::applySql();
+}
+if (isset($_POST['action']) && $_POST['action'] === 'rename_backup') {
+    Backup_t::renameBackup();
+}
+if (isset($_POST['action']) && $_POST['action'] === 'delete_backup') {
+    Backup_t::deleteBackup();
+}
+if (isset($_POST['action']) && $_POST['action'] === 'bulk_rename') {
+    Backup_t::bulkRename();
+}
+if (isset($_POST['action']) && $_POST['action'] === 'bulk_delete') {
+    Backup_t::bulkDelete();
 }
 
 
