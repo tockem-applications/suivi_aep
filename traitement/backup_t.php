@@ -138,15 +138,15 @@ class Backup_t
             if ($returnVar !== 0 || !file_exists($filePath) || filesize($filePath) === 0) {
                 $pdo = Connexion::connect();
                 self::phpSqlDump($pdo, $db, $filePath);
-                header('Location: ..?page=backup&success=backup_created_php');
-                exit;
+//                header('Location: ..?page=backup&success=backup_created_php');
+//                exit;
             }
 
-            header('Location: ..?page=backup&success=backup_created');
-            exit;
+//            header('Location: ..?page=backup&success=backup_created');
+            return;
         } catch (Exception $e) {
             header('Location: ..?page=backup&error=backup_failed&message=' . urlencode($e->getMessage()));
-            exit;
+            return;
         }
     }
 
@@ -178,7 +178,7 @@ class Backup_t
             $pdo = Connexion::connect();
             self::phpSqlDump($pdo, $db, $preFile);
         } catch (Exception $e) {
-            header('Location: ..?page=backup&error=prebackup_failed&message=' . urlencode($e->getMessage()));
+//            header('Location: ..?page=backup&error=prebackup_failed&message=' . urlencode($e->getMessage()));
             exit;
         }
 
@@ -186,7 +186,7 @@ class Backup_t
         $tmp = $_FILES['sql_file']['tmp_name'];
         $content = file_get_contents($tmp);
         if ($content === false || $content === '') {
-            header('Location: ..?page=backup&error=empty_file');
+//            header('Location: ..?page=backup&error=empty_file');
             exit;
         }
 
@@ -236,6 +236,7 @@ class Backup_t
                 $handle = fopen($tmp, 'r');
                 if ($handle) {
                     while (($line = fgets($handle)) !== false) {
+                        echo $line;
                         $trim = trim($line);
                         if ($trim === '' || substr($trim, 0, 2) === '--')
                             continue;
@@ -264,6 +265,8 @@ class Backup_t
 
 if (isset($_POST['action']) && $_POST['action'] === 'export_sql') {
     Backup_t::exportSql();
+    header('Location: ..?page=backup&success=backup_created_php');
+    exit();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'apply_sql') {
     Backup_t::applySql();
