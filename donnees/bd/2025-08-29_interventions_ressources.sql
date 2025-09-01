@@ -141,3 +141,67 @@ GROUP BY
     i.aep_id;
 
 -- Fin du script
+
+
+CREATE ALGORITHM=UNDEFINED
+    DEFINER=`root`@`localhost`
+    SQL SECURITY DEFINER
+    VIEW `vue_abones_facturation` AS
+
+SELECT
+    -- Identifiants
+    i.id AS id,
+    i.id_compteur AS id_compteur,
+    cr.id_aep AS id_aep,
+    mf.id AS id_mois,
+    a.id AS id_abone,
+
+    -- Informations sur l'abonné
+    a.nom AS nom_abone,
+    a.id_reseau AS id_reseau,
+    a.numero_telephone AS numero_telephone,
+    a.numero_compte_anticipation AS numero_compte_anticipation,
+
+    -- Informations sur la facturation
+    mf.mois AS mois,
+    cr.id AS id_constante_reseau,
+    i.id_mois_facturation AS id_mois_facturation,
+    mf.date_facturation AS date_facturation,
+    mf.date_depot AS date_depot,
+    mf.date_releve AS date_releve,
+
+    -- Index et consommation
+    i.ancien_index AS ancien_index,
+    i.nouvel_index AS nouvel_index,
+    (i.nouvel_index - i.ancien_index) AS consommation,
+
+    -- Coûts et constantes réseau
+    cr.prix_entretient_compteur AS prix_entretient_compteur,
+    cr.prix_metre_cube_eau AS prix_metre_cube_eau,
+    cr.prix_tva AS prix_tva,
+
+    -- Calculs financiers
+    ((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) AS montant_conso,
+    (((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) AS montant_conso_entretien,
+    ((((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) * (1 + (cr.prix_tva / 100))) AS montant_conso_tva,
+    ((((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) * (1 + (cr.prix_tva / 100)) + f.penalite) AS montant_total,
+
+    -- Montants restants et validés
+    f.montant_verse AS montant_verse,
+    ((((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) * (1 + (cr.prix_tva / 100)) + f.penalite - f.montant_verse) AS montant_restant,
+    LEAST(
+            (((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) * (1 + (cr.prix_tva / 100)) + f.penalite,
+            f.montant_verse
+    ) AS montant_a_valider,
+    ((((i.nouvel_index - i.ancien_index) * cr.prix_metre_cube_eau) + cr.prix_entretient_compteur) * (1 + (cr.prix_tva / 100)) + f.penalite - f.montant_verse) AS impaye,
+
+    -- Pénalité
+    f.penalite AS penalite,
+    f.id AS id_facture
+
+FROM
+    abone a
+        INNER JOIN facture f ON a.id = f.id_abone
+        INNER JOIN indexes i ON f.id_indexes = i.id
+        INNER JOIN mois_facturation mf ON i.id_mois_facturation = mf.id
+        INNER JOIN constante_reseau cr ON mf.id_constante = cr.id;

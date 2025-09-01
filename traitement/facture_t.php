@@ -749,7 +749,7 @@ class Facture_t
     ) {
         switch ($type_facture) {
             case 'model_fokoue':
-                return self::creerFactureFokoue(
+                return self::creerFactureFokoue2(
                                     $nom,
                                     $numero_compteur,
                                     $numero_compte_anticipation,
@@ -983,6 +983,217 @@ class Facture_t
             <?php
 
             return ob_get_clean();
+    }
+public static function creerFactureFokoue2(
+        $nom,
+        $numero_compteur,
+        $numero_compte_anticipation,
+        $reseau,
+        $ancien_index,
+        $nouvel_index,
+        $conso_mois,
+        $mois,
+        $impaye,
+        $penalite,
+        $prix_eau,
+        $prix_entretient_compteur,
+        $totalFacture,
+        $facture_mois,
+        $tva,
+        $date_depot,
+        $date_max_paiement,
+        $id_abone = 0,
+        $id_mois = 0,
+        $id_facture = 0,
+        $date_releve = '',
+        $numero_compte_bancaire = 0,
+        $nom_banque
+    ) {
+        ob_start();
+        ?>
+
+
+            <div class="container my-0 py-0">
+            <style>
+                @media print {
+                    @page {
+                        size: A4 landscape;
+                        margin: 1cm;
+                    }
+                    body {
+                        font-size: 12pt;
+                    }
+                    .container {
+                        width: 100%;
+                        max-width: 100%;
+                    }
+                    .additional-space {
+                        min-height: 150px;
+                    }
+                }
+                body {
+                    font-family: Arial, sans-serif;
+                }
+                .logo_commune img, .logo_amgeea img {
+                    max-height: 80px;
+                    width: auto;
+                }
+                .table th, .table td {
+                    vertical-align: middle;
+                }
+                .border-heavy {
+                    border: 2px solid #6c757d;
+                }
+                .additional-space {
+                    min-height: 150px;
+                }
+            </style>
+                <div class="row align-items-center mb-3">
+                    <div class="col-2 logo_commune">
+                        <img src="presentation/assets/images/logo_commune_fokoue.png" class="img-fluid" alt="Logo Commune de Fokoué">
+                    </div>
+                    <div class="col-8 text-center">
+                        <h4 class="mb-0">Agence Municipale de la Gestion de l'Energie, de l'Eau et de l'Assainissement<br>Commune de Fokoué (AMGEEA)</h4>
+                    </div>
+                    <div class="col-2 logo_amgeea">
+                        <img src="presentation/assets/images/logo_amgeea.png" class="img-fluid" alt="Logo AMGEEA">
+                    </div>
+                </div>
+
+                <div class="row text-center mb-2">
+                    <div class="col">
+                        <span>Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></span>
+                    </div>
+                    <div class="col">
+                        <span>B.P 02 Fokoué</span>
+                    </div>
+                </div>
+
+                <div class="row text-center mb-3">
+                    <div class="col">
+                        <span>Tél: 656 16 16 82 / 699 35 25 11 / 699 82 01 49 / 677 03 58 09</span>
+                    </div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <h2>FACTURE D'EAU / WATER BILL Nº <?php echo $id_facture ?></h2>
+                </div>
+
+                <div class="text-center fst-italic mb-3">
+                    «Tous ensemble pour un accès durable à l'eau, à l'énergie et à l'assainissement dans la commune de Fokoué»
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col text-center">
+                        Date de dépôt: <span class="text-success"><?php echo $date_depot ?></span>
+                    </div>
+                    <div class="col text-center">
+                        Date limite de paiement: <span class="text-danger"><?php echo $date_max_paiement ?></span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col text-center">
+                        Période de facturation: <span class="text-uppercase"><?php echo getLetterMonth($mois) ?></span>
+                    </div>
+                    <div class="col text-center">
+                         <?php
+                         $impaye = (int)$impaye;
+                        if($impaye < 0)
+//                            echo "Avance: $impaye";
+                            echo "Avance: <span class='text-success'>$impaye</span>";
+                        elseif ($impaye == 0)
+                            echo "Impayés: <span>$impaye</span>";
+                        else
+                            echo "Impayés: <span class='text-danger'>$impaye</span>";
+
+                            ?>
+                    </div>
+                    <div class="col text-center">
+                        Pénalité: <?php echo (int) $penalite ?>
+                    </div>
+                </div>
+
+<!--                <div class="row mb-3">-->
+<!--                    <div class="col-6"></div>-->
+<!--                    <div class="col-6">-->
+<!--                        Compte anticipation: --><?php //echo $numero_compte_anticipation ?>
+<!--                    </div>-->
+<!--                </div>-->
+
+                <div class="row mb-3">
+                    <div class="col text-center">
+                        Nom du client: <span class="text-uppercase fw-bold"><?php echo $nom ?></span>
+                    </div>
+                    <div class="col text-center">
+                        Nº compteur: <?php echo $numero_compteur ?>
+                    </div>
+                    <div class="col text-center">
+                        Réseau: <?php echo $reseau ?>
+                    </div>
+                </div>
+
+                <table class="table table-striped table-bordered border-heavy mb-3">
+                    <thead>
+                        <tr>
+                            <th>Rubrique Facture</th>
+                            <th class="text-center">Ancien index</th>
+                            <th class="text-center">Nouvel index</th>
+                            <th class="text-center">Consommation</th>
+                            <th class="text-center">Tarif</th>
+                            <th class="text-center">Montant HT</th>
+                            <th class="text-center">TVA</th>
+                        </tr>
+                        <tr class="text-center">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>m<sup>3</sup></td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>Consommation facturée</th>
+                            <td class="text-center"><?php echo $ancien_index ?></td>
+                            <td class="text-center"><?php echo $nouvel_index ?></td>
+                            <td class="text-center"><?php echo $conso_mois ?></td>
+                            <td class="text-center"><?php echo $prix_eau ?></td>
+                            <td class="text-center"><?php echo $facture_mois ?></td>
+                            <td class="text-center"><?php echo $tva ?></td>
+                        </tr>
+                        <tr>
+                            <th>Entretien compteur</th>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                            <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <th colspan="4">Montant total facture</th>
+                            <td colspan="2" class="text-center fs-4 border-heavy">
+                                <?php echo self::moneyFormatter($totalFacture) ?>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="text-center fw-bold mb-3">
+                    ATTENTION: Tout paiement après la date limite est augmenté des frais de pénalité (2500 Fcfa).<br>
+                    Any payment after the date above will be increased with penalty (2500 Fcfa).
+                </div>
+
+<!--                <div class="additional-space">-->
+                    <!-- Additional space for other content -->
+<!--                </div>-->
+            </div>
+        <?php
+        return ob_get_clean();
     }
     public static function creerFactureNkongzem(
         $nom,

@@ -86,6 +86,10 @@ abstract class Manager{
 
     abstract function getconstraint();
 
+    public static function getBdd(){
+        return self::$bd;
+    }
+
     public function __construct(){
         $this->connecter();
     }

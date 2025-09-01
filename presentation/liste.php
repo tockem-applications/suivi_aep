@@ -329,6 +329,8 @@ if (isset($_GET['list'])) {
         AuthManager::logout();
     }else if ($_GET['page'] == 'backup') {
         include("presentation/backup_page.php");
+    }else if ($_GET['page'] == 'fokoue_data') {
+        include("presentation/import_fokoue_data.php");
     } else if ($_GET['page'] == 'download_index') {
         header("location: traitement/abone_t.php?action=export_index");
     } else if ($_GET['page'] == 'role_detail') {
