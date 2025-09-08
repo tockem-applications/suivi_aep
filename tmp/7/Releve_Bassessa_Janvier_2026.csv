@@ -1,6 +1,6 @@
 id;id_compteur;id_reseau;id_mois;nom;mois;ancien_index;nouvel_index;numero_compteur;date_facturation;reseau
-148;3;1;30;"@Compteur Reseau principal";2026-01;18.30;18.30;00000020;2025-09-08;"Reseau principal"
 150;13;1;30;"@Compteur Reseau principal";2026-01;13.00;13.00;587489657;2025-09-08;"Reseau principal"
+148;3;1;30;"@Compteur Reseau principal";2026-01;18.30;21.00;00000020;2025-09-08;"Reseau principal"
 149;12;5;30;"@Compteur Reseau secondaire 4";2026-01;6.50;6.50;15421613;2025-09-08;"Reseau secondaire 4"
 145;6;;30;"Abopda Ulrich";2026-01;11.20;11.20;15421613;2025-09-08;
 141;1;;30;"Donkeng Maxime";2026-01;27.00;27.00;Bass00001;2025-09-08;

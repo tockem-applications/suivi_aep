@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
+$nbAbonnes = 0;
 
 // Récupérer l'AEP actuel
 $aepId = isset($_SESSION['id_aep']) ? (int)$_SESSION['id_aep'] : 0;
@@ -21,6 +22,9 @@ if (!$aepId) {
     $filtreImpayes = isset($_GET['filtre_impayes']) ? (int)$_GET['filtre_impayes'] : 0;
     $filtreVolumeMin = isset($_GET['filtre_volume_min']) ? (float)$_GET['filtre_volume_min'] : 0;
     $searchNom = isset($_GET['search_nom']) ? trim($_GET['search_nom']) : '';
+    // Tri
+    $sortBy = isset($_GET['sort_by']) ? $_GET['sort_by'] : '';
+    $sortDir = isset($_GET['sort_dir']) ? $_GET['sort_dir'] : 'asc';
     
     // Construire la requête avec filtres
     $whereConditions = array("r.id_aep = ?");
@@ -48,6 +52,20 @@ if (!$aepId) {
     
     $whereClause = implode(" AND ", $whereConditions);
     
+    // Construire ORDER BY sécurisé
+    $allowedSorts = array(
+        'rang' => 'COALESCE(a.rang, 999999)',
+        'nom' => 'a.nom',
+        'reseau' => 'nom_reseau',
+        'restant' => 'total_restant',
+        'nb_mois' => 'nb_mois_factures'
+    );
+    $orderExprPrimary = 'COALESCE(a.rang, 999999)';
+    if ($sortBy !== '' && isset($allowedSorts[$sortBy])) {
+        $orderExprPrimary = $allowedSorts[$sortBy];
+    }
+    $orderDirSql = (strtolower($sortDir) === 'desc') ? 'DESC' : 'ASC';
+
     // Récupérer tous les abonnés pour l'AEP avec statistiques et filtres
     $abonnes = Manager::prepare_query(
         "SELECT a.*, r.nom as nom_reseau, r.abreviation,
@@ -60,10 +78,10 @@ if (!$aepId) {
          FROM abone a
          INNER JOIN reseau r ON a.id_reseau = r.id
          WHERE $whereClause 
-         ORDER BY COALESCE(a.rang, 999999), a.nom ASC",
+         ORDER BY " . $orderExprPrimary . " " . $orderDirSql . ", a.nom ASC",
         $params
     )->fetchAll();
-    
+    $nbAbonnes = count($abonnes);
     $message = '';
 }
 
@@ -104,6 +122,7 @@ if ($aepId) {
         "SELECT * FROM reseau WHERE id_aep = ? ORDER BY nom",
         array($aepId)
     )->fetchAll();
+    
 }
 ?>
 
@@ -115,7 +134,9 @@ if ($aepId) {
     <!-- Section des Abonnés -->
     <div class="card">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="bi bi-people"></i> Abonnés</h4>
+            <h4 class="mb-0"><i class="bi bi-people"></i> Abonnés
+            <span class="badge bg-secondary ms-2"><?php echo $nbAbonnes; ?></span>
+            </h4>
             <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addAbonneModal"
                 <?php echo $aepId ? '' : 'disabled'; ?>>
                 <i class="bi bi-plus-circle"></i> Nouvel Abonné
@@ -155,6 +176,26 @@ if ($aepId) {
                     <label for="search_nom" class="form-label">Rechercher par nom</label>
                     <input type="text" class="form-control" id="search_nom" name="search_nom" 
                            value="<?php echo htmlspecialchars($searchNom); ?>" placeholder="Nom de l'abonné">
+                </div>
+
+                <div class="col-md-2">
+                    <label for="sort_by" class="form-label">Trier par</label>
+                    <select class="form-control" id="sort_by" name="sort_by">
+                        <option value="">Par défaut</option>
+                        <option value="rang" <?php echo $sortBy=='rang'?'selected':''; ?>>Rang</option>
+                        <option value="nom" <?php echo $sortBy=='nom'?'selected':''; ?>>Nom</option>
+                        <option value="reseau" <?php echo $sortBy=='reseau'?'selected':''; ?>>Réseau</option>
+                        <option value="restant" <?php echo $sortBy=='restant'?'selected':''; ?>>Reste à payer</option>
+                        <option value="nb_mois" <?php echo $sortBy=='nb_mois'?'selected':''; ?>>Mois facturés</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label for="sort_dir" class="form-label">Ordre</label>
+                    <select class="form-control" id="sort_dir" name="sort_dir">
+                        <option value="asc" <?php echo strtolower($sortDir)=='asc'?'selected':''; ?>>Croissant</option>
+                        <option value="desc" <?php echo strtolower($sortDir)=='desc'?'selected':''; ?>>Décroissant</option>
+                    </select>
                 </div>
                 
                 <div class="col-md-2 d-flex align-items-end">
