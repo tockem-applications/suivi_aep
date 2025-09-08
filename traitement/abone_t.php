@@ -521,12 +521,13 @@ class Abone_t
 
     public static function getJsonDataToExport()
     {
-        if (!isset($_GET['action']))
+//        var_dump($_GET);
+        if (!isset($_GET['action'], $_GET['id_mois']))
             return;
         elseif ($_GET['action'] != 'export_index')
             return;
 //        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
-        $req = Abones::getLastmonthIndex($_SESSION['id_aep']);
+        $req = Abones::getJsonDataFromIdMois($_GET['id_mois']);
 //        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
         //var_dump($req);
         $date_export = new DateTime();

@@ -328,19 +328,31 @@ class Facture extends Manager
                     inner join compteur_reseau c_re on c_re.id_compteur = co.id
                     inner join reseau r on r.id = c_re.id_reseau
                     inner join mois_facturation m on id.id_mois_facturation =m.id 
-                where  m.id=? and r.id_aep=?
+                where  m.id=?
                 group by r.id
                 order by r.id
-            ", array($id_mois, $id_aep));
+            ", array($id_mois));
     }
 
-    /*
-    
-                select f.id, f.id_abone, a.nom, f.ancien_index, f.nouvel_index, c.prix_entretient_compteur, 
-                c.prix_metre_cube_eau, c.prix_tva, penalite, impaye, f.montant_verse, f.date_paiement 
-                from abone a, facture f, constante_reseau c 
-                where f.id_mois_facturation =$id_mois and c.id=$id_constante and a.id=f.id_abone order by a.id;
-    */
+    public static function getMonthIndexes($id_mois, $id_aep)
+    {
+//        var_dump($id_mois);
+        if (!is_int($id_mois))
+            return false;
+        return self::prepare_query("
+                select id.id, co.id as id_compteur, r.id id_reseau,  m.id id_mois, coalesce(a.nom, concat('@Compteur ',r.nom)) as nom, m.mois, ancien_index, nouvel_index, co.numero_compteur,
+             date_facturation, r.nom reseau
+                from indexes id
+                    inner join compteur co on id.id_compteur = co.id
+                    left join compteur_abone c_a on c_a.id_compteur = co.id
+                    left join compteur_reseau c_re on c_re.id_compteur = co.id
+                    left join reseau r on r.id = c_re.id_reseau
+                    left join abone a on a.id = c_a.id_abone
+                    inner join mois_facturation m on id.id_mois_facturation =m.id 
+                where  m.id=?
+                order by coalesce(a.nom, concat('@Compteur ',r.nom))
+            ", array($id_mois));
+    }
 
 
     public static function getAncienneFacture($id_aep)

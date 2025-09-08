@@ -332,7 +332,7 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'fokoue_data') {
         include("presentation/import_fokoue_data.php");
     } else if ($_GET['page'] == 'download_index') {
-        header("location: traitement/abone_t.php?action=export_index");
+        header("location: traitement/abone_t.php?action=export_index&id_mois=".(isset($_GET['id_mois']) ? $_GET['id_mois'] : 0));
     } else if ($_GET['page'] == 'role_detail') {
         require_once 'presentation/role_detail_component.php';
     } else if ($_GET['page'] == 'clefs') {
@@ -348,7 +348,7 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'abonne') {
         require_once 'presentation/abonne_page.php';
     } else if ($_GET['page'] == 'reseaux') {
-        
+
         require_once 'presentation/reseaux_page.php';
     } else if ($_GET['page'] == 'reseau_detail') {
         require_once 'presentation/reseau_detail_page.php';

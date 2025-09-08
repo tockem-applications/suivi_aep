@@ -155,7 +155,7 @@ for ($i = 0; $i < count($labels); $i++) {
                     <input type="hidden" name="reseau_id" value="<?php echo $reseauId; ?>">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Nom *</n label>
+                            <label class="form-label">Nom * </label>
                                 <input type="text" class="form-control" name="nom"
                                     value="<?php echo htmlspecialchars($reseau['nom']); ?>" required>
                         </div>
@@ -239,10 +239,10 @@ for ($i = 0; $i < count($labels); $i++) {
                                             <td><?php echo (int) $c['id']; ?></td>
                                             <td><strong><?php echo htmlspecialchars($c['numero_compteur']); ?></strong></td>
                                             <td><?php echo htmlspecialchars($c['derniers_index']); ?></td>
-<!--                                            <td>-->
-<!--                                                --><?php //echo isset($c['longitude']) ? htmlspecialchars($c['longitude']) : ''; ?><!--,-->
-<!--                                                --><?php //echo isset($c['latitude']) ? htmlspecialchars($c['latitude']) : ''; ?>
-<!--                                            </td>-->
+                                            <!--                                            <td>-->
+                                            <!--                                                --><?php //echo isset($c['longitude']) ? htmlspecialchars($c['longitude']) : ''; ?><!--,-->
+                                            <!--                                                --><?php //echo isset($c['latitude']) ? htmlspecialchars($c['latitude']) : ''; ?>
+                                            <!--                                            </td>-->
                                             <td><span
                                                     class="badge bg-info"><?php echo number_format(isset($c['conso_totale']) ? $c['conso_totale'] : 0, 2, ',', ' '); ?>
                                                     m³</span></td>

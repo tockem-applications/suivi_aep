@@ -153,9 +153,27 @@ class Abones extends Manager
             , array($id_aep));
     }
 
-    public static function getLastmonthIndex($id_aep)
+    public static function getLastmonthIndex($id_mois= 0)
+
     {
-        //recuperation des compteurs d'abonés
+
+            $query = "select a.id, co.id as id_compteur, i.id as id_index,  coalesce(a.nom, concat('compteur ', r.nom )) as libele, numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone, 
+                           ancien_index, 0.0 as nouvel_index,
+                            r.nom as reseau, 0.0 as latitude, 0.0 as longitude, Date_format(now(), '%d/%m/%y') as date_releve 
+                            
+                    from indexes i 
+                        #inner join mois_facturation mf on i.id_mois_facturation = mf.id
+                        inner join compteur co on i.id_compteur = co.id
+                        left join compteur_abone c_a on c_a.id_compteur = co.id
+                        left join abone a on a.id = c_a.id_abone
+                        left join compteur_reseau c_r on c_r.id_compteur = co.id
+                        inner join reseau r on r.id = c_r.id_reseau or a.id_reseau = r.id
+                    where id_mois_facturation=?
+                    order by coalesce(a.nom, concat('compteur ', r.nom ));
+                            ";
+        $request = self::prepare_query($query, array($id_mois));;
+//        return $request;
+/*
         $res = self::prepare_query("
                             select a.id, co.id as id_compteur,  a.nom as libele, numero_compteur as numero, numero_telephone as numero_abone, 
                                    derniers_index as ancien_index, 0.0 as nouvel_index,
@@ -185,14 +203,38 @@ class Abones extends Manager
                                 inner join compteur co on co.id = c_ab.id_compteur
                                  inner join reseau r on a.id_reseau = r.id 
                             where r.id_aep=? and a.etat='actif';", array($id_aep));
-
+*/
 
         $tab = array();
-        $tab = self::addResponseToTabAsJson($res, $tab);
-        $tab = self::addResponseToTabAsJson($res2, $tab);
-//        $tab = self::addResponseToTabAsJson($res3, $tab);
+//        $tab = self::addResponseToTabAsJson($res, $tab);
+        //        $tab = self::addResponseToTabAsJson($res3, $tab);
 //        exit();
-        return $tab;
+        return self::addResponseToTabAsJson($request, $tab);
+
+    }
+
+    public static function getJsonDataFromIdMois($id_mois= 0)
+
+    {
+
+            $query = "select a.id, co.id as id_compteur, i.id as id_index,  coalesce(a.nom, concat('compteur ', r.nom )) as libele,
+                            numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone, 
+                           ancien_index, 0.0 as nouvel_index, r.nom as reseau, 0.0 as latitude, 0.0 as longitude, 
+                           Date_format(now(), '%d/%m/%y') as date_releve 
+                            
+                    from indexes i 
+                        inner join compteur co on i.id_compteur = co.id
+                        left join compteur_abone c_a on c_a.id_compteur = co.id
+                        left join abone a on a.id = c_a.id_abone
+                        left join compteur_reseau c_r on c_r.id_compteur = co.id
+                        inner join reseau r on r.id = c_r.id_reseau or a.id_reseau = r.id
+                    where id_mois_facturation=30
+                    order by coalesce(a.nom, concat('compteur ', r.nom ));
+                            ";
+        $request = self::prepare_query($query, array($id_mois));;
+
+        $tab = array();
+        return self::addResponseToTabAsJson($request, $tab);
 
     }
 
@@ -205,6 +247,8 @@ class Abones extends Manager
                 'id' => (int)$row['id']
             ,
                 'id_compteur' => $row['id_compteur']
+            ,
+                'id_index' => $row['id_index']
             ,
                 'libele' => $row['libele']
             ,

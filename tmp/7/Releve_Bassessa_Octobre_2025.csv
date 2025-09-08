@@ -1,8 +1,9 @@
 id;id_compteur;id_reseau;id_mois;nom;mois;ancien_index;nouvel_index;numero_compteur;date_facturation;reseau
-112;1;1;25;"Donkeng Maxime";2025-10;27.00;27.00;Bass00001;0000-00-00;"Reseau principal"
-113;2;1;25;"Tedonkeu Mireille";2025-10;20.00;20.00;Bass00002;0000-00-00;"Reseau principal"
-114;4;1;25;"Takam Ulrich";2025-10;25.00;25.00;000154;0000-00-00;"Reseau principal"
-116;6;2;25;"Mbopda Ulrich";2025-10;11.20;11.20;15421613;0000-00-00;"Reseau secondaire 1"
-117;7;3;25;"Matefack Cedrick";2025-10;6.30;6.30;654123;0000-00-00;"Reseau secondaire 2"
-115;8;1;25;"Manka Michel";2025-10;2.20;2.20;123520p;0000-00-00;"Reseau principal"
-118;9;5;25;Onana;2025-10;3.50;3.50;Rs123456;0000-00-00;"Reseau secondaire 4"
+119;3;1;25;"@Compteur Reseau principal";2025-10;40.00;40.00;00000020;0000-00-00;"Reseau principal"
+116;6;;25;"Abopda Ulrich";2025-10;11.20;11.20;15421613;0000-00-00;
+112;1;;25;"Donkeng Maxime";2025-10;27.00;27.00;Bass00001;0000-00-00;
+115;8;;25;"Manka Michel";2025-10;2.20;2.20;123520p;0000-00-00;
+117;7;;25;"Matefack Cedrick";2025-10;6.30;6.30;654123;0000-00-00;
+118;9;;25;Onana;2025-10;3.50;3.50;Rs123456;0000-00-00;
+114;4;;25;"Takam Ulrich";2025-10;25.00;25.00;000154;0000-00-00;
+113;2;;25;"Tedonkeu Mireille";2025-10;20.00;20.00;Bass00002;0000-00-00;

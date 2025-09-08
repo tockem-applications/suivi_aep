@@ -38,21 +38,22 @@ class Facture_t
             $mois_lettre = getLetterMonth($mois[0]['mois']);
         }
         //recuperation des index des abones
-        $req = Facture::getAboneMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
-        $req = $req->fetchAll(PDO::FETCH_ASSOC);
+//        $req = Facture::getAboneMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
+//        $req = $req->fetchAll(PDO::FETCH_ASSOC);
 
         // recperation des index des reseaux
-        $req2 = Facture::getReseauMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
+        $req2 = Facture::getMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
         $req2 = $req2->fetchAll(PDO::FETCH_ASSOC);
 //        var_dump($req2);
-        create_csv_exportation_button($req,
+        create_csv_exportation_button($req2,
         'Releve-'.$_SESSION["libele_aep"].'-'.$mois_lettre.'.csv',
         'Vous allez exporter les donnees de releve de '.$mois_lettre.'au format csv');
 
-        $titre = "$titre $mois_lettre";
+        $titre = "<div class='d-flex justify-content-around'>$titre <div> $mois_lettre</div></div>";
         $mes_facture = "";
         ob_start();
         ?>
+
         <style>
             /* Masquer les flèches d'incrémentation dans les navigateurs modernes */
             input[type='number']::-webkit-inner-spin-button,
@@ -73,7 +74,7 @@ class Facture_t
         </tr>
         <?php
             self::creerLigneTableauReleveManuelle($req2);
-            self::creerLigneTableauReleveManuelle($req);
+//            self::creerLigneTableauReleveManuelle($req);
         echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
         $codeHtml = ob_get_clean();
         self::createTable($codeHtml, $titre, ""/*"<a href='traitement/moisfacturation_t.php?action=export_index' target='_blank'>Telecharger les index</a><br>"*/);

@@ -111,9 +111,9 @@ if (isset($_GET['success'])) {
                                 <td><?php echo date('d/m/Y', strtotime($tarif['date_creation'])); ?></td>
                                 <td>
                                     <?php if ($tarif['est_actif']): ?>
-                                        <span class="badge bg-success">Actif</span>
+                                        <span class="badge bg-success">Actuel</span>
                                     <?php else: ?>
-                                        <span class="badge bg-secondary">Inactif</span>
+                                        <span class="badge bg-secondary">ancien</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -218,9 +218,9 @@ if (isset($_GET['success'])) {
 
                                          <div class="form-check mb-3">
                          <input class="form-check-input" type="checkbox" id="activer_immediatement"
-                                name="activer_immediatement" checked>
+                                    name="activer_immediatement" checked>
                          <label class="form-check-label" for="activer_immediatement">
-                             Activer ce tarif immédiatement (désactivera l'ancien)
+                             Appliquer ce tarif immédiatement (désactivera l'ancien)
                          </label>
                      </div>
                      
