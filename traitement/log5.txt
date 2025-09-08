@@ -1,4 +1,19 @@
 recouvrement: 1
+id_indexes: 146
+nouvel_index: 7
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 146
+nouvel_index: 25
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 150
+nouvel_index: 15.6
+id_compteur: 13\nrecouvrement: 1
+id_indexes: 144
+nouvel_index: 2.20
+id_compteur: 8\nrecouvrement: 1
+id_indexes: 145
+nouvel_index: 11.20
+id_compteur: 6\nrecouvrement: 1
 id_indexes: 148
 nouvel_index: 21
 id_compteur: 3\nrecouvrement: 1

@@ -130,13 +130,61 @@ class MoisFacturation extends Manager
                     select mf.id from mois_facturation mf 
                         inner join constante_reseau as cr on cr.id=mf.id_constante 
                     where cr.id_aep=? and mf.id<=>?)", array($mois_input, $id_aep, $id));
-        $res=$res->fetchAll();
+        $res = $res->fetchAll();
         if (empty($res))
-        return self::prepare_query("
+            return self::prepare_query("
                 update mois_facturation 
                 set mois=?, description=? 
                 where id=?", array($mois_input, $description, $id));
         return false;
+    }
+
+    public static function updateIndexFronFile($data, $id_mois)
+    {
+//        var_dump($data);
+        try {
+        foreach ($data as $value) {
+            $aep = $value['data'];
+
+            foreach ($aep as $ligne) {
+                $id_index = $ligne['id_index'];
+                $id_compteur = $ligne['id_compteur'];
+                $ancien_index = $ligne['ancien_index'];
+                $nouvel_index = $ligne['nouvel_index'];
+                self::updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index);
+                //                var_dump($ligne);
+            }
+        }
+        } catch (Exception $e) {
+            return false;
+        }
+//        exit();
+        return true;
+    }
+
+    public static function updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index)
+    {
+        $index = max($nouvel_index, $ancien_index);
+        var_dump(array($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index));
+        try {
+            $req = self::prepare_query("
+                select i.* from indexes as i
+                    inner join compteur as co on i.id_compteur=co.id
+                where i.id =? and i.id_mois_facturation=? and co.id=? and i.nouvel_index = ?
+            ", array($id_index, $id_mois, $id_compteur, $index));
+            var_dump($req->fetchAll(PDO::FETCH_ASSOC));
+            $toto = self::prepare_query("
+                update indexes as i
+                    inner join compteur as co on i.id_compteur=co.id
+                set i.nouvel_index = ?, co.derniers_index = ?
+                where i.id=? and co.id = ? and i.id_mois_facturation = ? and i.nouvel_index <> ? and i.ancien_index <> ?
+            ", array($index, $index, $id_index, $id_compteur, $id_mois, $index, $index));
+//            var_dump();
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
+
     }
 
 

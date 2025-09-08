@@ -75,6 +75,43 @@ function generateOptionGraphique($selectedValue)
 class MoisFacturation_t
 {
 
+    public static function update_indexes_mois(){
+        if (!isset($_GET['update_indexes_mois'], $_GET['id_mois']))
+            return;
+        $id_mois = (int)$_GET['id_mois'];
+        if (!isset($_FILES['fichier_index'])) {
+            header("location: ../index.php?page=releves&operation=error&message=Veillez selectionner le fichier des index");
+        }
+        $file_path = MoisFacturation::uploadImage('fichier_index');
+        if ($file_path == '') {
+            header("location: ../index.php?page=releves&operation=error&message=Veuillez importer un fichier de releve valide");
+            exit();
+        }
+        $file_content = file_get_contents($file_path);
+        $data = json_decode($file_content, true);
+        //                    var_dump($data['releve']['data']);
+//        $id_constante = ConstanteReseau::getIdConstanteActive($_SESSION['id_aep']);
+//        var_dump($data['releve'][0]['data']);
+        if (!isset($data['info_reseau']['id_reseau'], $data['info_reseau']['nom_reseau'])) {
+            header("location: ../index.php?page=releves&operation=error&message=La structure du fichier que vous avez importé ne correspond pas");
+            exit();
+        }
+        $id_reseau_input = $data['info_reseau']['id_reseau'];
+        $nom_reseau_input = $data['info_reseau']['nom_reseau'];
+        $aep_value = Aep::getOne($id_reseau_input, 'aep');
+        $aep_value = $aep_value->fetchAll();
+        if (count($aep_value) != 1 || $id_reseau_input != $_SESSION['id_aep']) {
+            header("location: ../index.php?page=releves&operation=error&message=Les données que vous souhaitez enregistrer ne sont pas celles de ce reseau");
+            exit();
+        }
+
+        $res = MoisFacturation::updateIndexFronFile($data['releve'], $id_mois);
+        if (!$res)
+            header("location: ../index.php?page=releves&operation=error&message=La structure du fichier que vous avez importé ne correspond pas");
+        else
+            header("location: ../index.php?page=releves&operation=succes&message=les donnee ont ete mise a jour");
+
+    }
     public static function ajout()
     {
         if (isset($_GET['ajout'])) {
@@ -917,6 +954,7 @@ class MoisFacturation_t
 }
 //var_dump($_POST);
 MoisFacturation_t::ajout();
+MoisFacturation_t::update_indexes_mois();
 MoisFacturation_t::update();
 //exit();
 MoisFacturation_t::delete();

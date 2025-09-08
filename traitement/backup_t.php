@@ -180,7 +180,7 @@ class Backup_t
             }
 
             // 1) Sauvegarde préalable
-            self::exportSql(); // redirige, on veut éviter la redirection ici => on factoriserait normalement. 
+//            self::exportSql(); // redirige, on veut éviter la redirection ici => on factoriserait normalement.
         } catch (Exception $e) {
             // Si exportSql redirige, on ne passe pas ici. Pour éviter la redirection, on duplique l'export minimal:
         }

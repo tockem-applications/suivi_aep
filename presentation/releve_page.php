@@ -74,19 +74,19 @@
             $id_mois = isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0;
             $id_mois = $id;
             ob_start()
-            ?>
+                ?>
 
             <div class="d-flex d-inline">
                 <div class="p-0 m-0" data-bs-toggle="tooltip" data-bs-placement="top"
-                     data-bs-title="Importer les index de votre machine dans l'application">
+                    data-bs-title="Importer les index de votre machine dans l'application">
                     <button type="button" class="btn btn-primary mb-3 shadow-sm me-1" data-bs-toggle="modal"
-                            data-bs-target="#importIndexModal">
+                        data-bs-target="#importIndexModal">
                         <i class="bi bi-file-earmark-arrow-up"></i>
                     </button>
                 </div>
-                <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id_mois?>" type="button"
-                                        class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip" data-bs-placement="top"
-                                        data-bs-title="exporter les index compteurs du derniers mois">
+                <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id_mois ?>"
+                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
+                        data-bs-placement="top" data-bs-title="exporter les index compteurs du derniers mois">
                         <i class="bi bi-file-earmark-arrow-down"></i>
                     </a>
                 </div>
@@ -186,69 +186,56 @@
                                 aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <form action="traitement/mois_facturation_t.php?ajout=true" method="post"
+                            <form action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id;?>" method="post"
                                 enctype="multipart/form-data">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label for="mois" class="form-label fw-bold">Mois <span
-                                                class="text-danger">*</span></label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light"><i
-                                                    class="fas fa-calendar-month"></i></span>
-                                            <input type="month" class="form-control shadow-sm" id="mois" name="mois"
-                                                value="<?php echo date('Y-m'); ?>" required>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
+                                    <div class="col-md-12">
                                         <label for="fichier_index" class="form-label fw-bold">Fichier des index <span
                                                 class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
                                                     class="fas fa-file-upload"></i></span>
                                             <input type="file" class="form-control shadow-sm" id="fichier_index"
-                                                name="fichier_index" accept=".json" required>
+                                                name="fichier_index" accept=".json,.csv" required>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mb-3 mt-3">
-                                    <label for="description" class="form-label fw-bold">Description du réseau</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light"><i
-                                                class="fas fa-info-circle"></i></span>
-                                        <textarea class="form-control shadow-sm" id="description" name="description"
-                                            rows="3" placeholder="Décrivez le réseau..."></textarea>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="id_constante"
-                                    value="<?php echo isset($constante_reseau_id) ? $constante_reseau_id : ''; ?>">
-                                <div class="mb-3">
-                                    <a class="btn btn-outline-info btn-sm" data-bs-toggle="collapse"
-                                        href="#tarifCollapse" role="button" aria-expanded="false"
-                                        aria-controls="tarifCollapse">
-                                        Voir les tarifs
-                                    </a>
-                                    <div class="collapse mt-2" id="tarifCollapse">
-                                        <div class="card card-body bg-light">
-                                            <ul class="list-group list-group-flush">
-                                                <li class="list-group-item d-flex justify-content-between"><span>Prix de
-                                                        l'eau
-                                                        :</span><span><?php echo isset($prix_metre_cube_eau) ? $prix_metre_cube_eau . ' FCFA/m³' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>Entretien compteur
-                                                        :</span><span><?php echo isset($prix_entretient_compteur) ? $prix_entretient_compteur . ' FCFA/mois' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>TVA
-                                                        :</span><span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item"><a href="?form=constante_reseau"
-                                                        class="text-decoration-none">Modifier les
-                                                        tarifs</a></li>
-                                            </ul>
+
+                                <!-- Aperçu du fichier importé -->
+                                <div id="preview_section" class="mt-3 d-none">
+                                    <div class="d-flex flex-wrap align-items-end gap-2 mb-2">
+                                        <div>
+                                            <label class="form-label mb-1">Filtrer</label>
+                                            <select id="preview_filter" class="form-select form-select-sm">
+                                                <option value="all">Tous</option>
+                                                <option value="ok">Coherent (nouvel ≥ ancien)</option>
+                                                <option value="identique">Identique (nouvel = ancien)</option>
+                                                <option value="error">Incohérent (nouvel < ancien)</option>
+                                            </select>
                                         </div>
+                                        <div>
+                                            <label class="form-label mb-1">Recherche</label>
+                                            <input id="preview_search" type="text" class="form-control form-control-sm"
+                                                placeholder="Libellé ou N° compteur">
+                                        </div>
+                                        <div class="ms-auto small text-muted" id="preview_count"></div>
+                                    </div>
+                                    <div class="table-responsive border rounded">
+                                        <table class="table table-sm table-hover mb-0" id="preview_table">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Libellé</th>
+                                                    <th>Numéro compteur</th>
+                                                    <th class="text-end">Ancien index</th>
+                                                    <th class="text-end">Nouvel index</th>
+                                                    <th>Statut</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody></tbody>
+                                        </table>
                                     </div>
                                 </div>
+                                <!-- Champs supprimés: mois/description/tarifs → la prévisualisation suffit avant import -->
                                 <button type="submit" class="btn btn-primary w-100 shadow-sm">Importer</button>
                             </form>
                         </div>
@@ -361,6 +348,140 @@
                     }
                     moisInput.addEventListener('change', updateDepotDate, false);
                     moisInput.addEventListener('input', updateDepotDate, false);
+                })();
+            </script>
+            <script>
+                (function () {
+                    var fileInput = document.getElementById('fichier_index');
+                    var previewSection = document.getElementById('preview_section');
+                    var previewTableBody = document.querySelector('#preview_table tbody');
+                    var previewFilter = document.getElementById('preview_filter');
+                    var previewSearch = document.getElementById('preview_search');
+                    var previewCount = document.getElementById('preview_count');
+                    var rawRows = [];
+
+                    function buildRowClass(row) {
+                        var ancien = parseFloat(row.ancien_index);
+                        var nouvel = parseFloat(row.nouvel_index);
+                        if (isNaN(ancien) || isNaN(nouvel)) return 'table-warning';
+                        if (nouvel < ancien) return 'table-danger';
+                        if (nouvel === ancien) return 'table-secondary';
+                        return 'table-success';
+                    }
+
+                    function matchFilter(row) {
+                        var cls = buildRowClass(row);
+                        var f = previewFilter.value;
+                        if (f === 'ok') return cls === 'table-success';
+                        if (f === 'identique') return cls === 'table-secondary';
+                        if (f === 'error') return cls === 'table-danger';
+                        return true;
+                    }
+
+                    function matchSearch(row) {
+                        var q = (previewSearch.value || '').toLowerCase();
+                        if (!q) return true;
+                        var lib = (row.libelle || '').toLowerCase();
+                        var num = (row.numero_compteur || '').toLowerCase();
+                        return lib.indexOf(q) !== -1 || num.indexOf(q) !== -1;
+                    }
+
+                    function render() {
+                        previewTableBody.innerHTML = '';
+                        var shown = 0;
+                        for (var i = 0; i < rawRows.length; i++) {
+                            var r = rawRows[i];
+                            if (!matchFilter(r) || !matchSearch(r)) continue;
+                            var cls = buildRowClass(r);
+                            var tr = document.createElement('tr');
+                            tr.className = cls;
+                            tr.innerHTML = '' +
+                                '<td>' + (r.libelle || '') + '</td>' +
+                                '<td>' + (r.numero_compteur || '') + '</td>' +
+                                '<td class="text-end">' + (r.ancien_index || 0) + '</td>' +
+                                '<td class="text-end">' + (r.nouvel_index || 0) + '</td>' +
+                                '<td>' + (cls === 'table-success' ? 'Coherent' : (cls === 'table-secondary' ? 'Identique' : (cls === 'table-danger' ? 'Incohérent' : 'Vérifier'))) + '</td>';
+                            previewTableBody.appendChild(tr);
+                            shown++;
+                        }
+                        previewCount.textContent = shown + ' / ' + rawRows.length + ' lignes';
+                    }
+
+                    function parseIncomingJson(data) {
+                        if (data && data.releve && data.releve[0] && data.releve[0].data) {
+                            // Map fields to expected keys
+                            var arr = data.releve[0].data;
+                            var out = [];
+                            for (var i = 0; i < arr.length; i++) {
+                                var row = arr[i] || {};
+                                out.push({
+                                    libelle: row.libele || row.libelle || '',
+                                    numero_compteur: row.numero || row.numero_compteur || '',
+                                    ancien_index: row.ancien_index,
+                                    nouvel_index: row.nouvel_index
+                                });
+                            }
+                            return out;
+                        }
+                        if (Object.prototype.toString.call(data) === '[object Array]') return data;
+                        return [];
+                    }
+
+                    function parseCsv(text) {
+                        var lines = text.split(/\r?\n/);
+                        var rows = [];
+                        if (!lines.length) return rows;
+                        // detect header
+                        var header = lines[0].split(',');
+                        var hasHeader = header.length >= 4 &&
+                            /lib/i.test(header[0]) && /compteur|numero/i.test(header[1]);
+                        for (var i = hasHeader ? 1 : 0; i < lines.length; i++) {
+                            var line = lines[i].trim();
+                            if (!line) continue;
+                            var cols = line.split(',');
+                            rows.push({
+                                libelle: (cols[0] || '').trim(),
+                                numero_compteur: (cols[1] || '').trim(),
+                                ancien_index: parseFloat(cols[2] || '0'),
+                                nouvel_index: parseFloat(cols[3] || '0')
+                            });
+                        }
+                        return rows;
+                    }
+
+                    function handleFile(file) {
+                        var reader = new FileReader();
+                        reader.onload = function (e) {
+                            try {
+                                var ext = (file.name || '').toLowerCase();
+                                if (ext.indexOf('.csv') !== -1) {
+                                    rawRows = parseCsv(e.target.result);
+                                } else {
+                                    var json = JSON.parse(e.target.result);
+                                    rawRows = parseIncomingJson(json);
+                                }
+                                previewSection.classList.remove('d-none');
+                                render();
+                            } catch (err) {
+                                previewSection.classList.add('d-none');
+                                rawRows = [];
+                                previewTableBody.innerHTML = '';
+                                previewCount.textContent = '';
+                                alert('Fichier invalide: ' + err);
+                            }
+                        };
+                        reader.readAsText(file);
+                    }
+
+                    if (fileInput) {
+                        fileInput.addEventListener('change', function () {
+                            if (fileInput.files && fileInput.files[0]) {
+                                handleFile(fileInput.files[0]);
+                            }
+                        });
+                    }
+                    if (previewFilter) previewFilter.addEventListener('change', render);
+                    if (previewSearch) previewSearch.addEventListener('input', render);
                 })();
             </script>
         </div>
