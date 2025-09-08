@@ -1,4 +1,7 @@
 recouvrement: 1
+id_indexes: 5
+nouvel_index: 18.3
+id_compteur: 3\nrecouvrement: 1
 id_indexes: 630
 nouvel_index: 25
 id_compteur: 298\nrecouvrement: 1

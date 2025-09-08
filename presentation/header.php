@@ -34,7 +34,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             Structure
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
-                            <li><a class="dropdown-item" href="?page=reseau">Réseaux</a></li>
+                            <li><a class="dropdown-item" href="?page=reseaux">Réseaux</a></li>
                             <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>
                             <li>
                                 <hr class="dropdown-divider">
@@ -66,6 +66,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li><a class="dropdown-item" href="index.php?page=releves">Relèves</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation">Mois Facturés</a></li>
                             <li><a class="dropdown-item" href="index.php?form=constante_reseau">Tarifs AEP</a></li>
+                            <li><a class="dropdown-item" href="index.php?page=reseau">Statistiques</a></li>
                             <?php if (isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) && $_SESSION['id'] == '1'): ?>
                                 <li><a class="dropdown-item" href="index.php?list=cle">Clé</a></li>
                             <?php endif; ?>

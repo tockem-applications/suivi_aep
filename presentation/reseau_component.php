@@ -108,26 +108,26 @@ function make_formulaire_reseau_colapse($reseau = null, $id_collapse = 'create_r
 {
     ?>
     <p class="d-inline-flex gap-1">
-        <a class="" data-bs-toggle="collapse" href="#<?php echo $id_collapse ?>" role="button" aria-expanded="false"
-            aria-controls="collapseExample">
-            ajouter un reseau
-        </a>
+<!--        <a class="" data-bs-toggle="collapse" href="#--><?php //echo $id_collapse ?><!--" role="button" aria-expanded="false"-->
+<!--            aria-controls="collapseExample">-->
+<!--            ajouter un reseau-->
+<!--        </a>-->
         <!--        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">-->
         <!--            Button with data-bs-target-->
         <!--        </button>-->
     </p>
-    <div class="collapse" id="<?php echo $id_collapse ?>">
-        <div class="text-start">
-            <form action="traitement/reseau_t.php?ajout=true" method="post">
-                <?php make_formulaire_reseau($reseau) ?>
-                <div class='d-flex justify-content-end p-2 btn-group'>
-                    <button class='btn btn-danger col-6 ' type='reset'>Vider</button>
-                    <button class='btn btn-success col-6' type='submit'>Enregistrer</button>
-                </div>
-            </form>
-        </div>
-
-    </div>
+<!--    <div class="collapse" id="--><?php //echo $id_collapse ?><!--">-->
+<!--        <div class="text-start">-->
+<!--            <form action="traitement/reseau_t.php?ajout=true" method="post">-->
+<!--                --><?php //make_formulaire_reseau($reseau) ?>
+<!--                <div class='d-flex justify-content-end p-2 btn-group'>-->
+<!--                    <button class='btn btn-danger col-6 ' type='reset'>Vider</button>-->
+<!--                    <button class='btn btn-success col-6' type='submit'>Enregistrer</button>-->
+<!--                </div>-->
+<!--            </form>-->
+<!--        </div>-->
+<!---->
+<!--    </div>-->
     <?php
 
 

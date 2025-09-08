@@ -347,6 +347,11 @@ if (isset($_GET['list'])) {
         require_once 'presentation/recouvrement_page.php';
     } else if ($_GET['page'] == 'abonne') {
         require_once 'presentation/abonne_page.php';
+    } else if ($_GET['page'] == 'reseaux') {
+        
+        require_once 'presentation/reseaux_page.php';
+    } else if ($_GET['page'] == 'reseau_detail') {
+        require_once 'presentation/reseau_detail_page.php';
     } else if ($_GET['page'] == 'versement') {
         require_once 'presentation/versments_page.php';
     } else if ($_GET['page'] == 'ressources') {
