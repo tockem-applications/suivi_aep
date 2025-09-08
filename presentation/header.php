@@ -39,9 +39,10 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
+                            <li><a class="dropdown-item" href="?page=abonne">Abonnés</a></li>
+                            <!-- <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <li><a class="dropdown-item" href="?list=compteur_reseau">Liste des compteurs réseau</a></li>
-                            <li><a class="dropdown-item" href="?list=distribution_simple">Liste des abonnés</a></li>
+                            <li><a class="dropdown-item" href="?list=distribution_simple">Liste des abonnés</a></li> -->
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
@@ -86,6 +87,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             </li>
                             <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
                             <li><a class="dropdown-item" href="?page=tarif_aep">Tarifs</a></li>
+                            <li><a class="dropdown-item" href="?page=recouvrement">Mois de Recouvrement</a></li>
+                            
                             <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
                             <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
                         </ul>

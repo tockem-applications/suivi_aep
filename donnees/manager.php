@@ -32,6 +32,99 @@ function startSessionWithTimeout() {
 }
 startSessionWithTimeout();
 
+function viderRepertoire($repertoire) {
+    // Vérifier si le répertoire existe
+    if (!is_dir($repertoire)) {
+        return;
+    }
+
+    // Scanne les fichiers et sous-répertoires dans le répertoire
+    $fichiers = scandir($repertoire);
+
+    foreach ($fichiers as $fichier) {
+        // Ignorer les entrées spéciales '.' et '..'
+        if ($fichier !== '.' && $fichier !== '..') {
+            $cheminComplet = $repertoire . '/' . $fichier;
+
+            // Supprimer les fichiers ou le répertoire récursivement
+            if (is_dir($cheminComplet)) {
+                // Appel récursif pour vider le sous-répertoire
+                viderRepertoire($cheminComplet);
+                // Supprimer le sous-répertoire
+                rmdir($cheminComplet);
+            } else {
+                // Supprimer le fichier
+                unlink($cheminComplet);
+            }
+        }
+    }
+}
+
+function obtenirCheminFichier($repertoire) {
+    $fichiers = glob($repertoire . '/*'); // Récupérer tous les fichiers dans le répertoire
+
+    // Vérifier s'il y a des fichiers
+    if (!empty($fichiers)) {
+        return $fichiers[0]; // Retourne le chemin du premier fichier trouvé
+    }
+
+    return null; // Aucun fichier trouvé
+}
+
+
+
+
+function enregistrerCSV($tableauAssociatif, $nomFichier, $id_user) {
+    $repertoire = 'tmp/'.$id_user;
+//    viderRepertoire($repertoire);
+    // Créer le répertoire s'il n'existe pas
+    if (!is_dir($repertoire)) {
+        mkdir($repertoire, 0777, true); // Crée le répertoire avec les permissions appropriées
+    }
+
+    // Chemin du fichier
+    $chemin = $repertoire . '/' . $nomFichier;
+//    echo '--------------------------';
+    // Ouverture du fichier en écriture
+    $fichier = fopen($chemin, 'w');
+//    var_dump($chemin);
+
+    // Écriture de l'en-tête (clés du tableau)
+    $res = fputcsv($fichier, array_keys($tableauAssociatif[0]), ';');
+//    var_dump($res);
+
+    // Écriture des lignes (valeurs)
+    foreach ($tableauAssociatif as $ligne) {
+        fputcsv($fichier, $ligne, ';');
+//        var_dump(1);
+    }
+//    var_dump(stream_get_meta_data($fichier));
+//    sleep(2.5);
+    fclose($fichier);
+
+    // Retourner le chemin du fichier
+    return $chemin;
+}
+
+function create_csv_exportation_button($data, $filename, $tooltip_message)
+{
+    if (count($data)== 0)
+        return;
+//    var_dump($data);
+    $filename = str_replace(' ', '_', $filename);
+    $filename = str_replace('-', '_', $filename);
+    enregistrerCSV($data, $filename, $_SESSION['user_id']);
+
+    ?>
+
+        <a href="traitement/download_csv.php?file_name=<?php echo $filename;?>" target="_blank" class="float-sm-end btn btn-dark" data-bs-placement="top" data-bs-toggle="tooltip"
+                data-bs-title="<?php echo $tooltip_message;?>" >
+            <i class="bi bi-arrow-down-circle-fill"></i> Exporter</a>
+    <?php
+}
+
+
+
 //session_start();
 //session_
 @include_once("../donnees/connexion.php");

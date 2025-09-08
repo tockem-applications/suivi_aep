@@ -1,4 +1,31 @@
 recouvrement: 1
+id_indexes: 630
+nouvel_index: 25
+id_compteur: 298\nrecouvrement: 1
+id_indexes: 815
+nouvel_index: 4.6
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 814
+nouvel_index: 11.3
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 816
+nouvel_index: 6.2
+id_compteur: 471\nrecouvrement: 1
+id_indexes: 812
+nouvel_index: 1.5
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 813
+nouvel_index: 3
+id_compteur: 471\nrecouvrement: 1
+id_indexes: 60
+nouvel_index: 5
+id_compteur: 9\nrecouvrement: 1
+id_indexes: 59
+nouvel_index: 6.30
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 58
+nouvel_index: 15
+id_compteur: 6\nrecouvrement: 1
 id_indexes: 111
 nouvel_index: 3
 id_compteur: 11\nrecouvrement: 1

@@ -327,15 +327,7 @@ include_once("presentation/header.php");
         <?php
         ob_start();
 
-        function create_csv_exportation_button($data, $filename, $tooltip_message)
-        {
-            ?>
-            <button class="float-sm-end btn btn-dark" data-bs-placement="top" data-bs-toggle="tooltip"
-                    data-bs-title="<?php echo $tooltip_message;?>"
-                    onclick='downloadCSV2(<?php echo $data;?>, "<?php echo $filename?>")'>
-                <i class="bi bi-arrow-down-circle-fill"></i> Exporter</button>
-            <?php
-        }
+
 
         include_once("donnees/page.php");
         include_once("traitement/role_t.php");

@@ -91,7 +91,7 @@ function genererGraphiques($dataArray)
     //    var_dump($nombreFacturesJSON);
     echo "
         <div class='card ' >
-            <h2 class='h2 d-flex justify-content-center'>Tableau de bord</h2>
+            <h2 class='h2 d-flex justify-content55.json-center'>Tableau de bord</h2>
             <div class='card-body row'>
                 <div id='reseau_chart1' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>
                 <div id='reseau_chart2' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>

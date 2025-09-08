@@ -343,6 +343,10 @@ if (isset($_GET['list'])) {
         require_once 'presentation/redevance_page.php';
     } else if ($_GET['page'] == 'tarif_aep') {
         require_once 'presentation/tarif_page.php';
+    } else if ($_GET['page'] == 'recouvrement') {
+        require_once 'presentation/recouvrement_page.php';
+    } else if ($_GET['page'] == 'abonne') {
+        require_once 'presentation/abonne_page.php';
     } else if ($_GET['page'] == 'versement') {
         require_once 'presentation/versments_page.php';
     } else if ($_GET['page'] == 'ressources') {

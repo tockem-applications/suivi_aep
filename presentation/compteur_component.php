@@ -51,7 +51,7 @@ function makeFullCompteurFomrForReseau($id_reseau)
         ";
 
     make_formulaire_compteur();
-    echo "<div class='d-flex justify-content-end p-2 btn-group'>
+    echo "<div class='d-flex justify-content55.json-end p-2 btn-group'>
             <button class='btn btn-danger col-6 ' type='reset'>Vider</button> 
             <button class='btn btn-success col-6' type='submit'>Enregistrer</button>
         </div>

@@ -17,12 +17,12 @@ class Flux_financier_t {
                 $fluxFinancier = new FluxFinancier('', $date, $libele, $prix, $type, $description, $mois, $_SESSION['id_aep']);
                 $res = $fluxFinancier->ajouter();
                 if ($res) {
-                    header("Location: ../index.php?list=transaction&operation=success");
+                    header("Location: ../index.php?page=transaction&operation=success");
                 } else {
                     header("Location: ../index.php?list=transaction&operation=error&message=Echec de l'enregistrement");
                 }
             } else {
-                header("Location: ../index.php?form=finance&operation=error&message=Veuillez renseigner tous les champs obligatoires");
+                header("Location: ../index.php?page=transaction&operation=error&message=Veuillez renseigner tous les champs obligatoires");
             }
         }
     }

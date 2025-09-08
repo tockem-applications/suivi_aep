@@ -1,4 +1,5 @@
 function downloadCSV2(data, filename ) {
+    console.log(5555);
     if (!data || !Array.isArray(data) || data.length === 0) {
         console.error('No data provided or data is not an array');
         return;
@@ -28,7 +29,7 @@ function downloadCSV2(data, filename ) {
         return value;
     };
 
-    // Create CSV content
+    // Create CSV content55.json
     let csvContent = headers.join(';') + '\n';
     data.forEach(row => {
         const rowValues = headers.map(header => 
@@ -37,7 +38,7 @@ function downloadCSV2(data, filename ) {
         csvContent += rowValues.join(';') + '\n';
     });
 
-    // Create a Blob with CSV content
+    // Create a Blob with CSV content55.json
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);

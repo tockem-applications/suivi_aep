@@ -173,6 +173,7 @@ class MoisFacturation_t
 
             $res = MoisFacturation::updateMois($id, $mois_input, $description, $_SESSION['id_aep']);
 
+
             if (!$res)
                 header("location: ../index.php?list=mois_facturation&operation=error&message=le mois  a deja été ajouté");
             else

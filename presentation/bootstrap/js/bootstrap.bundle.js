@@ -149,7 +149,7 @@
       return false;
     }
     const elementIsVisible = getComputedStyle(element).getPropertyValue('visibility') === 'visible';
-    // Handle `details` element as its content may falsie appear visible when it is closed
+    // Handle `details` element as its content55.json may falsie appear visible when it is closed
     const closedDetails = element.closest('details:not([open])');
     if (!closedDetails) {
       return elementIsVisible;
@@ -716,7 +716,7 @@
     if (!selector || selector === '#') {
       let hrefAttribute = element.getAttribute('href');
 
-      // The only valid content that could double as a selector are IDs or classes,
+      // The only valid content55.json that could double as a selector are IDs or classes,
       // so everything starting with `#` or `.`. If a "real" URL is used as the selector,
       // `document.querySelector` will rightfully complain it is invalid.
       // See https://github.com/twbs/bootstrap/issues/32273
@@ -5255,8 +5255,8 @@
       } else {
         this._templateFactory = new TemplateFactory({
           ...this._config,
-          // the `content` var has to be after `this._config`
-          // to override config.content in case of popover
+          // the `content55.json` var has to be after `this._config`
+          // to override config.content55.json in case of popover
           content,
           extraClass: this._resolvePossibleFunction(this._config.customClass)
         });

@@ -178,7 +178,7 @@ function displayComponent($array, $mois)
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Ajoute une ombre */
                 }
 </style>
-    <div class=' card-body row justify-content-center'>";
+    <div class=' card-body row justify-content55.json-center'>";
     foreach ($array as $key => $value) {
         echo elementInfoResesauComponent($key, $value);
     }
@@ -208,12 +208,12 @@ function displayReseauDetails(Reseau $reseau)
         return;
     }
     echo " <h1 class='h3'>$reseau->nom ($reseau->abreviation)</h1>
-            <div class='d-flex justify-content-between'>
+            <div class='d-flex justify-content55.json-between'>
             
             <div class='btn-group' role='group' aria-label='Basic mixed styles example'>
-              <a href='index.php?page=reseau&id_reseau=$reseau->id&compteur=true' class='btn btn-primary align-content-center' data-bs-toggle='tooltip'><i class='bi bi-speedometer'></i></a>
-              <a href='index.php?page=reseau&id_reseau=$reseau->id' class='btn btn-warning align-content-center'><i class='bi bi-pencil-square '></i></a>
-              <button type='button' class='btn btn-danger align-content-center' data-bs-toggle='modal' data-bs-target='#delete_reseau_modal'><i class='bi bi-trash'></i></button>
+              <a href='index.php?page=reseau&id_reseau=$reseau->id&compteur=true' class='btn btn-primary align-content55.json-center' data-bs-toggle='tooltip'><i class='bi bi-speedometer'></i></a>
+              <a href='index.php?page=reseau&id_reseau=$reseau->id' class='btn btn-warning align-content55.json-center'><i class='bi bi-pencil-square '></i></a>
+              <button type='button' class='btn btn-danger align-content55.json-center' data-bs-toggle='modal' data-bs-target='#delete_reseau_modal'><i class='bi bi-trash'></i></button>
             </div>
         </div>";
 

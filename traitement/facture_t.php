@@ -45,8 +45,7 @@ class Facture_t
         $req2 = Facture::getReseauMonthIndexes((int)$id_mois, $_SESSION['id_aep']);
         $req2 = $req2->fetchAll(PDO::FETCH_ASSOC);
 //        var_dump($req2);
-        $facture_json = json_encode($req);
-        create_csv_exportation_button($facture_json,
+        create_csv_exportation_button($req,
         'Releve-'.$_SESSION["libele_aep"].'-'.$mois_lettre.'.csv',
         'Vous allez exporter les donnees de releve de '.$mois_lettre.'au format csv');
 
@@ -157,10 +156,9 @@ class Facture_t
         // Récupérer les factures pour le mois
 //        $factures = Facture::getMonthFacture($idMois, $idAep)->fetchAll();
         $factures2 = Facture::getMonthFacture2($idMois, (int)$idAep)->fetchAll(PDO::FETCH_ASSOC);
-        $facture_json = json_encode($factures2);
 //        var_dump($_SESSION);
-        create_csv_exportation_button($facture_json,
-        'facturation-'.$_SESSION["libele_aep"].'-'.self::getLetterMonth($moisData["mois"]).'.csv',
+        create_csv_exportation_button($factures2,
+        'facturation-'.$_SESSION["libele_aep"].'_'.self::getLetterMonth($moisData["mois"]).'.csv',
         "Vous allez exporter les donnees de facturation de ".self::getLetterMonth($moisData["mois"]).'au format csv');
 
         // Générer le HTML du tableau

@@ -1,4 +1,5 @@
 <?php
+//exit();
 @include_once("../donnees/Abones.php");
 @include_once("donnees/Abones.php");
 @include_once("../donnees/facture.php");
@@ -11,7 +12,8 @@ class Abone_t
 
     public static function ajout()
     {
-        if (isset($_GET['ajout'])) {
+        if (isset($_GET['ajout_abone'])) {
+            ob_start();
             var_dump($_POST);
             echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
             if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
@@ -25,10 +27,51 @@ class Abone_t
                 $numero_compteur = htmlspecialchars($_POST['numero_compteur']);
                 $numero_telephone = htmlspecialchars($_POST['numero_telephone']);
                 $numero_compte_anticipation = 100;// htmlspecialchars($_POST['numero_compte_anticipation']);
-                $derniers_index = htmlspecialchars($_POST['derniers_index']);
+                $derniers_index = (float)htmlspecialchars($_POST['derniers_index']);
                 $id_reseau = htmlspecialchars($_POST['id_reseau']);
 //                $type_compteur = htmlspecialchars($_POST['type_compteur']);
                 $etat = htmlspecialchars($_POST['etat']);
+                if (empty($nom)) {
+            throw new Exception('Le nom est requis');
+        }
+        if (strlen($nom) > 128) {
+            throw new Exception('Le nom est trop long (max 128 caractères)');
+        }
+
+        if (strlen($numero_compteur) > 16) {
+            throw new Exception('Le numero de compteur est trop long (max 16 caractères)');
+        }
+
+        if ($derniers_index < 0) {
+            throw new Exception('Le dernier index ne peu etre inferieur à 0');
+        }
+
+        if (empty($numero_telephone)) {
+            throw new Exception('Le numéro de téléphone est requis');
+        }
+        if (strlen($numero_telephone) > 16) {
+            throw new Exception('Le numéro de téléphone est trop long (max 16 caractères)');
+        }
+
+        if (!in_array($etat, array('actif', 'inactif', 'suspendu'))) {
+            throw new Exception('État invalide');
+        }
+
+        if ($id_reseau <= 0) {
+            throw new Exception('Réseau invalide');
+        }
+
+        // Vérifier que le réseau appartient à l'AEP
+        $reseau = Manager::prepare_query(
+            'SELECT * FROM reseau WHERE id = ? AND id_aep = ?',
+            array($id_reseau, $_SESSION['id_aep'])
+        )->fetch();
+
+        if (!$reseau) {
+            throw new Exception('Réseau introuvable ou non autorisé');
+        }
+
+
 
                 $nouvel_abone = new Abones(
                     0,
@@ -47,10 +90,12 @@ class Abone_t
                 var_dump($nouvel_abone);
                 $nouvel_abone->getAboneIdBy();
                 var_dump($nouvel_abone);
-                if (!$res)
-                    header("location: ../index.php?form=abone&operation=error");
-                else
-                    header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
+//                exit();
+                $text = ob_get_clean();
+//                if (!$res)
+//                    header("location: ../index.php?form=abone&operation=error");
+//                else
+//                    header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
             }
         }
     }
@@ -349,8 +394,7 @@ class Abone_t
         elseif ( $type_compteur == 'production')
             $titre_page = "Liste des compteurs de production";
         ob_start();
-        $json_data = json_encode($req);
-        create_csv_exportation_button($json_data, "liste_abones.csv",
+        create_csv_exportation_button($req, "liste_abones.csv",
         "Exporter la liste des abonés au format csv");
         ?>
             <tr class="mt-3">
@@ -383,9 +427,8 @@ class Abone_t
                 </tr>
             <?php
             }
-            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
             $codeHtml = ob_get_clean();
-            self::createTable($codeHtml, $titre_page, "<a href='traitement/abone_t.php?action=export_index' target='_blank'>Telecharger les index</a><br>");
+            self::createTable($codeHtml, $titre_page, "");
     }
 
     public static function writeToFile($fileName, $content)
@@ -517,8 +560,7 @@ class Abone_t
         $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
         $resultats = $req->fetchAll(PDO::FETCH_ASSOC);
 
-        $facture_json = json_encode($resultats);
-        create_csv_exportation_button($facture_json,
+        create_csv_exportation_button($resultats,
                      'facturation-abone-'.$_SESSION["libele_aep"].'.csv',
                 "Vous allez exporter les donnees de facturation d'un aboné au format csv"
                 );
@@ -527,7 +569,7 @@ class Abone_t
     // Affichage des résultats dans un tableau HTML
     if ($resultats) {
         echo '<table class="table table-bordered table-hover">';
-        echo '<thead> <div class="d-flex justify-content-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
+        echo '<thead> <div class="d-flex justify-content55.json-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
         echo '<tr>';
         echo '<th>Mois</th>';
         echo '<th>Penalité</th>';
