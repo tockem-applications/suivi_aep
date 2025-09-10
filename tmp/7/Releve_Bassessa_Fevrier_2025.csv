@@ -1,5 +1,0 @@
-id;id_compteur;id_reseau;id_mois;nom;mois;ancien_index;nouvel_index;numero_compteur;date_facturation;reseau
-21;3;1;5;"@Compteur Reseau principal";2025-02;11.10;11.10;00000020;0000-00-00;"Reseau principal"
-18;1;;5;"Donkeng Maxime";2025-02;12.50;14.10;Bass00001;0000-00-00;
-20;4;;5;"Takam Ulrich";2025-02;5.10;6.80;000154;0000-00-00;
-19;2;;5;"Tedonkeu Mireille";2025-02;3.60;7.20;Bass00002;0000-00-00;

@@ -1,6 +1,29 @@
 <?php
 //H&*nh9w%nw+JU
 //require_once("connexion.php");
+
+function cleanTemporaryFiles($dir, $ageLimit) {
+    // Ouvrir le répertoire
+    $handle = false;
+    if ($handle = opendir($dir)) {
+        while (false !== ($file = readdir($handle))) {
+            // Ignorer les fichiers spéciaux '.' et '..'
+            if ($file != '.' && $file != '..') {
+                $filePath = $dir . '/' . $file;
+                // Vérifier si c'est un fichier
+                if (is_file($filePath)) {
+                    // Vérifier l'âge du fichier
+                    if (time() - filemtime($filePath) > $ageLimit) {
+                        // Supprimer le fichier
+                        unlink($filePath);
+                    }
+                }
+            }
+        }
+        closedir($handle);
+    }
+}
+
 function startSessionWithTimeout() {
     // Vérifier si une session est déjà active
     $duree = 60*60*10;
@@ -17,8 +40,10 @@ function startSessionWithTimeout() {
         if (isset($_SESSION['LAST_ACTIVITY']) &&
             (time() - $_SESSION['LAST_ACTIVITY'] > $duree)) {
             // Session expirée, détruire la session
+            cleanTemporaryFiles('tmp/'.$_SESSION['user_id'], 60*60*1);
             session_unset();
             session_destroy();
+//            exit();
             // Redémarrer une nouvelle session
             session_start();
         }
@@ -31,7 +56,7 @@ function startSessionWithTimeout() {
     return false;
 }
 startSessionWithTimeout();
-
+//var_dump($_SESSION);
 function viderRepertoire($repertoire) {
     // Vérifier si le répertoire existe
     if (!is_dir($repertoire)) {

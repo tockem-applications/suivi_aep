@@ -1,8 +1,0 @@
-id;nom;numero_telephone;numero_compte_anticipation;etat;rang;id_reseau;nom_reseau;abreviation;nb_mois_factures;total_facture;total_verse;total_restant;nb_mois_impayes;total_consommation
-1;"Donkeng Maxime";695854745;100;actif;0;1;"Reseau principal";RP;9;12985.00000000;12985.00;0.00000000;0;16.97
-6;"Manka Michel";659585754;100;actif;0;1;"Reseau principal";RP;2;1000.00000000;500.00;500.00000000;1;0.00
-5;"Matefack Cedrick";698979521;100;actif;0;3;"Reseau secondaire 2";Rs2;3;2850.00000000;3700.00;-850.00000000;0;2.70
-4;"Mbopda Ulrich";658545152;100;actif;0;2;"Reseau secondaire 1";Rs1;6;7850.00000000;7900.00;-50.00000000;1;9.70
-7;Onana;6565656565;100;actif;0;5;"Reseau secondaire 4";Rs4;1;500.00000000;500.00;0.00000000;0;0.00
-3;"Takam Ulrich";654852515;100;actif;0;1;"Reseau principal";RP;9;17000.00000000;15600.00;1400.00000000;1;25.00
-2;"Tedonkeu Mireille";652414878;100;actif;0;1;"Reseau principal";RP;9;14500.00000000;16000.00;-1500.00000000;1;20.00

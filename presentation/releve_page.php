@@ -186,8 +186,9 @@
                                 aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <form action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id;?>" method="post"
-                                enctype="multipart/form-data">
+                            <form
+                                action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id; ?>"
+                                method="post" enctype="multipart/form-data">
                                 <div class="row g-3">
                                     <div class="col-md-12">
                                         <label for="fichier_index" class="form-label fw-bold">Fichier des index <span

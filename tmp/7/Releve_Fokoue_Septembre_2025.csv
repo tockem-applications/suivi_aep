@@ -1,9 +1,9 @@
 id;id_compteur;id_reseau;id_mois;nom;mois;ancien_index;nouvel_index;numero_compteur;date_facturation;reseau
 61;3;1;12;"@Compteur Reseau principal";2025-09;36.00;40.00;00000020;0000-00-00;"Reseau principal"
-58;6;;12;"Abopda Ulrich";2025-09;11.20;11.20;15421613;0000-00-00;
 54;1;;12;"Donkeng Maxime";2025-09;24.00;27.00;Bass00001;0000-00-00;
 57;8;;12;"Manka Michel";2025-09;2.20;2.20;123520p;0000-00-00;
 59;7;;12;"Matefack Cedrick";2025-09;6.30;6.30;654123;0000-00-00;
+58;6;;12;"Mbopda Ulrich";2025-09;11.20;11.20;15421613;0000-00-00;
 60;9;;12;Onana;2025-09;3.50;3.50;Rs123456;0000-00-00;
 56;4;;12;"Takam Ulrich";2025-09;23.90;25.00;000154;0000-00-00;
 55;2;;12;"Tedonkeu Mireille";2025-09;18.00;20.00;Bass00002;0000-00-00;
