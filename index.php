@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="presentation/assets/images/favicon.png">
     <link rel="stylesheet" href="presentation/style.css">
+    <link rel="stylesheet" href="presentation/assets/css/recouvrement.css">
     <link rel="stylesheet" href="presentation/bootstrap/css/bootstrap.css">
     <link rel="stylesheet" href="presentation/assets/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="presentation/assets/bootstrap-icons-1.11.3/font/bootstrap-icons.min.css">
@@ -261,12 +262,6 @@
             }
         }
 
-        /*.circle {*/
-        /*    width: 50px; !* Largeur du cercle *!*/
-        /*    height: 100%; !* Hauteur du cercle *!*/
-        /*    !*background-color: #dc3545; !* Couleur danger *!*!*/
-        /*    border-radius: 50%; !* Rend le div circulaire *!*/
-        /*}*/
 
         .color-circle {
             display: inline-block;
@@ -308,6 +303,7 @@
         .export-button i {
             font-size: 18px; /* Taille de l'icône */
         }
+
 
     </style>
 </head>

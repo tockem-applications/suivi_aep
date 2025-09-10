@@ -86,7 +86,7 @@
                 </div>
                 <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id_mois ?>"
                         type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
-                        data-bs-placement="top" data-bs-title="exporter les index compteurs du derniers mois">
+                        data-bs-placement="top" data-bs-title="telecharger les index dans votre machine">
                         <i class="bi bi-file-earmark-arrow-down"></i>
                     </a>
                 </div>

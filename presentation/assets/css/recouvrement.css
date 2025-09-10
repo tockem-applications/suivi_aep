@@ -1,0 +1,116 @@
+/* Style de base pour les boutons personnalisés */
+.custom-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, opacity 0.3s ease;
+    cursor: pointer;
+}
+
+/* Bouton Insolvables */
+.btn-insolvables {
+    background-color: #ef5350; /* Rouge vif */
+    color: #fff;
+}
+
+.btn-insolvables:hover:not(.disabled) {
+    background-color: #d94444; /* Rouge vif plus foncé au survol */
+}
+
+.insolvables {
+    background-color: #ef5350 !important; /* Rouge vif, prioritaire */
+}
+
+/* Bouton Paiement partiel */
+.btn-paiement-partiel {
+    background-color: #ff8c00; /* Orange éclatant */
+    color: #fff;
+}
+
+.btn-paiement-partiel:hover:not(.disabled) {
+    background-color: #e67c00; /* Orange plus foncé au survol */
+}
+
+.paiement-partiel {
+    background-color: #ff8c00 !important; /* Orange éclatant, prioritaire */
+}
+
+/* Bouton Pas en règle */
+.btn-pas-en-regle {
+    background-color: #ff6d40; /* Rouge-orangé vif */
+    color: #fff;
+}
+
+.btn-pas-en-regle:hover:not(.disabled) {
+    background-color: #e66038; /* Rouge-orangé plus foncé au survol */
+}
+
+.pas-en-regle {
+    background-color: #ff6d40 !important; /* Rouge-orangé vif, prioritaire */
+}
+
+/* Bouton Solvables */
+.btn-solvables {
+    background-color: #0288d1; /* Bleu éclatant */
+    color: #fff;
+}
+
+.btn-solvables:hover:not(.disabled) {
+    background-color: #0277b8; /* Bleu plus foncé au survol */
+}
+
+.solvables {
+    background-color: #0288d1 !important; /* Bleu éclatant, prioritaire */
+}
+
+/* Bouton Anticipation */
+.btn-anticipation {
+    background-color: #2ecc71; /* Vert vif */
+    color: #fff;
+}
+
+.btn-anticipation:hover:not(.disabled) {
+    background-color: #27b262; /* Vert plus foncé au survol */
+}
+
+.anticipation {
+    background-color: #2ecc71 !important; /* Vert vif, prioritaire */
+}
+
+/* Bouton En règle */
+.btn-en-regle {
+    background-color: #00b7a8; /* Teal vif */
+    color: #fff;
+}
+
+.btn-en-regle:hover:not(.disabled) {
+    background-color: #009d91; /* Teal plus foncé au survol */
+}
+
+.en-regle {
+    background-color: #00b7a8 !important; /* Teal vif, prioritaire */
+}
+
+/* Bouton Vider */
+.btn-vider {
+    background-color: #607d8b; /* Gris-bleu affirmé */
+    color: #fff;
+}
+
+.btn-vider:hover:not(.disabled) {
+    background-color: #546d78; /* Gris-bleu plus foncé au survol */
+}
+
+.vider {
+    background-color: #607d8b !important; /* Gris-bleu affirmé, prioritaire */
+}
+
+/* Style pour les boutons désactivés */
+.custom-btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
