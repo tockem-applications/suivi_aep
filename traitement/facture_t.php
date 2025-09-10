@@ -904,7 +904,7 @@ class Facture_t
                 <div class="">Période de facturation: <span class="text-uppercase"> <?php echo getLetterMonth($mois) ?></span>
                 </div>
                 <div class="col-2"></div>
-                <div>Impayés: <?php echo (int) $impaye ?></div>
+                <div>Impayés: <?php echo self::moneyFormatter((int) $impaye) ?></div>
                 <div class="col-2"></div>
                 <div class="">Penalite: <?php echo (int) $penalite ?></div>
             </div>
@@ -1012,7 +1012,7 @@ public static function creerFactureFokoue2(
         ?>
 
 
-            <div class="container my-0 py-0">
+            <div class="container my-0 py-0 border border-5 border-black">
             <style>
                 @media print {
                     @page {
@@ -1098,18 +1098,20 @@ public static function creerFactureFokoue2(
                     <div class="col text-center">
                          <?php
                          $impaye = (int)$impaye;
+                         // ontransforme la valeur absolu de l'impaye/avance en nombre au format financier
+                         $impaye_string_value = self::moneyFormatter(abs($impaye));
                         if($impaye < 0)
 //                            echo "Avance: $impaye";
-                            echo "Avance: <span class='text-success'>$impaye</span>";
+                            echo "Compte anticipation: <span class='text-success'>$impaye_string_value</span>";
                         elseif ($impaye == 0)
-                            echo "Impayés: <span>$impaye</span>";
+                            echo "Impayés: <span>$impaye_string_value</span>";
                         else
-                            echo "Impayés: <span class='text-danger'>$impaye</span>";
+                            echo "Impayés: <span class='text-danger'>$impaye_string_value</span>";
 
                             ?>
                     </div>
                     <div class="col text-center">
-                        Pénalité: <?php echo (int) $penalite ?>
+                        Pénalité: <?php echo self::moneyFormatter((int) $penalite) ?>
                     </div>
                 </div>
 
@@ -1120,17 +1122,18 @@ public static function creerFactureFokoue2(
 <!--                    </div>-->
 <!--                </div>-->
 
-                <div class="row mb-3">
-                    <div class="col text-center">
-                        Nom du client: <span class="text-uppercase fw-bold"><?php echo $nom ?></span>
+                <div class="d-flex justify-content-around">
+                    <div class="">
+                        Nom du client: <span class="text-uppercase fw-bold"><?php echo trim($nom) ?></span>
                     </div>
-                    <div class="col text-center">
+                    <div class="">
                         Nº compteur: <?php echo $numero_compteur ?>
                     </div>
-                    <div class="col text-center">
+                    <div class="">
                         Réseau: <?php echo $reseau ?>
                     </div>
                 </div>
+                <br>
 
                 <table class="table table-striped table-bordered border-heavy mb-3">
                     <thead>
@@ -1160,7 +1163,7 @@ public static function creerFactureFokoue2(
                             <td class="text-center"><?php echo $nouvel_index ?></td>
                             <td class="text-center"><?php echo $conso_mois ?></td>
                             <td class="text-center"><?php echo $prix_eau ?></td>
-                            <td class="text-center"><?php echo $facture_mois ?></td>
+                            <td class="text-center"><?php echo self::moneyFormatter($facture_mois) ?></td>
                             <td class="text-center"><?php echo $tva ?></td>
                         </tr>
                         <tr>
