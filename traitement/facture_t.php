@@ -357,7 +357,14 @@ class Facture_t
 //        var_dump($bon_payeurs, $avanceur, $insolvable);
         ob_start();
         ?>
-        <table class="table table-striped table-bordered table-hover">
+        <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0"><i class="bi bi-people"></i> Recouvrent
+            <span class="badge bg-secondary ms-2"><?php echo count($factures); ?></span>
+            </h4>
+
+        </div>
+        <table class="table table-striped table-bordered table-hover ">
             <thead class="table-dark">
                 <tr>
 <!--                    <th>Id</th>-->
@@ -488,6 +495,8 @@ class Facture_t
                 <?php } ?>
             </tbody>
         </table>
+        </div>
+
         <?php
         return ob_get_clean();
     }

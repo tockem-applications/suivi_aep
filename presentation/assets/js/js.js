@@ -41,7 +41,7 @@ function recherche(le_input) {
                 ok = false;
                 let tabTh = tr.getElementsByTagName(('td'))
                 for (; y < tabTh.length; y++) {
-                    let tex = tabTh[y].innerText;
+                    let tex = tabTh[y].innerHTML;
                     if (tex.toUpperCase().includes(val.toUpperCase())) {
                         ok = true;
                         tr.style.display = '';

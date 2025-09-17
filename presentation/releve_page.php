@@ -1,3 +1,27 @@
+<?php
+
+@include_once("../donnees/Abones.php");
+@include_once("donnees/Abones.php");
+@include_once("../donnees/facture.php");
+@include_once("donnees/facture.php");
+@include_once("../donnees/mois_facturation.php");
+@include_once("donnees/mois_facturation.php");
+
+
+function moneyFormatter($montant)
+{
+    return number_format($montant, 0, ',', ' ');
+}
+
+function addDaysAndFormat($string_date, $days = 10)
+{
+    $date = new DateTime($string_date);
+    $date->modify("+$days days");
+    return $date->format('d/m/Y');
+}
+
+
+?>
 <div class="container-fluid">
     <div class="row">
         <!-- Menu à gauche -->
@@ -6,9 +30,9 @@
                 <h4 class="mb-3 text-primary fw-bold">Mois de Facturation</h4>
                 <div class="d-flex">
                     <div class="p-0 ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
-                        data-bs-title="Créer un nouveau mois de facturation et initialiser les index">
+                         data-bs-title="Créer un nouveau mois de facturation et initialiser les index">
                         <button type="button" class="btn btn-warning mb-3 shadow-sm" data-bs-toggle="modal"
-                            data-bs-target="#createMonthModal">
+                                data-bs-target="#createMonthModal">
                             <i class="bi bi-calendar-plus"></i>
                         </button>
                     </div>
@@ -61,40 +85,143 @@
                 <h2 class="mb-4 text-primary fw-bold">Relevés d'index
                     compteur</h2>
                 <a href="#" class="text-decoration-none text-primary" data-bs-toggle="modal"
-                    data-bs-target="#distributionModal<?php echo $id; ?>">
+                   data-bs-target="#distributionModal<?php echo $id; ?>">
                     <i class="bi bi-file-earmark-text me-1"> Facturer</i>
                     <!--                    <i class="bi bi-currency-dollar me-1"> Facturer</i>-->
                 </a>
             </div>
 
-
-            <?php
-            @include_once("../traitement/facture_t.php");
-            @include_once("traitement/facture_t.php");
-            $id_mois = isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0;
-            $id_mois = $id;
-            ob_start()
-                ?>
-
-            <div class="d-flex d-inline">
+            <div class="d-flex">
                 <div class="p-0 m-0" data-bs-toggle="tooltip" data-bs-placement="top"
-                    data-bs-title="Importer les index de votre machine dans l'application">
+                     data-bs-title="Importer les index de votre machine dans l'application">
                     <button type="button" class="btn btn-primary mb-3 shadow-sm me-1" data-bs-toggle="modal"
-                        data-bs-target="#importIndexModal">
+                            data-bs-target="#importIndexModal">
                         <i class="bi bi-file-earmark-arrow-up"></i>
                     </button>
                 </div>
-                <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id_mois ?>"
-                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
-                        data-bs-placement="top" data-bs-title="telecharger les index dans votre machine">
+                <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id ?>"
+                                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
+                                        data-bs-placement="top"
+                                        data-bs-title="telecharger les index dans votre machine">
                         <i class="bi bi-file-earmark-arrow-down"></i>
                     </a>
                 </div>
                 <!--                <li><a class="dropdown-item" href="" target="_blank">Exporter vers mobile</a></li>-->
             </div>
+
+
+            <?php
+            $id_mois = isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0;
+            $id_mois = $id;
+            ob_start()
+            ?>
+
             <?php
             $actions_button_html = ob_get_clean();
-            $id_current_mois = Facture_t::getTableauFactureactiveForReleve($id_mois, $titre = $actions_button_html);
+
+            //            <?php
+            $mois_lettre = '';
+            $id_mois_actif = MoisFacturation::getIdMoisFacturationActive($_SESSION['id_aep']);
+            $editable = $id_mois == $id_mois_actif || $id_mois == 0;
+
+            if ($id_mois == 0) {
+                $mois_data = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep'])->fetchAll();
+                if (count($mois_data)) {
+                    $id_mois = (int)$mois_data[0]['id'];
+                    $mois_lettre = getLetterMonth($mois_data[0]['mois']);
+                }
+            } else {
+                $mois_data = MoisFacturation::getOneById((int)$id_mois)->fetchAll();
+                $mois_lettre = getLetterMonth($mois_data[0]['mois']);
+            }
+
+            $req2 = Facture::getMonthIndexes((int)$id_mois, $_SESSION['id_aep'])->fetchAll(PDO::FETCH_ASSOC);
+
+
+            $titre_table = " $mois_lettre";
+
+            ?>
+
+            <style>
+                /* Masquer les flèches d'incrémentation dans les navigateurs modernes */
+                input[type='number']::-webkit-inner-spin-button,
+                input[type='number']::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+
+                /* Masquer les flèches dans Firefox */
+                input[type='number'] {
+                    -moz-appearance: textfield;
+                }
+            </style>
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-graph-up"></i> <?php echo $titre_table; ?>
+                        <span class="badge bg-secondary ms-2"><?php echo count($req2); ?></span>
+                    </h4>
+                    <?php create_csv_exportation_button($req2,
+                        'Releve-' . $_SESSION["libele_aep"] . '-' . $mois_lettre . '.csv',
+                        'Vous allez exporter les donnees de releve de ' . $mois_lettre . 'au format csv');
+                    ?>
+                </div>
+
+                <table class="table table-striped table-bordered table-hover">
+                    <thead>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <th>N° compteur</th>
+                        <th>Nom et Prenom</th>
+                        <th>Ancien index</th>
+                        <th>nouvel index</th>
+                    </tr>
+                    <?php
+                    // Intégration du code de creerLigneTableauReleveManuelle
+                    foreach ($req2 as $data) {
+                        $circle_bg_color = '';
+                        if ((float)$data['ancien_index'] > (float)$data['nouvel_index'])
+                            $circle_bg_color = 'bg-danger';
+                        elseif (((float)$data['ancien_index'] == (float)$data['nouvel_index']))
+                            $circle_bg_color = 'bg-warning';
+                        elseif ((float)$data['ancien_index'] < (float)$data['nouvel_index'])
+                            $circle_bg_color = 'bg-success';
+                        ?>
+
+                        <tr class="p-0 m-0">
+                            <td><?php echo $data['numero_compteur'] ?> </td>
+                            <td> <?php echo $data['nom'] ?> </td>
+                            <td id="ancien_index<?php echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
+                            <td class="w-auto d-flex justify-content-between align-items-center">
+                                <input type="number" class="form-control w-50 border-0 p-0 ps-2 "
+                                       style="background-color: rgba(0, 0, 0, 0)"
+                                       id="nouvel_index<?php echo $data['id'] ?>"
+                                       min="<?php echo $data['ancien_index'] ?>"
+                                       onclick="this.select()"
+
+                                       onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
+                                       step="0.01"
+                                       value="<?php echo((float)$data['nouvel_index'] == 0 || (float)$data['nouvel_index'] == (float)$data['ancien_index'] ? '' : $data['nouvel_index']) ?>"
+                                       aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
+                                <div class="color-circle <?php echo $circle_bg_color ?>"></div>
+                                <input type="hidden" value="<?php echo $data['nouvel_index'] ?>"
+                                       id="ex_nouvel_index<?php echo $data['id'] ?>">
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <?php
+            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
+            ?>
+            <br>
+
+            <?php
+            $id_current_mois = $id_mois;
 
 
             include('traitement/constante_reseau_t.php');
@@ -112,28 +239,18 @@
             $curentMoisQuery = MoisFacturation::getMoisById($id_current_mois);
             $currentMoisData = $curentMoisQuery->fetchAll();
             //            var_dump($currentMoisData, $selected_moi_id);
-            
+
             ?>
 
-            <!--            <div class="d-flex justify-content-center mb-3">-->
-            <!--                <button class="btn btn-danger" data-bs-toggle="modal"-->
-            <!--                        data-bs-target="#delete_--><?php //echo $id_current_mois ?><!--">-->
-            <!--                    Suprimer-->
-            <!--                </button>-->
-            <!---->
-            <!--                Modal Bootstrap pour la confirmation de suppression -->-->
-            <!--                -->
-            <!--            </div>-->
-
             <div class="modal fade" id="distributionModal<?php echo $id; ?>" tabindex="-1"
-                aria-labelledby="distributionModalLabel<?php echo $id; ?>" aria-hidden="true">
+                 aria-labelledby="distributionModalLabel<?php echo $id; ?>" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
                             <h5 class="modal-title" id="distributionModalLabel<?php echo $id; ?>">Distribution des
                                 factures - <?php echo htmlspecialchars($mois); ?></h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                                    aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form action="traitement/mois_facturation_t.php?get_mois_facturation=true" method="post">
@@ -144,10 +261,10 @@
                                         <!--                                        <input type="hidden" name="date_releve_mois_facturation" value="date_releve_mois_facturation_-->
                                         <?php //echo htmlspecialchars($id) ?><!--">-->
                                         <span class="input-group-text bg-light"><i
-                                                class="fas fa-calendar-day"></i></span>
+                                                    class="fas fa-calendar-day"></i></span>
                                         <input type="date" class="form-control shadow-sm"
-                                            value="<?php echo isset($currentMoisData[0]['date_releve']) ? htmlspecialchars($currentMoisData[0]['date_releve']) : ''; ?>"
-                                            id="releve_date_<?php echo $id; ?>" name="date_releve" required>
+                                               value="<?php echo isset($currentMoisData[0]['date_releve']) ? htmlspecialchars($currentMoisData[0]['date_releve']) : ''; ?>"
+                                               id="releve_date_<?php echo $id; ?>" name="date_releve" required>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -155,12 +272,12 @@
                                         distribution <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="hidden" name="mois_facturation"
-                                            value="<?php echo htmlspecialchars($id) ?>">
+                                               value="<?php echo htmlspecialchars($id) ?>">
                                         <span class="input-group-text bg-light"><i
-                                                class="fas fa-calendar-day"></i></span>
+                                                    class="fas fa-calendar-day"></i></span>
                                         <input type="date" class="form-control shadow-sm"
-                                            value="<?php echo isset($currentMoisData[0]['date_depot']) ? htmlspecialchars($currentMoisData[0]['date_depot']) : ''; ?>"
-                                            id="distribution_date_<?php echo $id; ?>" name="date_depot" required>
+                                               value="<?php echo isset($currentMoisData[0]['date_depot']) ? htmlspecialchars($currentMoisData[0]['date_depot']) : ''; ?>"
+                                               id="distribution_date_<?php echo $id; ?>" name="date_depot" required>
                                     </div>
                                 </div>
                                 <!--                                --><?php //echo htmlspecialchars($id); ?>
@@ -177,27 +294,27 @@
 
             <!-- Modal d'importation des index -->
             <div class="modal fade" id="importIndexModal" tabindex="-1" aria-labelledby="importIndexModalLabel"
-                aria-hidden="true">
+                 aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="importIndexModalLabel">Importer les index mensuels</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                                    aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form
-                                action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id; ?>"
-                                method="post" enctype="multipart/form-data">
+                                    action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id; ?>"
+                                    method="post" enctype="multipart/form-data">
                                 <div class="row g-3">
                                     <div class="col-md-12">
                                         <label for="fichier_index" class="form-label fw-bold">Fichier des index <span
-                                                class="text-danger">*</span></label>
+                                                    class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                    class="fas fa-file-upload"></i></span>
+                                                        class="fas fa-file-upload"></i></span>
                                             <input type="file" class="form-control shadow-sm" id="fichier_index"
-                                                name="fichier_index" accept=".json,.csv" required>
+                                                   name="fichier_index" accept=".json,.csv" required>
                                         </div>
                                     </div>
                                 </div>
@@ -217,20 +334,20 @@
                                         <div>
                                             <label class="form-label mb-1">Recherche</label>
                                             <input id="preview_search" type="text" class="form-control form-control-sm"
-                                                placeholder="Libellé ou N° compteur">
+                                                   placeholder="Libellé ou N° compteur">
                                         </div>
                                         <div class="ms-auto small text-muted" id="preview_count"></div>
                                     </div>
                                     <div class="table-responsive border rounded">
                                         <table class="table table-sm table-hover mb-0" id="preview_table">
                                             <thead class="table-light">
-                                                <tr>
-                                                    <th>Libellé</th>
-                                                    <th>Numéro compteur</th>
-                                                    <th class="text-end">Ancien index</th>
-                                                    <th class="text-end">Nouvel index</th>
-                                                    <th>Statut</th>
-                                                </tr>
+                                            <tr>
+                                                <th>Libellé</th>
+                                                <th>Numéro compteur</th>
+                                                <th class="text-end">Ancien index</th>
+                                                <th class="text-end">Nouvel index</th>
+                                                <th>Statut</th>
+                                            </tr>
                                             </thead>
                                             <tbody></tbody>
                                         </table>
@@ -246,48 +363,48 @@
 
             <!-- Modal de création d'un nouveau mois -->
             <div class="modal fade" id="createMonthModal" tabindex="-1" aria-labelledby="createMonthModalLabel"
-                aria-hidden="true">
+                 aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="createMonthModalLabel">Créer un nouveau mois</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                                    aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form action="traitement/mois_facturation_t.php" method="post">
                                 <input type="hidden" name="action" value="create_month_auto">
                                 <input type="hidden" name="id_constante"
-                                    value="<?php echo isset($constante_reseau_id) ? (int) $constante_reseau_id : 0; ?>">
+                                       value="<?php echo isset($constante_reseau_id) ? (int)$constante_reseau_id : 0; ?>">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="mois_new" class="form-label fw-bold">Mois <span
-                                                class="text-danger">*</span></label>
+                                                    class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                    class="fas fa-calendar-month"></i></span>
+                                                        class="fas fa-calendar-month"></i></span>
                                             <input type="month" class="form-control shadow-sm" id="mois_new" name="mois"
-                                                value="<?php echo date('Y-m'); ?>" required>
+                                                   value="<?php echo date('Y-m'); ?>" required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="date_depot_new" class="form-label fw-bold">Date de dépôt <span
-                                                class="text-danger">*</span></label>
+                                                    class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                    class="fas fa-calendar-day"></i></span>
+                                                        class="fas fa-calendar-day"></i></span>
                                             <input type="date" class="form-control shadow-sm" id="date_depot_new"
-                                                name="date_depot" value="<?php echo date('Y-m-28'); ?>" required>
+                                                   name="date_depot" value="<?php echo date('Y-m-28'); ?>" required>
                                         </div>
                                     </div>
                                     <div class="col-12">
                                         <label for="description_new" class="form-label fw-bold">Description</label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                    class="fas fa-info-circle"></i></span>
+                                                        class="fas fa-info-circle"></i></span>
                                             <textarea class="form-control shadow-sm" id="description_new"
-                                                name="description" rows="4"
-                                                placeholder="Décrivez le mois..."></textarea>
+                                                      name="description" rows="4"
+                                                      placeholder="Décrivez le mois..."></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -325,7 +442,10 @@
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler
                                     </button>
-                                    <button type="submit" class="btn btn-primary" <?php echo isset($constante_reseau_id) && $constante_reseau_id ? '' : 'disabled'; ?>>Créer le mois</button>
+                                    <button type="submit"
+                                            class="btn btn-primary" <?php echo isset($constante_reseau_id) && $constante_reseau_id ? '' : 'disabled'; ?>>
+                                        Créer le mois
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -337,6 +457,7 @@
                     var moisInput = document.getElementById('mois_new');
                     var depotInput = document.getElementById('date_depot_new');
                     if (!moisInput || !depotInput) return;
+
                     function updateDepotDate() {
                         var value = moisInput.value; // format attendu: YYYY-MM
                         if (!value || value.length < 7) return;
@@ -347,6 +468,7 @@
                             depotInput.value = yyyy + '-' + mm + '-28';
                         }
                     }
+
                     moisInput.addEventListener('change', updateDepotDate, false);
                     moisInput.addEventListener('input', updateDepotDate, false);
                 })();
