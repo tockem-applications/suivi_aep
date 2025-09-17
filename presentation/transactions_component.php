@@ -1,13 +1,22 @@
-<div class="container mt-4">
+<?php
+display_printing_button('', 'Imprimer la liste des entree sortie')
+
+?>
+<div class="container mt-4" id="a_imprimer">
+
+
     <h2 class="mb-3 text-primary fw-bold">Flux Financiers</h2>
     <div class="row">
         <div class="col-12">
+
             <div class="card shadow-sm border-0">
                 <div class="card-body">
                     <!-- Bouton pour ouvrir le modal de création -->
                     <button type="button" class="btn btn-primary mb-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#createFluxModal">
                         <i class="fas fa-plus me-2"></i>Ajouter un flux
                     </button>
+
+
 
                     <!-- Formulaire de recherche -->
                     <form action="?page=transaction" method="post" class="mb-3">

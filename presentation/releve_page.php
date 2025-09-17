@@ -30,9 +30,9 @@ function addDaysAndFormat($string_date, $days = 10)
                 <h4 class="mb-3 text-primary fw-bold">Mois de Facturation</h4>
                 <div class="d-flex">
                     <div class="p-0 ms-1" data-bs-toggle="tooltip" data-bs-placement="top"
-                         data-bs-title="Créer un nouveau mois de facturation et initialiser les index">
+                        data-bs-title="Créer un nouveau mois de facturation et initialiser les index">
                         <button type="button" class="btn btn-warning mb-3 shadow-sm" data-bs-toggle="modal"
-                                data-bs-target="#createMonthModal">
+                            data-bs-target="#createMonthModal">
                             <i class="bi bi-calendar-plus"></i>
                         </button>
                     </div>
@@ -85,7 +85,7 @@ function addDaysAndFormat($string_date, $days = 10)
                 <h2 class="mb-4 text-primary fw-bold">Relevés d'index
                     compteur</h2>
                 <a href="#" class="text-decoration-none text-primary" data-bs-toggle="modal"
-                   data-bs-target="#distributionModal<?php echo $id; ?>">
+                    data-bs-target="#distributionModal<?php echo $id; ?>">
                     <i class="bi bi-file-earmark-text me-1"> Facturer</i>
                     <!--                    <i class="bi bi-currency-dollar me-1"> Facturer</i>-->
                 </a>
@@ -93,16 +93,15 @@ function addDaysAndFormat($string_date, $days = 10)
 
             <div class="d-flex">
                 <div class="p-0 m-0" data-bs-toggle="tooltip" data-bs-placement="top"
-                     data-bs-title="Importer les index de votre machine dans l'application">
+                    data-bs-title="Importer les index de votre machine dans l'application">
                     <button type="button" class="btn btn-primary mb-3 shadow-sm me-1" data-bs-toggle="modal"
-                            data-bs-target="#importIndexModal">
+                        data-bs-target="#importIndexModal">
                         <i class="bi bi-file-earmark-arrow-up"></i>
                     </button>
                 </div>
                 <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id ?>"
-                                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
-                                        data-bs-placement="top"
-                                        data-bs-title="telecharger les index dans votre machine">
+                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
+                        data-bs-placement="top" data-bs-title="telecharger les index dans votre machine">
                         <i class="bi bi-file-earmark-arrow-down"></i>
                     </a>
                 </div>
@@ -114,7 +113,7 @@ function addDaysAndFormat($string_date, $days = 10)
             $id_mois = isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0;
             $id_mois = $id;
             ob_start()
-            ?>
+                ?>
 
             <?php
             $actions_button_html = ob_get_clean();
@@ -127,15 +126,15 @@ function addDaysAndFormat($string_date, $days = 10)
             if ($id_mois == 0) {
                 $mois_data = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep'])->fetchAll();
                 if (count($mois_data)) {
-                    $id_mois = (int)$mois_data[0]['id'];
+                    $id_mois = (int) $mois_data[0]['id'];
                     $mois_lettre = getLetterMonth($mois_data[0]['mois']);
                 }
             } else {
-                $mois_data = MoisFacturation::getOneById((int)$id_mois)->fetchAll();
+                $mois_data = MoisFacturation::getOneById((int) $id_mois)->fetchAll();
                 $mois_lettre = getLetterMonth($mois_data[0]['mois']);
             }
 
-            $req2 = Facture::getMonthIndexes((int)$id_mois, $_SESSION['id_aep'])->fetchAll(PDO::FETCH_ASSOC);
+            $req2 = Facture::getMonthIndexes((int) $id_mois, $_SESSION['id_aep'])->fetchAll(PDO::FETCH_ASSOC);
 
 
             $titre_table = " $mois_lettre";
@@ -158,59 +157,107 @@ function addDaysAndFormat($string_date, $days = 10)
             <div class="card">
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0"><i class="bi bi-graph-up"></i> <?php echo $titre_table; ?>
-                        <span class="badge bg-secondary ms-2"><?php echo count($req2); ?></span>
+                        <span class="badge bg-secondary ms-2" id="releve_total_count"><?php echo count($req2); ?></span>
                     </h4>
-                    <?php create_csv_exportation_button($req2,
+                    <?php create_csv_exportation_button(
+                        $req2,
                         'Releve-' . $_SESSION["libele_aep"] . '-' . $mois_lettre . '.csv',
-                        'Vous allez exporter les donnees de releve de ' . $mois_lettre . 'au format csv');
+                        'Vous allez exporter les donnees de releve de ' . $mois_lettre . 'au format csv'
+                    );
                     ?>
+                </div>
+
+                <!-- Filtres / Recherche / Tri -->
+                <div class="card-body border-bottom">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-4">
+                            <label for="releve_search" class="form-label">Rechercher (nom ou N° compteur)</label>
+                            <input type="text" id="releve_search" class="form-control"
+                                placeholder="Ex: NANA, 012345...">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="releve_filter" class="form-label">Filtrer</label>
+                            <select id="releve_filter" class="form-select">
+                                <option value="all">Tous</option>
+                                <option value="ok">Coherent (nouvel ≥ ancien)</option>
+                                <option value="identique">Identique (nouvel = ancien)</option>
+                                <option value="error">Incohérent (nouvel < ancien)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="releve_sort_by" class="form-label">Trier par</label>
+                            <div class="input-group">
+                                <select id="releve_sort_by" class="form-select">
+                                    <option value="numero">N° compteur</option>
+                                    <option value="nom" selected>Nom</option>
+                                    <option value="ancien">Ancien index</option>
+                                    <option value="nouvel">Nouvel index</option>
+                                    <option value="ecart">Écart (nouvel-ancien)</option>
+                                </select>
+                                <select id="releve_sort_dir" class="form-select" style="max-width: 140px;">
+                                    <option value="asc">Croissant</option>
+                                    <option value="desc">Décroissant</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-2 text-end">
+                            <small id="releve_count" class="text-muted"></small>
+                        </div>
+                    </div>
                 </div>
 
                 <table class="table table-striped table-bordered table-hover">
                     <thead>
                     </thead>
                     <tbody>
-                    <tr>
-                        <th>N° compteur</th>
-                        <th>Nom et Prenom</th>
-                        <th>Ancien index</th>
-                        <th>nouvel index</th>
-                    </tr>
-                    <?php
-                    // Intégration du code de creerLigneTableauReleveManuelle
-                    foreach ($req2 as $data) {
-                        $circle_bg_color = '';
-                        if ((float)$data['ancien_index'] > (float)$data['nouvel_index'])
-                            $circle_bg_color = 'bg-danger';
-                        elseif (((float)$data['ancien_index'] == (float)$data['nouvel_index']))
-                            $circle_bg_color = 'bg-warning';
-                        elseif ((float)$data['ancien_index'] < (float)$data['nouvel_index'])
-                            $circle_bg_color = 'bg-success';
-                        ?>
-
-                        <tr class="p-0 m-0">
-                            <td><?php echo $data['numero_compteur'] ?> </td>
-                            <td> <?php echo $data['nom'] ?> </td>
-                            <td id="ancien_index<?php echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
-                            <td class="w-auto d-flex justify-content-between align-items-center">
-                                <input type="number" class="form-control w-50 border-0 p-0 ps-2 "
-                                       style="background-color: rgba(0, 0, 0, 0)"
-                                       id="nouvel_index<?php echo $data['id'] ?>"
-                                       min="<?php echo $data['ancien_index'] ?>"
-                                       onclick="this.select()"
-
-                                       onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
-                                       step="0.01"
-                                       value="<?php echo((float)$data['nouvel_index'] == 0 || (float)$data['nouvel_index'] == (float)$data['ancien_index'] ? '' : $data['nouvel_index']) ?>"
-                                       aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
-                                <div class="color-circle <?php echo $circle_bg_color ?>"></div>
-                                <input type="hidden" value="<?php echo $data['nouvel_index'] ?>"
-                                       id="ex_nouvel_index<?php echo $data['id'] ?>">
-                            </td>
+                        <tr>
+                            <th>N° compteur</th>
+                            <th>Nom et Prenom</th>
+                            <th>Ancien index</th>
+                            <th>nouvel index</th>
                         </tr>
                         <?php
-                    }
-                    ?>
+                        // Intégration du code de creerLigneTableauReleveManuelle
+                        foreach ($req2 as $data) {
+                            $circle_bg_color = '';
+                            if ((float) $data['ancien_index'] > (float) $data['nouvel_index'])
+                                $circle_bg_color = 'bg-danger';
+                            elseif (((float) $data['ancien_index'] == (float) $data['nouvel_index']))
+                                $circle_bg_color = 'bg-warning';
+                            elseif ((float) $data['ancien_index'] < (float) $data['nouvel_index'])
+                                $circle_bg_color = 'bg-success';
+                            $status_value = ($circle_bg_color === 'bg-danger') ? 'error' : (($circle_bg_color === 'bg-warning') ? 'identique' : 'ok');
+                            $numero_attr = isset($data['numero_compteur']) ? strtolower($data['numero_compteur']) : '';
+                            $nom_attr = isset($data['nom']) ? strtolower($data['nom']) : '';
+                            $ancien_attr = isset($data['ancien_index']) ? (float) $data['ancien_index'] : 0;
+                            $nouvel_attr = isset($data['nouvel_index']) ? (float) $data['nouvel_index'] : 0;
+                            $ecart_attr = $nouvel_attr - $ancien_attr;
+                            ?>
+
+                            <tr class="p-0 m-0" data-numero="<?php echo htmlspecialchars($numero_attr); ?>"
+                                data-nom="<?php echo htmlspecialchars($nom_attr); ?>"
+                                data-ancien="<?php echo $ancien_attr; ?>" data-nouvel="<?php echo $nouvel_attr; ?>"
+                                data-ecart="<?php echo $ecart_attr; ?>" data-status="<?php echo $status_value; ?>">
+                                <td><?php echo $data['numero_compteur'] ?> </td>
+                                <td> <?php echo $data['nom'] ?> </td>
+                                <td id="ancien_index<?php echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
+                                <td class="w-auto d-flex justify-content-between align-items-center">
+                                    <input type="number" class="form-control w-50 border-0 p-0 ps-2 "
+                                        style="background-color: rgba(0, 0, 0, 0)"
+                                        id="nouvel_index<?php echo $data['id'] ?>" min="<?php echo $data['ancien_index'] ?>"
+                                        onclick="this.select()"
+                                        onchange="handleReleve(this.value, <?php echo $data['id'] ?>, <?php echo $data['id_compteur'] ?>)"
+                                        step="0.01"
+                                        value="<?php echo ((float) $data['nouvel_index'] == 0 || (float) $data['nouvel_index'] == (float) $data['ancien_index'] ? '' : $data['nouvel_index']) ?>"
+                                        aria-label="Sizing example input" aria-describedby="inputGroup-sizing-lg">
+                                    <div class="color-circle <?php echo $circle_bg_color ?>"></div>
+                                    <input type="hidden" value="<?php echo $data['nouvel_index'] ?>"
+                                        id="ex_nouvel_index<?php echo $data['id'] ?>">
+                                </td>
+                            </tr>
+                            <?php
+                        }
+                        ?>
                     </tbody>
                 </table>
             </div>
@@ -239,18 +286,18 @@ function addDaysAndFormat($string_date, $days = 10)
             $curentMoisQuery = MoisFacturation::getMoisById($id_current_mois);
             $currentMoisData = $curentMoisQuery->fetchAll();
             //            var_dump($currentMoisData, $selected_moi_id);
-
+            
             ?>
 
             <div class="modal fade" id="distributionModal<?php echo $id; ?>" tabindex="-1"
-                 aria-labelledby="distributionModalLabel<?php echo $id; ?>" aria-hidden="true">
+                aria-labelledby="distributionModalLabel<?php echo $id; ?>" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">
                         <div class="modal-header bg-success text-white">
                             <h5 class="modal-title" id="distributionModalLabel<?php echo $id; ?>">Distribution des
                                 factures - <?php echo htmlspecialchars($mois); ?></h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+                                aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form action="traitement/mois_facturation_t.php?get_mois_facturation=true" method="post">
@@ -261,10 +308,10 @@ function addDaysAndFormat($string_date, $days = 10)
                                         <!--                                        <input type="hidden" name="date_releve_mois_facturation" value="date_releve_mois_facturation_-->
                                         <?php //echo htmlspecialchars($id) ?><!--">-->
                                         <span class="input-group-text bg-light"><i
-                                                    class="fas fa-calendar-day"></i></span>
+                                                class="fas fa-calendar-day"></i></span>
                                         <input type="date" class="form-control shadow-sm"
-                                               value="<?php echo isset($currentMoisData[0]['date_releve']) ? htmlspecialchars($currentMoisData[0]['date_releve']) : ''; ?>"
-                                               id="releve_date_<?php echo $id; ?>" name="date_releve" required>
+                                            value="<?php echo isset($currentMoisData[0]['date_releve']) ? htmlspecialchars($currentMoisData[0]['date_releve']) : ''; ?>"
+                                            id="releve_date_<?php echo $id; ?>" name="date_releve" required>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -272,12 +319,12 @@ function addDaysAndFormat($string_date, $days = 10)
                                         distribution <span class="text-danger">*</span></label>
                                     <div class="input-group">
                                         <input type="hidden" name="mois_facturation"
-                                               value="<?php echo htmlspecialchars($id) ?>">
+                                            value="<?php echo htmlspecialchars($id) ?>">
                                         <span class="input-group-text bg-light"><i
-                                                    class="fas fa-calendar-day"></i></span>
+                                                class="fas fa-calendar-day"></i></span>
                                         <input type="date" class="form-control shadow-sm"
-                                               value="<?php echo isset($currentMoisData[0]['date_depot']) ? htmlspecialchars($currentMoisData[0]['date_depot']) : ''; ?>"
-                                               id="distribution_date_<?php echo $id; ?>" name="date_depot" required>
+                                            value="<?php echo isset($currentMoisData[0]['date_depot']) ? htmlspecialchars($currentMoisData[0]['date_depot']) : ''; ?>"
+                                            id="distribution_date_<?php echo $id; ?>" name="date_depot" required>
                                     </div>
                                 </div>
                                 <!--                                --><?php //echo htmlspecialchars($id); ?>
@@ -294,27 +341,27 @@ function addDaysAndFormat($string_date, $days = 10)
 
             <!-- Modal d'importation des index -->
             <div class="modal fade" id="importIndexModal" tabindex="-1" aria-labelledby="importIndexModalLabel"
-                 aria-hidden="true">
+                aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="importIndexModalLabel">Importer les index mensuels</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+                                aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form
-                                    action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id; ?>"
-                                    method="post" enctype="multipart/form-data">
+                                action="traitement/mois_facturation_t.php?update_indexes_mois=true&id_mois=<?php echo $id; ?>"
+                                method="post" enctype="multipart/form-data">
                                 <div class="row g-3">
                                     <div class="col-md-12">
                                         <label for="fichier_index" class="form-label fw-bold">Fichier des index <span
-                                                    class="text-danger">*</span></label>
+                                                class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                        class="fas fa-file-upload"></i></span>
+                                                    class="fas fa-file-upload"></i></span>
                                             <input type="file" class="form-control shadow-sm" id="fichier_index"
-                                                   name="fichier_index" accept=".json,.csv" required>
+                                                name="fichier_index" accept=".json,.csv" required>
                                         </div>
                                     </div>
                                 </div>
@@ -334,20 +381,20 @@ function addDaysAndFormat($string_date, $days = 10)
                                         <div>
                                             <label class="form-label mb-1">Recherche</label>
                                             <input id="preview_search" type="text" class="form-control form-control-sm"
-                                                   placeholder="Libellé ou N° compteur">
+                                                placeholder="Libellé ou N° compteur">
                                         </div>
                                         <div class="ms-auto small text-muted" id="preview_count"></div>
                                     </div>
                                     <div class="table-responsive border rounded">
                                         <table class="table table-sm table-hover mb-0" id="preview_table">
                                             <thead class="table-light">
-                                            <tr>
-                                                <th>Libellé</th>
-                                                <th>Numéro compteur</th>
-                                                <th class="text-end">Ancien index</th>
-                                                <th class="text-end">Nouvel index</th>
-                                                <th>Statut</th>
-                                            </tr>
+                                                <tr>
+                                                    <th>Libellé</th>
+                                                    <th>Numéro compteur</th>
+                                                    <th class="text-end">Ancien index</th>
+                                                    <th class="text-end">Nouvel index</th>
+                                                    <th>Statut</th>
+                                                </tr>
                                             </thead>
                                             <tbody></tbody>
                                         </table>
@@ -363,48 +410,48 @@ function addDaysAndFormat($string_date, $days = 10)
 
             <!-- Modal de création d'un nouveau mois -->
             <div class="modal fade" id="createMonthModal" tabindex="-1" aria-labelledby="createMonthModalLabel"
-                 aria-hidden="true">
+                aria-hidden="true">
                 <div class="modal-dialog modal-lg">
                     <div class="modal-content">
                         <div class="modal-header bg-primary text-white">
                             <h5 class="modal-title" id="createMonthModalLabel">Créer un nouveau mois</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+                                aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <form action="traitement/mois_facturation_t.php" method="post">
                                 <input type="hidden" name="action" value="create_month_auto">
                                 <input type="hidden" name="id_constante"
-                                       value="<?php echo isset($constante_reseau_id) ? (int)$constante_reseau_id : 0; ?>">
+                                    value="<?php echo isset($constante_reseau_id) ? (int) $constante_reseau_id : 0; ?>">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label for="mois_new" class="form-label fw-bold">Mois <span
-                                                    class="text-danger">*</span></label>
+                                                class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                        class="fas fa-calendar-month"></i></span>
+                                                    class="fas fa-calendar-month"></i></span>
                                             <input type="month" class="form-control shadow-sm" id="mois_new" name="mois"
-                                                   value="<?php echo date('Y-m'); ?>" required>
+                                                value="<?php echo date('Y-m'); ?>" required>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label for="date_depot_new" class="form-label fw-bold">Date de dépôt <span
-                                                    class="text-danger">*</span></label>
+                                                class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                        class="fas fa-calendar-day"></i></span>
+                                                    class="fas fa-calendar-day"></i></span>
                                             <input type="date" class="form-control shadow-sm" id="date_depot_new"
-                                                   name="date_depot" value="<?php echo date('Y-m-28'); ?>" required>
+                                                name="date_depot" value="<?php echo date('Y-m-28'); ?>" required>
                                         </div>
                                     </div>
                                     <div class="col-12">
                                         <label for="description_new" class="form-label fw-bold">Description</label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                        class="fas fa-info-circle"></i></span>
+                                                    class="fas fa-info-circle"></i></span>
                                             <textarea class="form-control shadow-sm" id="description_new"
-                                                      name="description" rows="4"
-                                                      placeholder="Décrivez le mois..."></textarea>
+                                                name="description" rows="4"
+                                                placeholder="Décrivez le mois..."></textarea>
                                         </div>
                                     </div>
                                 </div>
@@ -442,8 +489,7 @@ function addDaysAndFormat($string_date, $days = 10)
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler
                                     </button>
-                                    <button type="submit"
-                                            class="btn btn-primary" <?php echo isset($constante_reseau_id) && $constante_reseau_id ? '' : 'disabled'; ?>>
+                                    <button type="submit" class="btn btn-primary" <?php echo isset($constante_reseau_id) && $constante_reseau_id ? '' : 'disabled'; ?>>
                                         Créer le mois
                                     </button>
                                 </div>
@@ -605,6 +651,85 @@ function addDaysAndFormat($string_date, $days = 10)
                     }
                     if (previewFilter) previewFilter.addEventListener('change', render);
                     if (previewSearch) previewSearch.addEventListener('input', render);
+                })();
+            </script>
+            <script>
+                (function () {
+                    var searchInput = document.getElementById('releve_search');
+                    var filterSelect = document.getElementById('releve_filter');
+                    var sortBySelect = document.getElementById('releve_sort_by');
+                    var sortDirSelect = document.getElementById('releve_sort_dir');
+                    var countEl = document.getElementById('releve_count');
+                    var totalEl = document.getElementById('releve_total_count');
+                    var tbody = document.querySelector('#a_imprimer table tbody');
+                    if (!tbody) return;
+
+                    function getRows() {
+                        var rows = [];
+                        var trs = tbody.querySelectorAll('tr.p-0.m-0');
+                        for (var i = 0; i < trs.length; i++) rows.push(trs[i]);
+                        return rows;
+                    }
+
+                    function matchesSearch(tr) {
+                        var q = (searchInput && searchInput.value ? searchInput.value.toLowerCase() : '');
+                        if (!q) return true;
+                        var numero = (tr.getAttribute('data-numero') || '').toLowerCase();
+                        var nom = (tr.getAttribute('data-nom') || '').toLowerCase();
+                        return numero.indexOf(q) !== -1 || nom.indexOf(q) !== -1;
+                    }
+
+                    function matchesFilter(tr) {
+                        var f = filterSelect ? filterSelect.value : 'all';
+                        if (f === 'all') return true;
+                        return (tr.getAttribute('data-status') || '') === f;
+                    }
+
+                    function compare(a, b) {
+                        var key = sortBySelect ? sortBySelect.value : 'numero';
+                        var dir = (sortDirSelect && sortDirSelect.value === 'desc') ? -1 : 1;
+                        var av, bv;
+                        if (key === 'nom' || key === 'numero') {
+                            av = (a.getAttribute('data-' + key) || '');
+                            bv = (b.getAttribute('data-' + key) || '');
+                            av = av.toString();
+                            bv = bv.toString();
+                            if (av < bv) return -1 * dir;
+                            if (av > bv) return 1 * dir;
+                            return 0;
+                        }
+                        av = parseFloat(a.getAttribute('data-' + key) || '0');
+                        bv = parseFloat(b.getAttribute('data-' + key) || '0');
+                        if (av < bv) return -1 * dir;
+                        if (av > bv) return 1 * dir;
+                        return 0;
+                    }
+
+                    function render() {
+                        var rows = getRows();
+                        var shown = 0;
+                        for (var i = 0; i < rows.length; i++) {
+                            var tr = rows[i];
+                            var visible = matchesSearch(tr) && matchesFilter(tr);
+                            tr.style.display = visible ? '' : 'none';
+                            if (visible) shown++;
+                        }
+                        // tri: on ne trie que les visibles pour garder l'ordre naturel des cachés
+                        var visibles = rows.filter(function (tr) { return tr.style.display !== 'none'; });
+                        visibles.sort(compare);
+                        for (var j = 0; j < visibles.length; j++) {
+                            tbody.appendChild(visibles[j]);
+                        }
+                        if (countEl) countEl.textContent = shown + ' / ' + (totalEl ? totalEl.textContent : rows.length) + ' affichés';
+                    }
+
+                    if (searchInput) searchInput.addEventListener('input', render);
+                    if (filterSelect) filterSelect.addEventListener('change', render);
+                    if (sortBySelect) sortBySelect.addEventListener('change', render);
+                    if (sortDirSelect) sortDirSelect.addEventListener('change', render);
+
+                    // Première exécution
+                    render();
                 })();
             </script>
         </div>

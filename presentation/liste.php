@@ -5,7 +5,7 @@ function display_printing_button($button_text = "Imprimer", $tooltip_message = "
     ?>
     <button id="printing_button" data-bs-toggle="tooltip" data-bs-placement="left"
         data-bs-title="<?php echo $tooltip_message ?>"
-        class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed" onclick="imprimer(this)" type="button"
+        class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed z-3" onclick="imprimer(this)" type="button"
         style="background-color: #28a745; border: none; transition: background-color 0.3s ease; display: block">
         <i class="bi bi-printer"></i> <?php echo $button_text ?>
     </button>
