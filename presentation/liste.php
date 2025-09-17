@@ -264,16 +264,16 @@ if (isset($_GET['list'])) {
 
 
         ?>
-        <div class="row">
+        <div class="row container-fluid p-5">
             <article class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
-                <a href="?list=abone_simple" class="btn btn-primary ">
+                <a href="?page=abonne" class="btn btn-secondary ">
                     < Liste des abones </a>
                         <div class="me-2">
                             <?php $id_compteur = Abone_t::afficheInfoAbone($id_abone); ?>
                         </div>
             </article>
 
-            <aside class=" col-xl-7">
+            <aside class=" col-xl-8">
                 <?php
                 echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
                 //                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);

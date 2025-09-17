@@ -223,6 +223,24 @@ class Abone_t
         //var_dump($data);
         ?>
 
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h5 class="mb-0 me-2"><?php echo htmlspecialchars($data['nom']); ?></h5>
+                            <span class="badge bg-light text-dark">Réseau:
+                                <?php echo htmlspecialchars($data['reseau']); ?></span>
+                            <?php $etatClass = ($data['etat'] === 'actif') ? 'bg-success' : (($data['etat'] === 'suspendu') ? 'bg-warning' : 'bg-secondary'); ?>
+                            <span
+                                class="badge <?php echo $etatClass; ?> text-uppercase"><?php echo htmlspecialchars($data['etat']); ?></span>
+                        </div>
+                        <div>
+                            <span class="badge bg-info">Tél: <a class="text-white text-decoration-none"
+                                    href="https://wa.me/237<?php echo htmlspecialchars($data['numero_telephone']); ?>"
+                                    target="_blank"><?php echo htmlspecialchars($data['numero_telephone']); ?></a></span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
                 <table class="table table-bordered">
@@ -614,12 +632,12 @@ class Abone_t
         );
 
         // Graphiques (au-dessus du tableau)
-        echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
-        echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
-        echo '<div class="card mb-3"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
+        // echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
+        // echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
+        echo '<div class="card mb-3 col-md-12"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
         echo '<div class="row g-3">';
-        echo '<div class="col-md-7"><div style="height:320px"><canvas id="abonne_bar_recouvrement"></canvas></div></div>';
-        echo '<div class="col-md-5"><div style="height:320px"><canvas id="abonne_line_cumule"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule"></canvas></div></div>';
         echo '</div>';
         if (!count($labels)) {
             echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
@@ -627,109 +645,70 @@ class Abone_t
         echo '</div></div>';
 
         echo '<script>
-(function () {
-        window.addEventListener(\'load\', function () {
-            try {
-                if (!window.Chart) {
-                    var cont = document.getElementById("abonne_bar_recouvrement");
-                    if (cont) {
-                        var p = document.createElement("div");
-                        p.className = "text-danger small mt-2";
-                        p.textContent = "Chart.js non chargé.";
-                        cont.parentNode.appendChild(p);
-                    }
-                    return;
-                }
-                var labels = ' . json_encode($labels) . ';
-                var factures = ' . json_encode($facturesArr) . ';
-                var verses = ' . json_encode($versesArr) . ';
-                var restants = ' . json_encode($restantsArr) . ';
-                var resteCumule = ' . json_encode($resteCumuleArr) . ';
-                if (!Array.isArray(labels) || !labels.length) {
-                    labels = ["-"];
-                    factures = [0];
-                    verses = [0];
-                    restants = [0];
-                    resteCumule = [0];
-                }
-                var cA = document.getElementById("abonne_bar_recouvrement");
-                if (cA) {
-                    var ctxA = cA.getContext("2d");
-                    new Chart(ctxA, {
-                        type: "bar",
-                        data: {
-                            labels: labels, datasets: [
-                                {
-                                    label: "Facturé",
-                                    data: factures,
-                                    backgroundColor: "rgba(255,99,132,0.7)",
-                                    borderColor: "rgba(255,0,0,1)",
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: "Versé",
-                                    data: verses,
-                                    backgroundColor: "rgba(50,205,50,0.7)",
-                                    borderColor: "rgba(0,128,0,1)",
-                                    borderWidth: 1
-                                },
-                                {
-                                    label: "Reste",
-                                    data: restants,
-                                    backgroundColor: "rgba(255,159,64,0.7)",
-                                    borderColor: "rgba(255,140,0,1)",
-                                    borderWidth: 1
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {y: {beginAtZero: true}},
-                            plugins: {legend: {position: "bottom"}}
-                        }
-                    });
-                }
-                var cB = document.getElementById("abonne_line_cumule");
-                if (cB) {
-                    var ctxB = cB.getContext("2d");
-                    new Chart(ctxB, {
-                        type: "line",
-                        data: {
-                            labels: labels, datasets: [
-                                {
-                                    label: "Reste cumulé",
-                                    data: resteCumule,
-                                    borderColor: "rgba(54,162,235,1)",
-                                    backgroundColor: "rgba(54,162,235,0.15)",
-                                    tension: 0.2,
-                                    fill: true
-                                }
-                            ]
-                        },
-                        options: {
-                            responsive: true,
-                            scales: {y: {beginAtZero: true}},
-                            plugins: {legend: {position: "bottom"}}
-                        }
-                    });
-                }
-            } catch
-                (e) {
-                console.error(e);
-                var cA = document.getElementById("abonne_bar_recouvrement");
-                if (cA) {
+(function(){
+    window.addEventListener("load", function(){
+        try {
+            if (!window.Chart) {
+                var cont = document.getElementById("abonne_bar_recouvrement");
+                if (cont) {
                     var p = document.createElement("div");
                     p.className = "text-danger small mt-2";
-                    p.textContent = e.message;
-                    cA.parentNode.appendChild(p);
+                    p.textContent = "Chart.js non chargé.";
+                    cont.parentNode.appendChild(p);
                 }
+                return;
             }
-        })
-    }
-)
-();
-        
-        </script>';
+            var labels = ' . json_encode($labels) . ';
+            var factures = ' . json_encode($facturesArr) . ';
+            var verses = ' . json_encode($versesArr) . ';
+            var consommations = ' . json_encode(array_map(function ($row) {
+            return isset($row["consommation"]) ? (float) $row["consommation"] : 0;
+        }, $resultats)) . ';
+            if (!Array.isArray(labels) || !labels.length) {
+                labels = ["-"]; factures=[0]; verses=[0]; consommations=[0];
+            }
+            var cA = document.getElementById("abonne_bar_recouvrement");
+            if (cA) {
+                var ctxA = cA.getContext("2d");
+                new Chart(ctxA, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: "Montant facturé", data: factures, backgroundColor: "rgba(255,99,132,0.7)", borderColor: "rgba(255,0,0,1)", borderWidth: 1 },
+                            { label: "Montant versé", data: verses, backgroundColor: "rgba(50,205,50,0.7)", borderColor: "rgba(0,128,0,1)", borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
+                });
+            }
+            var cB = document.getElementById("abonne_line_cumule");
+            if (cB) {
+                var ctxB = cB.getContext("2d");
+                new Chart(ctxB, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: "Consommation (m³)", data: consommations, borderColor: "rgba(54,162,235,1)", backgroundColor: "rgba(54,162,235,0.15)", tension: 0.2, fill: true }
+                        ]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            var root = document.getElementById("abonne_bar_recouvrement");
+            if (root) {
+                var p2 = document.createElement("div");
+                p2.className = "text-danger small mt-2";
+                p2.textContent = e.message;
+                root.parentNode.appendChild(p2);
+            }
+        }
+    });
+})();
+</script>';
 
         $sum = 0;
         // Affichage des résultats dans un tableau HTML
