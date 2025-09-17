@@ -371,6 +371,7 @@ class Facture_t
                     <th>Nom et Prénom</th>
                     <th>Index</th>
                     <th>Conso</th>
+                    <th>Pénalité</th>
                     <th>Impayé</th>
                     <th>Facture</th>
                     <th>Total</th>
@@ -459,6 +460,7 @@ class Facture_t
                         <td><?php echo htmlspecialchars($data['ancien_index'] . ' - ' . $data['nouvel_index']); ?></td>
 <!--                        <td>--><?php //echo htmlspecialchars($data['premier_index'] ); ?><!--</td>-->
                         <td class="text-center"><?php echo htmlspecialchars($consoMois); ?></td>
+                        <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int)$data['penalite'])); ?></td>
                         <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int)$data['impayer_cumule'])); ?></td>
                         <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier($montantTva)); ?></td>
                         <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier($montantTotal)); ?></td>

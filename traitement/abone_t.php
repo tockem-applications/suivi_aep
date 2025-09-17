@@ -636,12 +636,82 @@ class Abone_t
         // echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
         echo '<div class="card mb-3 col-md-12"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
         echo '<div class="row g-3">';
-        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement'.$id_compteur.'"></canvas></div></div>';
-        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule'.$id_compteur.'"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement' . $id_compteur . '"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule' . $id_compteur . '"></canvas></div></div>';
         echo '</div>';
         if (!count($labels)) {
             echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
         }
+        echo '</div></div>';
+
+        // Section pénalité
+        $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
+        $moisActifData = $moisActif->fetchAll();
+        $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;
+        $moisActifLibelle = count($moisActifData) > 0 ? getLetterMonth($moisActifData[0]['mois']) : 'Aucun mois actif';
+
+        // Récupérer la pénalité actuelle pour ce compteur et ce mois
+        $penaliteActuelle = 0;
+        if ($moisActifId > 0) {
+            $penaliteReq = Manager::prepare_query("
+                SELECT f.penalite 
+                FROM facture f 
+                INNER JOIN indexes i ON f.id_indexes = i.id 
+                WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+            ", array($id_compteur, $moisActifId));
+            $penaliteData = $penaliteReq->fetchAll();
+            if (count($penaliteData) > 0) {
+                $penaliteActuelle = (int) $penaliteData[0]['penalite'];
+            }
+        }
+
+        echo '<div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Gestion des pénalités</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Mois actuel</h6>
+                            <span class="badge bg-primary fs-6">' . $moisActifLibelle . '</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Pénalité actuelle</h6>
+                            <span class="badge ' . ($penaliteActuelle > 0 ? 'bg-danger' : 'bg-success') . ' fs-6">' . Facture::formatFinancier($penaliteActuelle) . '</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <form method="POST" action="traitement/abone_t.php" class="d-flex gap-2">
+                            <input type="hidden" name="action" value="apply_penalite">
+                            <input type="hidden" name="id_compteur" value="' . $id_compteur . '">
+                            <input type="hidden" name="id_mois" value="' . $moisActifId . '">
+                            <input type="number" name="penalite_montant" class="form-control" value="2500" min="0" step="100" required>
+                            <button type="submit" class="btn btn-warning btn-sm" ' . ($moisActifId == 0 ? 'disabled' : '') . '>
+                                <i class="fas fa-plus"></i> Pénaliser
+                            </button>
+                        </form>
+                    </div>
+                </div>';
+
+        // Bouton d'annulation de pénalité si pénalité > 0 et mois actif
+        if ($penaliteActuelle > 0 && $moisActifId > 0) {
+            echo '<div class="row mt-3">
+                <div class="col-12 text-center">
+                    <form method="POST" action="traitement/abone_t.php" class="d-inline">
+                        <input type="hidden" name="action" value="cancel_penalite">
+                        <input type="hidden" name="id_compteur" value="' . $id_compteur . '">
+                        <input type="hidden" name="id_mois" value="' . $moisActifId . '">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm(\'Êtes-vous sûr de vouloir annuler la pénalité ?\')">
+                            <i class="fas fa-times"></i> Annuler la pénalité
+                        </button>
+                    </form>
+                </div>
+            </div>';
+        }
+
         echo '</div></div>';
 
         echo '<script>
@@ -667,7 +737,7 @@ class Abone_t
             if (!Array.isArray(labels) || !labels.length) {
                 labels = ["-"]; factures=[0]; verses=[0]; consommations=[0];
             }
-            var cA = document.getElementById("abonne_bar_recouvrement'.$id_compteur.'");
+            var cA = document.getElementById("abonne_bar_recouvrement' . $id_compteur . '");
             if (cA) {
                 var ctxA = cA.getContext("2d");
                 new Chart(ctxA, {
@@ -682,7 +752,7 @@ class Abone_t
                     options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
                 });
             }
-            var cB = document.getElementById("abonne_line_cumule'.$id_compteur.'");
+            var cB = document.getElementById("abonne_line_cumule' . $id_compteur . '");
             if (cB) {
                 var ctxB = cB.getContext("2d");
                 new Chart(ctxB, {
@@ -698,7 +768,7 @@ class Abone_t
             }
         } catch (e) {
             console.error(e);
-            var root = document.getElementById("abonne_bar_recouvrement'.$id_compteur.'");
+            var root = document.getElementById("abonne_bar_recouvrement' . $id_compteur . '");
             if (root) {
                 var p2 = document.createElement("div");
                 p2.className = "text-danger small mt-2";
@@ -775,6 +845,103 @@ class Abone_t
         return ob_get_clean();
     }
 
+    public static function applyPenalite()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'apply_penalite') {
+            $id_compteur = (int) $_POST['id_compteur'];
+            $id_mois = (int) $_POST['id_mois'];
+            $penalite_montant = (int) $_POST['penalite_montant'];
+
+            if ($id_compteur > 0 && $id_mois > 0 && $penalite_montant > 0) {
+                try {
+                    // Récupérer l'ID de l'index pour ce compteur et ce mois
+                    $indexReq = Manager::prepare_query("
+                        SELECT i.id 
+                        FROM indexes i 
+                        WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+                    ", array($id_compteur, $id_mois));
+                    $indexData = $indexReq->fetchAll();
+
+                    if (count($indexData) > 0) {
+                        $id_indexes = $indexData[0]['id'];
+
+                        // Mettre à jour la pénalité dans la facture
+                        $updateReq = Manager::prepare_query("
+                            UPDATE facture 
+                            SET penalite = ? 
+                            WHERE id_indexes = ?
+                        ", array($penalite_montant, $id_indexes));
+
+                        if ($updateReq) {
+                            $_SESSION['success_message'] = "Pénalité de " . Facture::formatFinancier($penalite_montant) . " appliquée avec succès.";
+                            header("location: ../index.php?list=recouvrement&operation=succes");
+//                            header("location: ../index.php?list=tarif&operation=error");
+                        } else {
+                            $_SESSION['error_message'] = "Erreur lors de l'application de la pénalité.";
+                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'application de la pénalité");
+                        }
+                    } else {
+                        $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
+                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
+                }
+            } else {
+                $_SESSION['error_message'] = "Données invalides pour l'application de la pénalité.";
+                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'application de la pénalité.");
+            }
+        }
+    }
+
+    public static function cancelPenalite()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'cancel_penalite') {
+            $id_compteur = (int) $_POST['id_compteur'];
+            $id_mois = (int) $_POST['id_mois'];
+
+            if ($id_compteur > 0 && $id_mois > 0) {
+                try {
+                    // Récupérer l'ID de l'index pour ce compteur et ce mois
+                    $indexReq = Manager::prepare_query("
+                        SELECT i.id 
+                        FROM indexes i 
+                        WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+                    ", array($id_compteur, $id_mois));
+                    $indexData = $indexReq->fetchAll();
+
+                    if (count($indexData) > 0) {
+                        $id_indexes = $indexData[0]['id'];
+
+                        // Annuler la pénalité (mettre à 0)
+                        $updateReq = Manager::prepare_query("
+                            UPDATE facture 
+                            SET penalite = 0 
+                            WHERE id_indexes = ?
+                        ", array($id_indexes));
+
+                        if ($updateReq) {
+                            $_SESSION['success_message'] = "Pénalité annulée avec succès.";
+                            header("location: ../index.php?list=recouvrement&operation=succes");
+                        } else {
+                            $_SESSION['error_message'] = "Erreur lors de l'annulation de la pénalité.";
+                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'annulation de la pénalité");
+                        }
+                    } else {
+                        $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
+                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
+                    header("location: ../index.php?list=recouvrement&operation=error&message=".$e->getMessage());
+                }
+            } else {
+                $_SESSION['error_message'] = "Données invalides pour l'annulation de la pénalité.";
+                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'annulation de la pénalité.");
+            }
+        }
+    }
+
 }
 
 //var_dump($_POST);
@@ -784,6 +951,8 @@ Abone_t::delete();
 Abone_t::findUpadate();
 Abone_t::handleSingleFielAboneUpdate();
 Abone_t::getJsonDataToExport();
+Abone_t::applyPenalite();
+Abone_t::cancelPenalite();
 //tarif_t::getAll();
 
 
