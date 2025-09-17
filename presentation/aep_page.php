@@ -13,6 +13,91 @@ if (!isset($_SESSION['user_id'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_aep'])) {
     $aep_id = intval($_POST['aep_id']);
     try {
+        // Préparer la sauvegarde avant suppression
+        $resAep = Manager::prepare_query("SELECT * FROM aep WHERE id = ?", array($aep_id));
+        $aepRow = $resAep ? $resAep->fetch() : array();
+        $aepName = isset($aepRow['libele']) ? $aepRow['libele'] : ('AEP_' . $aep_id);
+        $safeName = preg_replace('/[^A-Za-z0-9_-]+/', '_', $aepName);
+        $timestamp = date('Ymd_His');
+        $backupDir = dirname(__FILE__) . '/../donnees/backups';
+        if (!is_dir($backupDir)) {
+            @mkdir($backupDir, 0777, true);
+        }
+
+        // Collecte des données liées à l'AEP
+        $backup = array();
+        $backup['meta'] = array('generated_at' => date('c'), 'aep_id' => $aep_id, 'aep_libele' => $aepName);
+        $backup['aep'] = $aepRow ? $aepRow : array();
+
+        $q = Manager::prepare_query("SELECT * FROM constante_reseau WHERE id_aep = ?", array($aep_id));
+        $backup['constante_reseau'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query("SELECT r.* FROM reseau r WHERE r.id_aep = ?", array($aep_id));
+        $reseaux = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+        $backup['reseau'] = $reseaux;
+
+        $q = Manager::prepare_query(
+            "SELECT a.* FROM abone a INNER JOIN reseau r ON r.id = a.id_reseau WHERE r.id_aep = ?",
+            array($aep_id)
+        );
+        $backup['abone'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query(
+            "SELECT mf.* FROM mois_facturation mf INNER JOIN constante_reseau c ON c.id = mf.id_constante WHERE c.id_aep = ?",
+            array($aep_id)
+        );
+        $mois = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+        $backup['mois_facturation'] = $mois;
+
+        $q = Manager::prepare_query(
+            "SELECT i.* FROM indexes i WHERE i.id_mois_facturation IN (
+                SELECT mf.id FROM mois_facturation mf INNER JOIN constante_reseau c ON c.id = mf.id_constante WHERE c.id_aep = ?
+            )",
+            array($aep_id)
+        );
+        $backup['indexes'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query(
+            "SELECT f.* FROM facture f WHERE f.id_indexes IN (
+                SELECT i.id FROM indexes i WHERE i.id_mois_facturation IN (
+                    SELECT mf.id FROM mois_facturation mf INNER JOIN constante_reseau c ON c.id = mf.id_constante WHERE c.id_aep = ?
+                )
+            )",
+            array($aep_id)
+        );
+        $backup['facture'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query(
+            "SELECT v.* FROM versements v WHERE v.id_redevance IN (SELECT id FROM redevance WHERE id_aep = ?) 
+             OR v.id_mois_facturation IN (
+                SELECT mf.id FROM mois_facturation mf INNER JOIN constante_reseau c ON c.id = mf.id_constante WHERE c.id_aep = ?
+             )",
+            array($aep_id, $aep_id)
+        );
+        $backup['versements'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query("SELECT * FROM compteur_aep WHERE id_aep = ?", array($aep_id));
+        $backup['compteur_aep'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query(
+            "SELECT cr.* FROM compteur_reseau cr INNER JOIN reseau r ON r.id = cr.id_reseau WHERE r.id_aep = ?",
+            array($aep_id)
+        );
+        $backup['compteur_reseau'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query("SELECT * FROM redevance WHERE id_aep = ?", array($aep_id));
+        $backup['redevance'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        $q = Manager::prepare_query("SELECT * FROM flux_financier WHERE id_aep = ?", array($aep_id));
+        $backup['flux_financier'] = $q ? $q->fetchAll(PDO::FETCH_ASSOC) : array();
+
+        // Écriture du fichier JSON
+        $backupFile = $backupDir . '/backup_avant_supression_' . $safeName . '_' . $timestamp . '.json';
+        $json = json_encode($backup);
+        if ($json === false || file_put_contents($backupFile, $json) === false) {
+            throw new Exception("Sauvegarde avant suppression échouée");
+        }
+
         $bd = Connexion::connect();
         $bd->beginTransaction();
 
