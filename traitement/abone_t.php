@@ -636,8 +636,8 @@ class Abone_t
         // echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
         echo '<div class="card mb-3 col-md-12"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
         echo '<div class="row g-3">';
-        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement"></canvas></div></div>';
-        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement'.$id_compteur.'"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule'.$id_compteur.'"></canvas></div></div>';
         echo '</div>';
         if (!count($labels)) {
             echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
@@ -667,7 +667,7 @@ class Abone_t
             if (!Array.isArray(labels) || !labels.length) {
                 labels = ["-"]; factures=[0]; verses=[0]; consommations=[0];
             }
-            var cA = document.getElementById("abonne_bar_recouvrement");
+            var cA = document.getElementById("abonne_bar_recouvrement'.$id_compteur.'");
             if (cA) {
                 var ctxA = cA.getContext("2d");
                 new Chart(ctxA, {
@@ -682,7 +682,7 @@ class Abone_t
                     options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
                 });
             }
-            var cB = document.getElementById("abonne_line_cumule");
+            var cB = document.getElementById("abonne_line_cumule'.$id_compteur.'");
             if (cB) {
                 var ctxB = cB.getContext("2d");
                 new Chart(ctxB, {
@@ -698,7 +698,7 @@ class Abone_t
             }
         } catch (e) {
             console.error(e);
-            var root = document.getElementById("abonne_bar_recouvrement");
+            var root = document.getElementById("abonne_bar_recouvrement'.$id_compteur.'");
             if (root) {
                 var p2 = document.createElement("div");
                 p2.className = "text-danger small mt-2";

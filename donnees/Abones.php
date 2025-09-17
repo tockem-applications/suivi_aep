@@ -228,7 +228,7 @@ class Abones extends Manager
                         left join abone a on a.id = c_a.id_abone
                         left join compteur_reseau c_r on c_r.id_compteur = co.id
                         inner join reseau r on r.id = c_r.id_reseau or a.id_reseau = r.id
-                    where id_mois_facturation=30
+                    where id_mois_facturation=?
                     order by coalesce(a.nom, concat('compteur ', r.nom ));
                             ";
         $request = self::prepare_query($query, array($id_mois));;
