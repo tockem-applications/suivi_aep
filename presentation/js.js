@@ -52,7 +52,7 @@ async function handleAboneDelete(id_abone) {
 
 }
 
-function handleRecouvrement(montant, id_indexes, id_elemenent="") {
+function handleRecouvrement(montant, id_indexes, id_elemenent = "") {
     if (!validerExpressionAlgebrique(id_elemenent))
         return false;
     montant = parseInt(eval(montant));
@@ -291,9 +291,10 @@ function afficherFeedback(element, message, estValide) {
     feedback.textContent = message;
 
     // Ajoute le feedback après l'input
-    if(message != "")
-    element.insertAdjacentElement('afterend', feedback);
+    if (message != "")
+        element.insertAdjacentElement('afterend', feedback);
 
     // Change le style de l'input
     element.style.borderColor = estValide ? 'green' : 'red';
 }
+

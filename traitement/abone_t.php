@@ -27,49 +27,49 @@ class Abone_t
                 $numero_compteur = htmlspecialchars($_POST['numero_compteur']);
                 $numero_telephone = htmlspecialchars($_POST['numero_telephone']);
                 $numero_compte_anticipation = 100;// htmlspecialchars($_POST['numero_compte_anticipation']);
-                $derniers_index = (float)htmlspecialchars($_POST['derniers_index']);
+                $derniers_index = (float) htmlspecialchars($_POST['derniers_index']);
                 $id_reseau = htmlspecialchars($_POST['id_reseau']);
-//                $type_compteur = htmlspecialchars($_POST['type_compteur']);
+                //                $type_compteur = htmlspecialchars($_POST['type_compteur']);
                 $etat = htmlspecialchars($_POST['etat']);
                 if (empty($nom)) {
-            throw new Exception('Le nom est requis');
-        }
-        if (strlen($nom) > 128) {
-            throw new Exception('Le nom est trop long (max 128 caractères)');
-        }
+                    throw new Exception('Le nom est requis');
+                }
+                if (strlen($nom) > 128) {
+                    throw new Exception('Le nom est trop long (max 128 caractères)');
+                }
 
-        if (strlen($numero_compteur) > 16) {
-            throw new Exception('Le numero de compteur est trop long (max 16 caractères)');
-        }
+                if (strlen($numero_compteur) > 16) {
+                    throw new Exception('Le numero de compteur est trop long (max 16 caractères)');
+                }
 
-        if ($derniers_index < 0) {
-            throw new Exception('Le dernier index ne peu etre inferieur à 0');
-        }
+                if ($derniers_index < 0) {
+                    throw new Exception('Le dernier index ne peu etre inferieur à 0');
+                }
 
-        if (empty($numero_telephone)) {
-            throw new Exception('Le numéro de téléphone est requis');
-        }
-        if (strlen($numero_telephone) > 16) {
-            throw new Exception('Le numéro de téléphone est trop long (max 16 caractères)');
-        }
+                if (empty($numero_telephone)) {
+                    throw new Exception('Le numéro de téléphone est requis');
+                }
+                if (strlen($numero_telephone) > 16) {
+                    throw new Exception('Le numéro de téléphone est trop long (max 16 caractères)');
+                }
 
-        if (!in_array($etat, array('actif', 'inactif', 'suspendu'))) {
-            throw new Exception('État invalide');
-        }
+                if (!in_array($etat, array('actif', 'inactif', 'suspendu'))) {
+                    throw new Exception('État invalide');
+                }
 
-        if ($id_reseau <= 0) {
-            throw new Exception('Réseau invalide');
-        }
+                if ($id_reseau <= 0) {
+                    throw new Exception('Réseau invalide');
+                }
 
-        // Vérifier que le réseau appartient à l'AEP
-        $reseau = Manager::prepare_query(
-            'SELECT * FROM reseau WHERE id = ? AND id_aep = ?',
-            array($id_reseau, $_SESSION['id_aep'])
-        )->fetch();
+                // Vérifier que le réseau appartient à l'AEP
+                $reseau = Manager::prepare_query(
+                    'SELECT * FROM reseau WHERE id = ? AND id_aep = ?',
+                    array($id_reseau, $_SESSION['id_aep'])
+                )->fetch();
 
-        if (!$reseau) {
-            throw new Exception('Réseau introuvable ou non autorisé');
-        }
+                if (!$reseau) {
+                    throw new Exception('Réseau introuvable ou non autorisé');
+                }
 
 
 
@@ -90,9 +90,9 @@ class Abone_t
                 var_dump($nouvel_abone);
                 $nouvel_abone->getAboneIdBy();
                 var_dump($nouvel_abone);
-//                exit();
+                //                exit();
                 $text = ob_get_clean();
-//                if (!$res)
+                //                if (!$res)
 //                    header("location: ../index.php?form=abone&operation=error");
 //                else
 //                    header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
@@ -222,7 +222,7 @@ class Abone_t
         $idCompteur = $data['id_compteur'];
         //var_dump($data);
         ?>
-                
+
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
                 <table class="table table-bordered">
@@ -249,7 +249,9 @@ class Abone_t
                         <tr>
                             <th>Nº compteur</th>
                             <th> <?php echo $data['numero_compteur'] ?> </th>
-                            <th> <input type="number" step="0.01" placeholder="modifier le Nº compteur" onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)" class="form-control">
+                            <th> <input type="number" step="0.01" placeholder="modifier le Nº compteur"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)"
+                                    class="form-control">
                             </th>
                         </tr>
                         <tr>
@@ -258,27 +260,37 @@ class Abone_t
                                     data-bs-title="cliquer pour envoyer un message sur mobile"
                                     href="https://wa.me/237<?php echo $data['numero_telephone'] ?>"><?php echo $data['numero_telephone'] ?></a>
                             </th>
-                            <th> <input type="tel" placeholder="modifier le numero" class="form-control" onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)"></th>
+                            <th> <input type="tel" placeholder="modifier le numero" class="form-control"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Index</th>
                             <th><?php echo $data['derniers_index'] ?></th>
-                            <th> <input type="number" step="0.01" placeholder="nouvel index" class="form-control" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
-                             onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)"></th>
+                            <th> <input type="number" step="0.01" placeholder="nouvel index" class="form-control"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Etat</th>
                             <th><?php echo $data['etat'] ?></th>
-                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $id_abone?>" class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a></th>
+                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $id_abone ?>"
+                                    class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>">
+                                    <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a></th>
                         </tr>
-<!--                        <tr>-->
-<!--                            <th>Type</th>-->
-<!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
-<!--                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=--><?php //echo $data['type_compteur']=='distribution'?'production':'distribution'?><!--&id_abone=--><?php //echo $id_abone?><!--" class="btn form-control --><?php //echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?><!--"> --><?php //echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production')?><!--</a></th>-->
-<!--                        </tr>-->
+                        <!--                        <tr>-->
+                        <!--                            <th>Type</th>-->
+                        <!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
+                        <!--                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=--><?php //echo $data['type_compteur']=='distribution'?'production':'distribution' ?><!--&id_abone=--><?php //echo $id_abone ?><!--" class="btn form-control --><?php //echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?><!--"> --><?php //echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production') ?><!--</a></th>-->
+                        <!--                        </tr>-->
                         <tr>
-                            <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0" data-bs-toggle="tooltip"data-bs-placement="right" data-bs-title="Modifiez le nom de l'aboné"
-                             onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)"></th>
+                            <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Modifiez le nom de l'aboné"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Consommation</th>
@@ -302,14 +314,17 @@ class Abone_t
                             <th class="text-end px-5"><?php echo $data['duree'] ?></sub></th>
                         </tr>
                         <tr>
-                            <th colspan="3" class=""> <a href="traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>"
-                             placeholder="modifier le nom" class="form-control m-0 bg-danger text-center" data-bs-toggle="tooltip"
-                             data-bs-placement="right" data-bs-title="Cette action va suprimer definitivement l'abone de la liste"> Suprimer</a></th>
+                            <th colspan="3" class=""> <a
+                                    href="traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>"
+                                    placeholder="modifier le nom" class="form-control m-0 bg-danger text-center"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Cette action va suprimer definitivement l'abone de la liste"> Suprimer</a>
+                            </th>
                         </tr>
                     </tbody>
                 </table>
                 <?php
-        return $idCompteur;
+                return $idCompteur;
     }
 
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
@@ -332,29 +347,28 @@ class Abone_t
 
     public static function handleSingleFielAboneUpdate()
     {
-        if (isset($_GET['single_update_abone'])|| isset($_GET['abone_deleting'])) {
+        if (isset($_GET['single_update_abone']) || isset($_GET['abone_deleting'])) {
             echo "bonjour<br>";
             echo $_SERVER['REQUEST_METHOD'];
             $sendedData = null;
-            if($_SERVER['REQUEST_METHOD'] == 'GET')
+            if ($_SERVER['REQUEST_METHOD'] == 'GET')
                 $sendedData = $_GET;
             else
                 $sendedData = json_decode(file_get_contents('php://input'), true);
             //self::writeToFile('tito.txt',  '555555555555555555555555');
-            if(isset($_GET['abone_deleting'])){
-                if(isset($sendedData['id_abone'])){
+            if (isset($_GET['abone_deleting'])) {
+                if (isset($sendedData['id_abone'])) {
                     $id_abone = (int) htmlspecialchars($sendedData['id_abone']);
-                    $res = Abones::deleteAbone( $id_abone);
-                    if ($res){
+                    $res = Abones::deleteAbone($id_abone);
+                    if ($res) {
                         header("location: ../index.php?list=abone_simple&message='aboné suprimé'");
-                    }else{
+                    } else {
                         header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=echec de supression de l'aboné");
                     }
                     return;
                 }
-            }
-            else if (!isset($sendedData['id_abone'], $sendedData['key'], $sendedData['value'])){
-//                self::writeToFile('tito.txt',  '6666666666666666666666');
+            } else if (!isset($sendedData['id_abone'], $sendedData['key'], $sendedData['value'])) {
+                //                self::writeToFile('tito.txt',  '6666666666666666666666');
                 return false;
             }
 
@@ -367,7 +381,7 @@ class Abone_t
                 $value = (int) $value;
             else if ($key == 'derniers_index')
                 $value = (float) $value;
-            
+
             $res = Abones::updateSingleValue($id_abone, $key, $value);
             if (!$res)
                 header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=");
@@ -378,42 +392,44 @@ class Abone_t
     }
     public static function getListeAboneSimple($type_compteur = '')
     {
-        $req = Abones::getSimpleAbone( $_SESSION['id_aep']);
+        $req = Abones::getSimpleAbone($_SESSION['id_aep']);
         $req = $req->fetchAll(PDO::FETCH_ASSOC);
-//        var_dump($req);
+        //        var_dump($req);
 
-        if($type_compteur == 'compteur_reseau'){
-            $titre_page ='Liste de tout les compteurs reseau';
-            $req =  Abones::getSimpleCompteurReseau($_SESSION['id_aep']);
+        if ($type_compteur == 'compteur_reseau') {
+            $titre_page = 'Liste de tout les compteurs reseau';
+            $req = Abones::getSimpleCompteurReseau($_SESSION['id_aep']);
             $req = $req->fetchAll(PDO::FETCH_ASSOC);
 
-        }
-
-        elseif ($type_compteur == 'distribution')
+        } elseif ($type_compteur == 'distribution')
             $titre_page = "Liste des abonés";
-        elseif ( $type_compteur == 'production')
+        elseif ($type_compteur == 'production')
             $titre_page = "Liste des compteurs de production";
         ob_start();
-        create_csv_exportation_button($req, "liste_abones.csv",
-        "Exporter la liste des abonés au format csv");
+        create_csv_exportation_button(
+            $req,
+            "liste_abones.csv",
+            "Exporter la liste des abonés au format csv"
+        );
         ?>
             <tr class="mt-3">
-<!--                <th>Id</th>-->
+                <!--                <th>Id</th>-->
                 <th>Nom et Prenom</th>
                 <th>N° Telephone</th>
                 <th>N° Compteur</th>
                 <th>Reseau</th>
                 <th>Index</th>
                 <th>Etat</th>
-<!--                <th>Type</th>-->
+                <!--                <th>Type</th>-->
 
             </tr>
             <?php
             foreach ($req as $data) {
                 ?>
                 <tr <?php ?> class=<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>>
-<!--                    <td> --><?php //echo $data['id'] ?><!--</td>-->
-                    <td class="table_link"> <a href="<?php echo $type_compteur=='distribution'? '?page=info_abone&id='.$data['id']:'#'?>"
+                    <!--                    <td> --><?php //echo $data['id'] ?><!--</td>-->
+                    <td class="table_link"> <a
+                            href="<?php echo $type_compteur == 'distribution' ? '?page=info_abone&id=' . $data['id'] : '#' ?>"
                             style="color:black;"><?php echo $data['nom'] ?></a></td>
                     <td> <?php echo $data['numero_telephone'] ?></td>
                     <td> <?php echo $data['numero_compteur'] ?></td>
@@ -421,11 +437,11 @@ class Abone_t
                     <td> <?php echo $data['derniers_index'] ?></td>
                     <td class="<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>">
                         <?php echo $data['etat'] == 'actif' ? 'ACTIF' : 'NON ACTIF' ?>
-                        <!-- <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $data['id']?>" class="btn form-control m-0 p-0"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a> -->
+                        <!-- <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $data['id'] ?>" class="btn form-control m-0 p-0"> <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a> -->
                     </td>
-<!--                    <td> --><?php //echo strtoupper($data['type_compteur']) ?><!--</td>-->
+                    <!--                    <td> --><?php //echo strtoupper($data['type_compteur']) ?><!--</td>-->
                 </tr>
-            <?php
+                <?php
             }
             $codeHtml = ob_get_clean();
             self::createTable($codeHtml, $titre_page, "");
@@ -491,44 +507,53 @@ class Abone_t
 
 
 
-    public static function getData(){
-    $file_name = 'donnees/data.csv';
-    $handle = fopen($file_name, 'r');
-    $tab = array();
-    $i = 0;
-    while (($donnee = fgetcsv($handle, 1000, ';' )) !== false) {
-        $i++;
+    public static function getData()
+    {
+        $file_name = 'donnees/data.csv';
+        $handle = fopen($file_name, 'r');
+        $tab = array();
+        $i = 0;
+        while (($donnee = fgetcsv($handle, 1000, ';')) !== false) {
+            $i++;
 
-        $a = $donnee;
-        $data = array();
-        // Convertir l'encodage des données
+            $a = $donnee;
+            $data = array();
+            // Convertir l'encodage des données
             foreach ($donnee as &$cellule) {
                 $data[] = mb_convert_encoding($cellule, 'UTF-8', 'ISO-8859-1'); // Ajustez l'encodage d'origine si nécessaire
             }
-//            var_dump($data);
-            if($i == 1){
-            continue;
-        }
-        $abone =new Abones('',''.$data[1],''.$data[0],''.$data[4],
-         ''.$data[3],'actif',''.$data[6],''.$data[5],
-         ''.$data[8]); //$donnee;
-         $abone->ajouter();
-//          $facture = new Facture('','','','','','','','','');
+            //            var_dump($data);
+            if ($i == 1) {
+                continue;
+            }
+            $abone = new Abones(
+                '',
+                '' . $data[1],
+                '' . $data[0],
+                '' . $data[4],
+                '' . $data[3],
+                'actif',
+                '' . $data[6],
+                '' . $data[5],
+                '' . $data[8]
+            ); //$donnee;
+            $abone->ajouter();
+            //          $facture = new Facture('','','','','','','','','');
 
+        }
+        return $tab;
     }
-    return $tab;
-}
 
     public static function getJsonDataToExport()
     {
-//        var_dump($_GET);
+        //        var_dump($_GET);
         if (!isset($_GET['action'], $_GET['id_mois']))
             return;
         elseif ($_GET['action'] != 'export_index')
             return;
-//        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
+        //        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
         $req = Abones::getJsonDataFromIdMois($_GET['id_mois']);
-//        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
+        //        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
         //var_dump($req);
         $date_export = new DateTime();
         $data = json_encode($req);
@@ -551,84 +576,224 @@ class Abone_t
         $fileName = '../donnees/exports/export_index_nom_AEP_' . $date_export->format('d-m-Y_H-i-s') . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
-        header('location: '.$_SESSION['PREVIOUS_REQUEST_HEADER']);
+        header('location: ' . $_SESSION['PREVIOUS_REQUEST_HEADER']);
         exit;
-//        unlink($fileName);
+        //        unlink($fileName);
     }
 
-    public static function afficheInputRecouvrementAbone($id_compteur){
+    public static function afficheInputRecouvrementAbone($id_compteur)
+    {
         ob_start();
         $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
         $resultats = $req->fetchAll(PDO::FETCH_ASSOC);
 
-        create_csv_exportation_button($resultats,
-                     'facturation-abone-'.$_SESSION["libele_aep"].'.csv',
-                "Vous allez exporter les donnees de facturation d'un aboné au format csv"
-                );
+        // Préparer données pour graphiques
+        $labels = array();
+        $facturesArr = array();
+        $versesArr = array();
+        $restantsArr = array();
+        $resteCumuleArr = array();
+        $resteCumule = 0;
+        foreach ($resultats as $row) {
+            $libMois = getLetterMonth($row['mois']);
+            $labels[] = $libMois;
+            $mt = isset($row['montant_total']) ? (float) $row['montant_total'] : 0;
+            $mv = isset($row['montant_verse']) ? (float) $row['montant_verse'] : 0;
+            $mr = isset($row['montant_restant']) ? (float) $row['montant_restant'] : max(0, $mt - $mv);
+            $facturesArr[] = $mt;
+            $versesArr[] = $mv;
+            $restantsArr[] = $mr;
+            $resteCumule += $mr;
+            $resteCumuleArr[] = $resteCumule;
+        }
+
+        create_csv_exportation_button(
+            $resultats,
+            'facturation-abone-' . $_SESSION["libele_aep"] . '.csv',
+            "Vous allez exporter les donnees de facturation d'un aboné au format csv"
+        );
+
+        // Graphiques (au-dessus du tableau)
+        echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
+        echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
+        echo '<div class="card mb-3"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
+        echo '<div class="row g-3">';
+        echo '<div class="col-md-7"><div style="height:320px"><canvas id="abonne_bar_recouvrement"></canvas></div></div>';
+        echo '<div class="col-md-5"><div style="height:320px"><canvas id="abonne_line_cumule"></canvas></div></div>';
+        echo '</div>';
+        if (!count($labels)) {
+            echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
+        }
+        echo '</div></div>';
+
+        echo '<script>
+(function () {
+        window.addEventListener(\'load\', function () {
+            try {
+                if (!window.Chart) {
+                    var cont = document.getElementById("abonne_bar_recouvrement");
+                    if (cont) {
+                        var p = document.createElement("div");
+                        p.className = "text-danger small mt-2";
+                        p.textContent = "Chart.js non chargé.";
+                        cont.parentNode.appendChild(p);
+                    }
+                    return;
+                }
+                var labels = ' . json_encode($labels) . ';
+                var factures = ' . json_encode($facturesArr) . ';
+                var verses = ' . json_encode($versesArr) . ';
+                var restants = ' . json_encode($restantsArr) . ';
+                var resteCumule = ' . json_encode($resteCumuleArr) . ';
+                if (!Array.isArray(labels) || !labels.length) {
+                    labels = ["-"];
+                    factures = [0];
+                    verses = [0];
+                    restants = [0];
+                    resteCumule = [0];
+                }
+                var cA = document.getElementById("abonne_bar_recouvrement");
+                if (cA) {
+                    var ctxA = cA.getContext("2d");
+                    new Chart(ctxA, {
+                        type: "bar",
+                        data: {
+                            labels: labels, datasets: [
+                                {
+                                    label: "Facturé",
+                                    data: factures,
+                                    backgroundColor: "rgba(255,99,132,0.7)",
+                                    borderColor: "rgba(255,0,0,1)",
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: "Versé",
+                                    data: verses,
+                                    backgroundColor: "rgba(50,205,50,0.7)",
+                                    borderColor: "rgba(0,128,0,1)",
+                                    borderWidth: 1
+                                },
+                                {
+                                    label: "Reste",
+                                    data: restants,
+                                    backgroundColor: "rgba(255,159,64,0.7)",
+                                    borderColor: "rgba(255,140,0,1)",
+                                    borderWidth: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {y: {beginAtZero: true}},
+                            plugins: {legend: {position: "bottom"}}
+                        }
+                    });
+                }
+                var cB = document.getElementById("abonne_line_cumule");
+                if (cB) {
+                    var ctxB = cB.getContext("2d");
+                    new Chart(ctxB, {
+                        type: "line",
+                        data: {
+                            labels: labels, datasets: [
+                                {
+                                    label: "Reste cumulé",
+                                    data: resteCumule,
+                                    borderColor: "rgba(54,162,235,1)",
+                                    backgroundColor: "rgba(54,162,235,0.15)",
+                                    tension: 0.2,
+                                    fill: true
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            scales: {y: {beginAtZero: true}},
+                            plugins: {legend: {position: "bottom"}}
+                        }
+                    });
+                }
+            } catch
+                (e) {
+                console.error(e);
+                var cA = document.getElementById("abonne_bar_recouvrement");
+                if (cA) {
+                    var p = document.createElement("div");
+                    p.className = "text-danger small mt-2";
+                    p.textContent = e.message;
+                    cA.parentNode.appendChild(p);
+                }
+            }
+        })
+    }
+)
+();
+        
+        </script>';
 
         $sum = 0;
-    // Affichage des résultats dans un tableau HTML
-    if ($resultats) {
-        echo '<table class="table table-bordered table-hover">';
-        echo '<thead> <div class="d-flex justify-content55.json-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
-        echo '<tr>';
-        echo '<th>Mois</th>';
-        echo '<th>Penalité</th>';
-        echo '<th>Total</th>';
-        echo '<th>Montant Versé</th>';
-        echo '<th>Reste</th>';
-        echo '</tr>';
+        // Affichage des résultats dans un tableau HTML
+        if ($resultats) {
+            echo '<table class="table table-bordered table-hover">';
+            echo '<thead> <div class="d-flex justify-content55.json-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
+            echo '<tr>';
+            echo '<th>Mois</th>';
+            echo '<th>Penalité</th>';
+            echo '<th>Total</th>';
+            echo '<th>Montant Versé</th>';
+            echo '<th>Reste</th>';
+            echo '</tr>';
 
-//        var_dump($resultats);
-        foreach ($resultats as $row) {
-            $mois = getLetterMonth($row['mois']);
-            $montant_verse = $row['montant_verse'] != '0'? (int)$row['montant_verse']:'';
-            $impaye = (int)$row['impaye'];
-            $prix_tva = $row['prix_tva'];
-            $prix_entretient_compteur = $row['prix_entretient_compteur'];
-            $avance = $row['montant_restant'];// ($row['montant_restant'])<0?$row['montant_restant']:'0';
-            $sum += $montant_verse;
-            $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
-            $montant_factue = $row['montant_total'];
-            $montant_restant = $row['montant_restant'];
+            //        var_dump($resultats);
+            foreach ($resultats as $row) {
+                $mois = getLetterMonth($row['mois']);
+                $montant_verse = $row['montant_verse'] != '0' ? (int) $row['montant_verse'] : '';
+                $impaye = (int) $row['impaye'];
+                $prix_tva = $row['prix_tva'];
+                $prix_entretient_compteur = $row['prix_entretient_compteur'];
+                $avance = $row['montant_restant'];// ($row['montant_restant'])<0?$row['montant_restant']:'0';
+                $sum += $montant_verse;
+                $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
+                $montant_factue = $row['montant_total'];
+                $montant_restant = $row['montant_restant'];
 
-            $placeholder = "";
-            $bg = "";
-            $desabled = '';
-            if($montant_factue == (int)($montant_verse +0.00000001)){
-                $bg = "bg-success-subtle text-success";
-//                $desabled = 'disabled';
-            }
-            if((int)$row['montant_restant'] > 0){
-//                    $desabled = 'disabled';
+                $placeholder = "";
+                $bg = "";
+                $desabled = '';
+                if ($montant_factue == (int) ($montant_verse + 0.00000001)) {
+                    $bg = "bg-success-subtle text-success";
+                    //                $desabled = 'disabled';
+                }
+                if ((int) $row['montant_restant'] > 0) {
+                    //                    $desabled = 'disabled';
                     $bg = "bg-danger-subtle text-danger";
                     $placeholder = "";
+                }
+                //echo $montant_factue.'<br>';
+
+                echo "<tr class='  border border-dark' >";
+                echo '<td>' . htmlspecialchars($mois) . '</td>';
+                echo '<td class="text-end"> ' . htmlspecialchars(Facture::formatFinancier((int) $row['penalite'])) . '</td>';
+                echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($montant_factue)) . '</td>';
+                //            echo '<td>';
+
+                if ((int) $row['mois_actif']) {
+                    echo '<td><input class="form-control border-0 m-0 py-0 ' . $bg . '" ' . $desabled . '
+                            value="' . ($placeholder == "" ? htmlspecialchars($montant_verse) : $placeholder) . '" 
+                            onchange="handleRecouvrement(this.value, ' . ($placeholder == "" ? $row['id'] : 0) . ' , this.id)" 
+                            id="montant_verse2' . $row['id'] . '" type="text"> 
+                            <input type="datetime" id="date_releve_facture_' . $row['id'] . 'class="form-control mb-0 " hidden value="' . date('d/m/Y') . '"></td>';
+                } else
+                    echo '<td class="text-end ' . $bg . '">' . htmlspecialchars(Facture::formatFinancier($montant_verse)) . '</td>';
+
+                echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($avance)) . '</td>';
+                echo '</tr>';
+                //            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
             }
-//echo $montant_factue.'<br>';
-
-            echo "<tr class='  border border-dark' >";
-            echo '<td>' . htmlspecialchars($mois) . '</td>';
-            echo '<td class="text-end"> ' . htmlspecialchars(Facture::formatFinancier((int)$row['penalite'])) . '</td>';
-            echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($montant_factue)) . '</td>';
-//            echo '<td>';
-
-            if((int)$row['mois_actif']){
-                echo '<td><input class="form-control border-0 m-0 py-0 '.$bg.'" '.$desabled.'
-                            value="' . ($placeholder==""?htmlspecialchars($montant_verse):$placeholder) .'" 
-                            onchange="handleRecouvrement(this.value, '.($placeholder==""?$row['id']:0).' , this.id)" 
-                            id="montant_verse2'.$row['id'].'" type="text"> 
-                            <input type="datetime" id="date_releve_facture_'.$row['id'].'class="form-control mb-0 " hidden value="'.date('d/m/Y').'"></td>';
-            }else
-                echo '<td class="text-end '.$bg.'">'.htmlspecialchars(Facture::formatFinancier($montant_verse)).'</td>';
-
-            echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($avance)) . '</td>';
-            echo '</tr>';
-//            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
+            echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
+            echo '</table>';
         }
-        echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
-        echo '</table>';
-    }
-    return ob_get_clean();
+        return ob_get_clean();
     }
 
 }
