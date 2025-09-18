@@ -1,4 +1,4 @@
-
+<?php include_once("donnees/manager.php")?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -35,7 +35,7 @@
 <!--    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>-->
     <!-- Font Awesome CDN pour les icônes -->
 <!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">-->
-    <title>Fokoue Water</title>
+    <title><?php echo isset($_SESSION['libele_aep'])? $_SESSION['libele_aep']: 'Tockem'?> SPE</title>
 
     <style>
         body {
@@ -310,6 +310,7 @@
 <body class="bg-white h-100 flex-column" style="background-color: rgba(220, 220, 220, 1);">
 <?php
 setlocale(LC_TIME, 'fr_FR.UTF-8');
+//var_dump($_SERVER);
 
 include_once("presentation/aep_components.php");
 include_once("presentation/header.php");

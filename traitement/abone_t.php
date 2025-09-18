@@ -14,7 +14,7 @@ class Abone_t
     {
         if (isset($_GET['ajout_abone'])) {
             ob_start();
-            var_dump($_POST);
+//            var_dump($_POST);
             echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
             if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
                 echo "nnnnnnnnnnnnnnnnnnnnnnnnn";
@@ -92,10 +92,10 @@ class Abone_t
                 var_dump($nouvel_abone);
                 //                exit();
                 $text = ob_get_clean();
-                //                if (!$res)
-//                    header("location: ../index.php?form=abone&operation=error");
-//                else
-//                    header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
+                if (!$res)
+                    header("location: ../index.php?page=abonne&operation=error");
+                else
+                    header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
             }
         }
     }
@@ -645,6 +645,7 @@ class Abone_t
         echo '</div></div>';
 
         // Section pénalité
+        include_once ("donnees/mois_facturation.php");
         $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
         $moisActifData = $moisActif->fetchAll();
         $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;

@@ -361,9 +361,10 @@ if ($aepId) {
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="addAbonneForm" method="post" action="traitement/abonne_t.php">
+                <form id="addAbonneForm" method="post" action="traitement/abone_t.php?ajout_abone=1">
                     <input type="hidden" name="action" value="add_abonne">
                     <input type="hidden" name="id_aep" value="<?php echo $aepId; ?>">
+<!--                    if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {-->
                     
                     <div class="row">
                         <div class="col-md-6">
@@ -412,12 +413,24 @@ if ($aepId) {
                      </div>
                     
                                          <div class="row">
-                         <div class="col-md-6">
-                             <div class="mb-3">
+                         <div class="col-mb-6">
+                             <div class="col-mb-3">
                                  <label for="rang" class="form-label">Rang</label>
                                  <input type="number" class="form-control" id="rang" name="rang" 
                                         placeholder="Rang de l'abonné" min="1">
                                  <small class="form-text text-muted">Optionnel - pour le classement</small>
+                             </div>
+                             <div class="col-mb-3">
+                                 <label for="rang" class="form-label">Numero compteur</label>
+                                 <input type="text" class="form-control" id="rang" name="numero_compteur"
+                                        placeholder="Numero compteur" >
+                                 <small class="form-text text-muted">Ajouter un numero compteur</small>
+                             </div>
+                             <div class="col-mb-3">
+                                 <label for="rang" class="form-label">Index pointé</label>
+                                 <input type="number" class="form-control" id="derniers_index" name="derniers_index"
+                                        placeholder="index" step="0.01">
+                                 <small class="form-text text-muted">le derniers index est requis</small>
                              </div>
                          </div>
                      </div>

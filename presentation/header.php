@@ -40,6 +40,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item" href="?page=abonne">Abonnés</a></li>
+                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <!-- <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <li><a class="dropdown-item" href="?list=compteur_reseau">Liste des compteurs réseau</a></li>
                             <li><a class="dropdown-item" href="?list=distribution_simple">Liste des abonnés</a></li> -->
