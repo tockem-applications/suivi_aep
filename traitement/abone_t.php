@@ -591,7 +591,7 @@ class Abone_t
         //echo $date_export->format('d/m/Y:H/i/s');
         //$boo = json_decode($data, true);
         //var_dump($boo);
-        $fileName = '../donnees/exports/export_index_nom_AEP_' . $date_export->format('d-m-Y_H-i-s') . '.json';
+        $fileName = '../donnees/exports/export_index_'.$_SESSION['libele_aep'].'_'. $date_export->format('d-F-Y_H-i-s') . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
         header('location: ' . $_SESSION['PREVIOUS_REQUEST_HEADER']);
