@@ -1,4 +1,40 @@
 recouvrement: 1
+id_indexes: 1428
+nouvel_index: 50
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1564
+nouvel_index: 160.6
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1428
+nouvel_index: 52
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1564
+nouvel_index: 165
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1409
+nouvel_index: 4
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 1411
+nouvel_index: 41
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 1410
+nouvel_index: 45
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1412
+nouvel_index: 6
+id_compteur: 474\nrecouvrement: 1
+id_indexes: 1406
+nouvel_index: 32
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1407
+nouvel_index: 40
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 1406
+nouvel_index: 50
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1408
+nouvel_index: 3
+id_compteur: 474\nrecouvrement: 1
 id_indexes: 1401
 nouvel_index: 7.3
 id_compteur: 462\nrecouvrement: 1

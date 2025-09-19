@@ -564,7 +564,7 @@ class Facture_t
                     $data['id_compteur'],
                     $data['id_mois'],
                     addZeros($data['id_facture'], 6),
-                     self::addDaysAndFormat($data['date_releve']),
+                     self::addDaysAndFormat($data['date_releve'], 0),
                      $data['numero_compte'],
                      $data['nom_banque']
                 );
@@ -1311,6 +1311,15 @@ public static function creerFactureFokoue2(
                         <td class="">1 Mois</td>
                         <td><?php echo $prix_entretient_compteur ?></td>
                     </tr>
+<!--                    <tr class="m-0 p-5" style="background-color: #d2deef">-->
+<!--                        <th>Pénalité</th>-->
+<!--                        <td></td>-->
+<!--                        <td></td>-->
+<!--                        <td></td>-->
+<!--                        <td></td>-->
+<!--                        <td></td>-->
+<!--                        <td class="">--><?php //echo self::moneyFormatter($penalite)?><!--</td>-->
+<!--                    </tr>-->
                     <tr style="background-color: #5b9bd5">
                         <th colspan="5">Total TTC (en FCFA) </th>
                         <td colspan="2" style="background-color: #d2deef" class=" text-center fs-5 fw-bold">

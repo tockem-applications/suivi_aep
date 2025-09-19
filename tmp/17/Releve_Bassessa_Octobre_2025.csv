@@ -1,0 +1,5 @@
+id;id_compteur;id_reseau;id_mois;nom;mois;ancien_index;nouvel_index;numero_compteur;date_facturation;reseau
+1412;474;;33;"DAMIEN LEROI";2025-10;3.00;6.00;2536522;2025-09-18;
+1410;475;;33;Eric;2025-10;32.00;45.00;20202;2025-09-18;
+1411;472;;33;"Mbopda Ulrich";2025-10;40.00;41.00;1234569696;2025-09-18;
+1409;473;;33;"Mezankeu Pascal";2025-10;2.00;4.00;12545412;2025-09-18;

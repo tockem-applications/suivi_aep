@@ -14,7 +14,10 @@
     <!-- <link rel="stylesheet" href="presentation/assets/css/styles.css"> -->
 
     <!-- <script src="presentation/js.js"></script> -->
-     
+
+    <script>
+        var addresse_serveur_reseau = '<?php echo $_SERVER['SERVER_ADDR']=="127.0.0.1"?"localhost":$_SERVER['SERVER_ADDR']?>';
+    </script>
     <script src="presentation/assets/@canvasjs/charts/canvasjs.min.js"></script>
     <script src="presentation/assets/jquery.js"></script>
     <script src="presentation/assets/js/bs-init.js"></script>
@@ -315,6 +318,7 @@ setlocale(LC_TIME, 'fr_FR.UTF-8');
 include_once("presentation/aep_components.php");
 include_once("presentation/header.php");
 ?>
+
 <div class="sous-header"></div>
 <main class="my_body overflow-hidden bg-white container2" style="flex: 1; ">
     <!-- <aside class="left_side_body" style="border-right: solid white 1px;">
