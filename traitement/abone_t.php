@@ -14,22 +14,18 @@ class Abone_t
     {
         if (isset($_GET['ajout_abone'])) {
             ob_start();
-//            var_dump($_POST);
+            //            var_dump($_POST);
             echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
             if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
                 echo "nnnnnnnnnnnnnnnnnnnnnnnnn";
-                echo "ooooooooooo";
-                /*if ($_POST['nom'] == '' || $_POST['prenom'] == '' || $_POST['numero'] == '') {
-                    $_POST['operation_message'] = 'Veuillez saisir tout les champs';
-                    header("location: ../index.php?form=abone&operation=error&message=Veuillez saisir tout les champs");
-                }*/
+
                 $nom = htmlspecialchars($_POST['nom']);
                 $numero_compteur = htmlspecialchars($_POST['numero_compteur']);
                 $numero_telephone = htmlspecialchars($_POST['numero_telephone']);
                 $numero_compte_anticipation = 100;// htmlspecialchars($_POST['numero_compte_anticipation']);
                 $derniers_index = (float) htmlspecialchars($_POST['derniers_index']);
                 $id_reseau = htmlspecialchars($_POST['id_reseau']);
-                //                $type_compteur = htmlspecialchars($_POST['type_compteur']);
+                $rang = htmlspecialchars(isset($_POST['rang']) ? htmlspecialchars($_POST['rang']) : '');
                 $etat = htmlspecialchars($_POST['etat']);
                 if (empty($nom)) {
                     throw new Exception('Le nom est requis');
@@ -81,7 +77,7 @@ class Abone_t
                     $numero_telephone,
                     $numero_compte_anticipation,
                     $etat,
-                    0,
+                    $rang,
                     $id_reseau,
                     $derniers_index
                 );
@@ -332,15 +328,109 @@ class Abone_t
                             <th class="text-end px-5"><?php echo $data['duree'] ?></sub></th>
                         </tr>
                         <tr>
-                            <th colspan="3" class=""> <a
-                                    href="traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>"
-                                    placeholder="modifier le nom" class="form-control m-0 bg-danger text-center"
+                            <th colspan="3" class="">
+                                <button type="button" class="form-control m-0 bg-danger text-center text-white border-0"
+                                    data-bs-toggle="modal" data-bs-target="#modalSuppressionAbone<?php echo $id_abone ?>"
                                     data-bs-toggle="tooltip" data-bs-placement="right"
-                                    data-bs-title="Cette action va suprimer definitivement l'abone de la liste"> Suprimer</a>
+                                    data-bs-title="Cette action va supprimer définitivement l'abonné de la liste">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
                             </th>
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- Modal de confirmation de suppression -->
+                <div class="modal fade" id="modalSuppressionAbone<?php echo $id_abone ?>" tabindex="-1"
+                    aria-labelledby="modalSuppressionAboneLabel<?php echo $id_abone ?>" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="modalSuppressionAboneLabel<?php echo $id_abone ?>">
+                                    <i class="fas fa-exclamation-triangle"></i> Confirmation de suppression
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger">
+                                    <strong>Attention !</strong> Cette action est irréversible et supprimera définitivement
+                                    l'abonné et toutes ses données associées.
+                                </div>
+
+                                <p class="mb-3">Pour confirmer la suppression de l'abonné
+                                    <strong><?php echo htmlspecialchars($data['nom']); ?></strong>, veuillez saisir exactement
+                                    son nom dans le champ ci-dessous :</p>
+
+                                <div class="mb-3">
+                                    <label for="nomConfirmation<?php echo $id_abone ?>" class="form-label">Nom de l'abonné à
+                                        supprimer :</label>
+                                    <input type="text" class="form-control" id="nomConfirmation<?php echo $id_abone ?>"
+                                        placeholder="Saisissez le nom exact de l'abonné"
+                                        data-nom-attendu="<?php echo htmlspecialchars($data['nom']); ?>">
+                                    <div class="invalid-feedback" id="erreurNom<?php echo $id_abone ?>">
+                                        Le nom saisi ne correspond pas au nom de l'abonné.
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                            id="confirmationCheckbox<?php echo $id_abone ?>">
+                                        <label class="form-check-label" for="confirmationCheckbox<?php echo $id_abone ?>">
+                                            Je comprends que cette action est irréversible et supprimera toutes les données de
+                                            l'abonné.
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times"></i> Annuler
+                                </button>
+                                <button type="button" class="btn btn-danger" id="btnConfirmerSuppression<?php echo $id_abone ?>"
+                                    disabled>
+                                    <i class="fas fa-trash"></i> Supprimer définitivement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    (function () {
+                        const nomInput = document.getElementById('nomConfirmation<?php echo $id_abone ?>');
+                        const checkbox = document.getElementById('confirmationCheckbox<?php echo $id_abone ?>');
+                        const btnConfirmer = document.getElementById('btnConfirmerSuppression<?php echo $id_abone ?>');
+                        const nomAttendu = nomInput.getAttribute('data-nom-attendu');
+
+                        function validerFormulaire() {
+                            const nomSaisi = nomInput.value.trim();
+                            const isNomCorrect = nomSaisi === nomAttendu;
+                            const isCheckboxCochee = checkbox.checked;
+
+                            // Validation du nom
+                            if (nomSaisi && !isNomCorrect) {
+                                nomInput.classList.add('is-invalid');
+                            } else {
+                                nomInput.classList.remove('is-invalid');
+                            }
+
+                            // Activation du bouton
+                            btnConfirmer.disabled = !(isNomCorrect && isCheckboxCochee);
+                        }
+
+                        nomInput.addEventListener('input', validerFormulaire);
+                        checkbox.addEventListener('change', validerFormulaire);
+
+                        btnConfirmer.addEventListener('click', function () {
+                            if (!btnConfirmer.disabled) {
+                                // Redirection vers la suppression
+                                window.location.href = 'traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>';
+                            }
+                        });
+                    })();
+                </script>
                 <?php
                 return $idCompteur;
     }
@@ -379,7 +469,7 @@ class Abone_t
                     $id_abone = (int) htmlspecialchars($sendedData['id_abone']);
                     $res = Abones::deleteAbone($id_abone);
                     if ($res) {
-                        header("location: ../index.php?list=abone_simple&message='aboné suprimé'");
+                        header("location: ../index.php?page=abonne&message='aboné suprimé'");
                     } else {
                         header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=echec de supression de l'aboné");
                     }
@@ -591,7 +681,7 @@ class Abone_t
         //echo $date_export->format('d/m/Y:H/i/s');
         //$boo = json_decode($data, true);
         //var_dump($boo);
-        $fileName = '../donnees/exports/export_index_'.$_SESSION['libele_aep'].'_'. $date_export->format('d-F-Y_H-i-s') . '.json';
+        $fileName = '../donnees/exports/export_index_' . $_SESSION['libele_aep'] . '_' . $date_export->format('d-F-Y_H-i-s') . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
         header('location: ' . $_SESSION['PREVIOUS_REQUEST_HEADER']);
@@ -645,7 +735,7 @@ class Abone_t
         echo '</div></div>';
 
         // Section pénalité
-        include_once ("donnees/mois_facturation.php");
+        include_once("donnees/mois_facturation.php");
         $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
         $moisActifData = $moisActif->fetchAll();
         $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;
@@ -876,7 +966,7 @@ class Abone_t
                         if ($updateReq) {
                             $_SESSION['success_message'] = "Pénalité de " . Facture::formatFinancier($penalite_montant) . " appliquée avec succès.";
                             header("location: ../index.php?list=recouvrement&operation=succes");
-//                            header("location: ../index.php?list=tarif&operation=error");
+                            //                            header("location: ../index.php?list=tarif&operation=error");
                         } else {
                             $_SESSION['error_message'] = "Erreur lors de l'application de la pénalité.";
                             header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'application de la pénalité");
@@ -934,7 +1024,7 @@ class Abone_t
                     }
                 } catch (Exception $e) {
                     $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
-                    header("location: ../index.php?list=recouvrement&operation=error&message=".$e->getMessage());
+                    header("location: ../index.php?list=recouvrement&operation=error&message=" . $e->getMessage());
                 }
             } else {
                 $_SESSION['error_message'] = "Données invalides pour l'annulation de la pénalité.";

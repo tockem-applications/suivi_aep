@@ -26,7 +26,7 @@ function cleanTemporaryFiles($dir, $ageLimit) {
 
 function startSessionWithTimeout() {
     // Vérifier si une session est déjà active
-    $duree = 60*60*10;
+    $duree = 60*60*1000;
     if (session_id() === '') {
         // Définir la durée de vie du cookie de session à 1h30 minutes (1800 secondes)
         ini_set('session.cookie_lifetime', $duree);
@@ -40,7 +40,7 @@ function startSessionWithTimeout() {
         if (isset($_SESSION['LAST_ACTIVITY']) &&
             (time() - $_SESSION['LAST_ACTIVITY'] > $duree)) {
             // Session expirée, détruire la session
-            cleanTemporaryFiles('tmp/'.$_SESSION['user_id'], 60*60*1);
+            cleanTemporaryFiles('tmp', 60*60*5);
             session_unset();
             session_destroy();
 //            exit();

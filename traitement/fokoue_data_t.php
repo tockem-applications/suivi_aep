@@ -358,6 +358,14 @@ function addAboneGetID($bd, $nom, $numero_telephone, $numero_compte_anticipation
     }
 }
 
+function deposer_compteur($id_abone)
+{
+    $requete = "update compteur set etat = 'noo actif' where id_abone=?";
+    Manager::prepare_query(
+            $requete, array($id_abone)
+    );
+}
+
 /**
  * @param $db
  * @param $nom_abone
@@ -526,7 +534,8 @@ function createAllForMonth2(
     $nom_colonne_ancien_index,
     $nom_colonne_nouvel_index,
     $nom_colonne_anticipation_account,
-    $nom_colonne_penalite
+    $nom_colonne_penalite,
+    $deposer=false
 
 )
 {
@@ -634,7 +643,10 @@ function createAllForMonth2(
                 $relation['id_abone'],
                 ''
             );
-
+            var_dump($row_data);
+            if($row_data['est_depose'] == 1 and $deposer){
+                deposer_compteur($relation['id_abone']);
+            }
             // Ajout des IDs générés aux données de la ligne
             $row_data['id_reseau'] = $id_reseau;
             $row_data['id_constante_reseau'] = $id_constante_reseau;
@@ -645,6 +657,7 @@ function createAllForMonth2(
             $row_data['id_abone'] = $relation['id_abone'];
             $row_data['id_facture'] = $id_facture;
             $row_data['id_indexes'] = $id_index;
+
 
             $processed_data[] = $row_data;
         }
@@ -702,6 +715,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
                         $ancien_index = $rowData['old_index'];
                         $montant_verse = $rowData['anticipation_account'];
                         $penalite = $rowData['penalty'];
+                        $est_depose = $rowData['est_depose'];
 
                         $numero_compteur = $rowData['meter_number'];
                         $id_network = array_search($network, $existing_networks);
@@ -742,11 +756,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
                         $rowData['id_abone'] = $id_abone;
                         $rowData['id_facture'] = $id_facture;
                         $rowData['id_indexes'] = $id_index;
+//                        $rowData['est_depose'] = $id_index;
                         $data[] = $rowData;
                     }
                     fclose($handle);
                     var_dump($existing_networks);
                     $db->rollBack();
+                    var_dump($data);
                     createAllForMonth2($db, $data, $prixM3Socle, $entretienSocle, $tvaSocle, '2020-01-01',
                         true, '', $id_aep, $moisSocle, '2020-01-29', '2020-01-30',
                         'ce mois ci contien des donnees bizarres', true, '2020-01-28', $_SESSION['libele_aep'],
@@ -754,7 +770,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
                     createAllForMonth2($db, $data, $prixM3Actuel, $entretienActuel, $tvaActuel, '2025-01-01',
                         true, '', $id_aep, $moisActuel, '2025-08-29', '2025-08-30',
                         '', true, '2025-08-28', $_SESSION['libele_aep'],
-                        'old_index', 'c_new_index', 'vide', 'vide');
+                        'old_index', 'c_new_index', 'vide', 'vide', true);
 
                 } catch (Exception $e) {
                     $db->rollBack();

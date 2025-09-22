@@ -75,10 +75,11 @@ function generateOptionGraphique($selectedValue)
 class MoisFacturation_t
 {
 
-    public static function update_indexes_mois(){
+    public static function update_indexes_mois()
+    {
         if (!isset($_GET['update_indexes_mois'], $_GET['id_mois']))
             return;
-        $id_mois = (int)$_GET['id_mois'];
+        $id_mois = (int) $_GET['id_mois'];
         if (!isset($_FILES['fichier_index'])) {
             header("location: ../index.php?page=releves&operation=error&message=Veillez selectionner le fichier des index");
         }
@@ -496,7 +497,8 @@ class MoisFacturation_t
                 <td> <?php echo $data['reseau'] ?></td>
                 <td> <?php echo $data['derniers_index'] ?></td>
                 <td class="<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>">
-                    <?php echo $data['etat'] == 'actif' ? 'ACTIF' : 'NON ACTIF' ?></td>
+                    <?php echo $data['etat'] == 'actif' ? 'ACTIF' : 'NON ACTIF' ?>
+                </td>
             </tr>
             <?php
         }
@@ -724,7 +726,8 @@ class MoisFacturation_t
                                 <div class="modal-content">
                                     <div class="modal-header bg-primary text-white">
                                         <h5 class="modal-title" id="updateModalLabel_<?php echo $id; ?>">Modifier le mois de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?></h5>
+                                            <?php echo htmlspecialchars($mois_en_lettre); ?>
+                                        </h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                                             aria-label="Close"></button>
                                     </div>
@@ -798,13 +801,15 @@ class MoisFacturation_t
                                 <div class="modal-content">
                                     <div class="modal-header bg-danger text-white">
                                         <h5 class="modal-title" id="deleteModalLabel_<?php echo $id; ?>">Suppression de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?></h5>
+                                            <?php echo htmlspecialchars($mois_en_lettre); ?>
+                                        </h5>
                                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                                             aria-label="Close"></button>
                                     </div>
                                     <div class="modal-body">
                                         <p class="font-weight-bold">Voulez-vous vraiment supprimer le mois de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?> ?</p>
+                                            <?php echo htmlspecialchars($mois_en_lettre); ?> ?
+                                        </p>
                                         <p class="text-danger font-weight-bold">Cette action sera irréversible.</p>
                                         <div class="form-group">
                                             <label for="confirmation_text_<?php echo $id; ?>"

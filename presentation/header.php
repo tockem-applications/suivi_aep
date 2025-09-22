@@ -1,10 +1,10 @@
 <?php
-require("traitement/aep_t.php");
+require_once("traitement/aep_t.php");
 
 $is_aep_selected = Aep_t::isAepIdInSession();
 
 ?>
-<nav class="navbar navbar-expand-lg position-fixed z-3 w-100 shadow-sm"
+<nav class="navbar navbar-expand-lg w-100 shadow-sm"
     style="min-height: 10vh; background: linear-gradient(90deg, #2c9D11, #34495e);">
     <div class="container-fluid">
         <!-- Logo/Brand -->

@@ -220,14 +220,22 @@ class Facture extends Manager
         //                                                                            inner join indexes id2 on id2.id = f2.id_indexes
         //                                                                       where a.id=a2.id and id2.id_mois_facturation<?)
     }
-    public static function getMonthFacture2($id_mois, $id_aep)
+    public static function getMonthFacture2($id_mois, $id_aep, $id_reseau)
     {
 //        var_dump($id_mois, $id_aep);
         if (!is_int($id_mois))
             return false;
-        $mois = self::prepare_query("select mois from mois_facturation where id = ?", array($id_mois));
+        $mois = self::prepare_query("select mois from mois_facturation where id = ? ", array($id_mois));
         $mois = $mois->fetch();
         $mois = $mois['mois'];
+
+        $data_array = array($mois, $id_mois, $id_aep);
+        $id_reseau_string_condition = "";
+        if($id_reseau){
+            $data_array = array($mois, $id_mois, $id_aep, $id_reseau);
+            $id_reseau_string_condition = "AND vaf.id_reseau = ?";
+        }
+
 
         return self::prepare_query("
           
@@ -235,9 +243,11 @@ class Facture extends Manager
                 vaf.*, 
                 COALESCE(impayer_cumule, 0) impayer_cumule, 
                 montant_total + COALESCE(impayer_cumule, 0) as total_cumule,
-                montant_total + COALESCE(impayer_cumule, 0) - montant_verse as restant_cumule
+                montant_total + COALESCE(impayer_cumule, 0) - montant_verse as restant_cumule, 
+                r.nom as reseau
             FROM 
-                vue_abones_facturation vaf
+                vue_abones_facturation as vaf
+                inner join reseau as r on r.id = vaf.id_reseau
                 left join ( 
                     SELECT SUM(montant_total - montant_verse) as impayer_cumule, id_abone
                     FROM vue_abones_facturation vaf2
@@ -247,11 +257,10 @@ class Facture extends Manager
             WHERE 
                 vaf.id_mois = ? 
                 AND vaf.id_aep = ?
+                $id_reseau_string_condition
             ORDER BY 
-                vaf.mois, vaf.id_abone
-
-                
-            ", array($mois, $id_mois, $id_aep));
+                vaf.nom_abone
+            ", $data_array);
     }
 
     public static function getMonthAllFactureData($id_mois, $id_aep)

@@ -310,17 +310,18 @@
 
     </style>
 </head>
-<body class="bg-white h-100 flex-column" style="background-color: rgba(220, 220, 220, 1);">
+<body class="bg-white h-100 flex-column overflow-y-hidden" style="background-color: rgba(220, 220, 220, 1);">
 <?php
 setlocale(LC_TIME, 'fr_FR.UTF-8');
 //var_dump($_SERVER);
 
 include_once("presentation/aep_components.php");
+include_once ("traitement/aep_t.php");
 include_once("presentation/header.php");
 ?>
 
-<div class="sous-header"></div>
-<main class="my_body overflow-hidden bg-white container2" style="flex: 1; ">
+<!--<div class="sous-header"></div>-->
+<main class="bg-white overflow-y-scroll" style="flex: 1;height: 90vh">
     <!-- <aside class="left_side_body" style="border-right: solid white 1px;">
         <img src="presentation/assets/images/aside_image.png" alt="tockem image" style="width: 100%; height: 50%;">
     </aside> -->
@@ -383,8 +384,8 @@ include_once("presentation/header.php");
         ?>
 
     </article>
+    <?php include_once "presentation/footer.php"; ?>
 </main>
-<?php include_once "presentation/footer.php"; ?>
 
 <div id="container"></div>
 <script>

@@ -1,4 +1,10 @@
 recouvrement: 1
+id_indexes: 1441
+nouvel_index: 70
+id_compteur: 318\nrecouvrement: 1
+id_indexes: 1456
+nouvel_index: 25
+id_compteur: 403\nrecouvrement: 1
 id_indexes: 1428
 nouvel_index: 50
 id_compteur: 296\nrecouvrement: 1

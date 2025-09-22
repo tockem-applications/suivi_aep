@@ -6,8 +6,8 @@ body{
     /*background-color: grey; */
 }
 .my_body{
-    display: flex;
-    background-color: rgba(220, 220, 220, 1);
+    /*display: flex;*/
+    /*background-color: rgba(220, 220, 220, 1);*/
 }
 
 .left_side_body{

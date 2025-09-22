@@ -60,7 +60,7 @@ if (!$aepId) {
         'restant' => 'total_restant',
         'nb_mois' => 'nb_mois_factures'
     );
-    $orderExprPrimary = 'COALESCE(a.rang, 999999)';
+    $orderExprPrimary = 'COALESCE(a.nom, 999999)';
     if ($sortBy !== '' && isset($allowedSorts[$sortBy])) {
         $orderExprPrimary = $allowedSorts[$sortBy];
     }
