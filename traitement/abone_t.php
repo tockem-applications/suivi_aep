@@ -360,7 +360,8 @@ class Abone_t
 
                                 <p class="mb-3">Pour confirmer la suppression de l'abonné
                                     <strong><?php echo htmlspecialchars($data['nom']); ?></strong>, veuillez saisir exactement
-                                    son nom dans le champ ci-dessous :</p>
+                                    son nom dans le champ ci-dessous :
+                                </p>
 
                                 <div class="mb-3">
                                     <label for="nomConfirmation<?php echo $id_abone ?>" class="form-label">Nom de l'abonné à

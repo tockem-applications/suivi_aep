@@ -1,0 +1,63 @@
+# Node / frontend
+# node_modules/
+# Garder le lockfile
+!package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vendors PHP (si utilisés)
+vendor/
+
+# Artéfacts de build
+/dist/
+/build/
+/coverage/
+/.cache/
+/tmp/
+/.idea/
+/.vscode/
+
+
+# Sauvegardes et exports volumineux
+/backups/
+/donnees/exports/
+/donnees/imports/
+
+# Fichiers de données générés et logs
+*.log
+*.tmp
+*.cache
+*.bak
+
+# Donnees: ignorer les fichiers générés courants
+/donnees/*.log
+/donnees/*.tmp
+/donnees/*.bak
+/donnees/*.csv
+/donnees/*.json
+# Exemple: autoriser des exemples si besoin
+!donnees/example*.json
+
+# Fichiers OS / IDE
+.DS_Store
+Thumbs.db
+/.idea/
+/.vscode/
+
+# Fichiers d'environnement
+.env
+.env.*
+
+# Composer (si présent)
+composer.lock
+
+# Dumps SQL dans backups/exports (garder schémas à la racine)
+/backups/**/*.sql
+/donnees/exports/**/*.sql
+
+# Divers
+*.swp
+*.swo
+*.orig

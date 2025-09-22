@@ -104,9 +104,9 @@ function display_tab_facture_by_month($id_reseau = 0)
                 function initSearch() {
                     const searchInput = document.getElementById('search_nom_input');
                     const clearBtn = document.getElementById('clear_search_btn');
-                    
+
                     if (!searchInput || !clearBtn) return;
-                    
+
                     // Attendre que le tableau soit chargé
                     function waitForTable() {
                         const table = document.querySelector('.table tbody');
@@ -114,27 +114,27 @@ function display_tab_facture_by_month($id_reseau = 0)
                             setTimeout(waitForTable, 100); // Réessayer dans 100ms
                             return;
                         }
-                        
+
                         console.log('Tableau trouvé, initialisation de la recherche...');
-                        
+
                         // Fonction de recherche
                         function filterTable() {
                             const searchTerm = searchInput.value.toLowerCase().trim();
                             const rows = table.querySelectorAll('tr');
                             let visibleCount = 0;
-                            
+
                             rows.forEach(function (row) {
                                 // Chercher dans toutes les colonnes qui contiennent du texte
                                 const cells = row.querySelectorAll('td');
                                 let found = false;
-                                
+
                                 cells.forEach(function (cell) {
                                     const cellText = cell.textContent.toLowerCase();
                                     if (cellText.includes(searchTerm) && searchTerm !== '') {
                                         found = true;
                                     }
                                 });
-                                
+
                                 if (searchTerm === '') {
                                     row.style.display = '';
                                     visibleCount++;
@@ -143,15 +143,15 @@ function display_tab_facture_by_month($id_reseau = 0)
                                     if (found) visibleCount++;
                                 }
                             });
-                            
+
                             // Afficher un message si aucun résultat
                             showNoResultsMessage(visibleCount === 0 && searchTerm !== '');
                         }
-                        
+
                         // Fonction pour afficher le message "aucun résultat"
                         function showNoResultsMessage(show) {
                             let noResultsRow = document.getElementById('no-results-row');
-                            
+
                             if (show && !noResultsRow) {
                                 noResultsRow = document.createElement('tr');
                                 noResultsRow.id = 'no-results-row';
@@ -161,19 +161,19 @@ function display_tab_facture_by_month($id_reseau = 0)
                                 noResultsRow.remove();
                             }
                         }
-                        
+
                         // Événements
                         searchInput.addEventListener('input', function () {
                             clearBtn.style.display = this.value ? 'block' : 'none';
                             filterTable();
                         });
-                        
+
                         clearBtn.addEventListener('click', function () {
                             searchInput.value = '';
                             clearBtn.style.display = 'none';
                             filterTable();
                         });
-                        
+
                         // Raccourci clavier pour effacer (Escape)
                         searchInput.addEventListener('keydown', function (e) {
                             if (e.key === 'Escape') {
@@ -182,17 +182,17 @@ function display_tab_facture_by_month($id_reseau = 0)
                                 filterTable();
                             }
                         });
-                        
+
                         // Initialiser l'état du bouton clear
                         clearBtn.style.display = searchInput.value ? 'block' : 'none';
                     }
-                    
+
                     waitForTable();
                 }
-                
+
                 // Initialiser la recherche
                 document.addEventListener('DOMContentLoaded', initSearch);
-                
+
                 // Réinitialiser après chargement AJAX ou changement de contenu
                 setTimeout(initSearch, 500);
             </script>
@@ -242,7 +242,7 @@ function display_tab_facture_by_month($id_reseau = 0)
     echo "<div class='container-fluid'>";
     $id_mois_listing = Facture_t::getTableauFactureByMoisId($_SESSION['id_aep'], $id_mois_listing, 'Liste des ' . $fin_titre, $id_reseau, $select_option, $selectedReseau);
     echo "</div>";
-    
+
     // Script de débogage pour la recherche
     echo '<script>
     console.log("Script de débogage chargé");
