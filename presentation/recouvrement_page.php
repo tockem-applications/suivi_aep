@@ -39,6 +39,7 @@ if (!$aepId) {
     $message = '';
 }
 
+
 // Gérer les messages de retour
 if (isset($_GET['success'])) {
     switch ($_GET['success']) {
@@ -177,10 +178,18 @@ if (isset($_GET['success'])) {
                                                     onclick="editMois(<?php echo $mois['id']; ?>)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                    onclick="deleteMois(<?php echo $mois['id']; ?>)">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
+                                            <?php if ($mois['est_actif']): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="deleteMois(<?php echo $mois['id']; ?>)"
+                                                        title="Supprimer le mois actif">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                                        disabled title="Seuls les mois actifs peuvent être supprimés">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </td>
                                 </tr>
@@ -311,6 +320,180 @@ if (isset($_GET['success'])) {
     </div>
 </div>
 
+<!-- Modal pour modifier un mois -->
+<div class="modal fade" id="editMoisModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier le Mois de Facturation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editMoisForm" method="post" action="traitement/recouvrement_t.php">
+                    <input type="hidden" name="action" value="update_mois">
+                    <input type="hidden" name="mois_id" id="edit_mois_id">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_mois" class="form-label">Mois (YYYY-MM)</label>
+                                <input type="month" class="form-control" id="edit_mois" name="mois" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_date_facturation" class="form-label">Date de facturation</label>
+                                <input type="date" class="form-control" id="edit_date_facturation" name="date_facturation" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_date_depot" class="form-label">Date de dépôt</label>
+                                <input type="date" class="form-control" id="edit_date_depot" name="date_depot" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_id_constante" class="form-label">Tarif à utiliser</label>
+                                <select class="form-control" id="edit_id_constante" name="id_constante" required>
+                                    <option value="">Sélectionner un tarif...</option>
+                                    <?php
+                                    if ($aepId) {
+                                        $tarifs = Manager::prepare_query(
+                                            "SELECT * FROM constante_reseau WHERE id_aep = ? ORDER BY date_creation DESC",
+                                            array($aepId)
+                                        )->fetchAll();
+                                        foreach ($tarifs as $tarif) {
+                                            echo '<option value="' . $tarif['id'] . '">' . 
+                                                 htmlspecialchars($tarif['prix_metre_cube_eau']) . ' FCFA/m³ - ' . 
+                                                 date('d/m/Y', strtotime($tarif['date_creation'])) . '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit_description" class="form-label">Description (optionnel)</label>
+                        <textarea class="form-control" id="edit_description" name="description" rows="3" 
+                                  placeholder="Description du mois de facturation..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_est_actif" name="est_actif">
+                            <label class="form-check-label" for="edit_est_actif">
+                                Activer ce mois (désactivera le mois actuellement actif)
+                            </label>
+                        </div>
+                        <div id="editWarningActivation" class="alert alert-warning mt-2" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Attention :</strong> Activer ce mois désactivera automatiquement le mois actuellement actif.
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('editMoisForm').submit();">
+                    <i class="bi bi-check-circle"></i> Mettre à jour
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation d'activation -->
+<div class="modal fade" id="activateMoisModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Confirmation d'activation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <h6><strong>⚠️ ATTENTION :</strong></h6>
+                    <p>Cette action va désactiver le mois actuellement actif et activer le nouveau mois.</p>
+                    <ul class="mb-0">
+                        <li>Le mois actuel sera désactivé</li>
+                        <li>Toutes les nouvelles factures utiliseront ce nouveau mois</li>
+                        <li>Cette action peut avoir un impact sur la facturation</li>
+                    </ul>
+                </div>
+                <p><strong>Êtes-vous vraiment sûr de vouloir continuer ?</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="traitement/recouvrement_t.php" style="display: inline;">
+                    <input type="hidden" name="action" value="activate_mois">
+                    <input type="hidden" name="mois_id" id="activate_mois_id">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Oui, activer ce mois
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteMoisModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-trash"></i> Confirmation de suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <h6><strong>⚠️ ATTENTION :</strong></h6>
+                    <p>Cette action va supprimer définitivement le mois de facturation actif ainsi que toutes les données associées.</p>
+                    <ul class="mb-0">
+                        <li>Les anciens index des compteurs deviendront les derniers index</li>
+                        <li>Le mois le plus récent deviendra automatiquement actif</li>
+                        <li>Toutes les factures de ce mois seront supprimées</li>
+                        <li>Cette action est irréversible</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="confirm_mois_lettre" class="form-label">
+                        <strong>Pour confirmer la suppression, tapez le mois en lettres :</strong>
+                    </label>
+                    <input type="text" class="form-control" id="confirm_mois_lettre" 
+                           placeholder="Ex: Janvier 2024" required>
+                    <div class="form-text">
+                        <span id="mois_attendu" class="text-muted"></span>
+                    </div>
+                </div>
+                
+                <p><strong>Êtes-vous vraiment sûr de vouloir continuer ?</strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="traitement/recouvrement_t.php" style="display: inline;" id="deleteForm">
+                    <input type="hidden" name="action" value="delete_mois">
+                    <input type="hidden" name="mois_id" id="delete_mois_id">
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                        <i class="bi bi-trash"></i> Oui, supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <script>
     // Afficher/masquer l'avertissement d'activation
     document.addEventListener('DOMContentLoaded', function() {
@@ -327,12 +510,49 @@ if (isset($_GET['success'])) {
                 warning.style.display = 'block';
             }
         }
+        
+        // Gestion de l'avertissement pour le modal d'édition
+        const editCheckbox = document.getElementById('edit_est_actif');
+        const editWarning = document.getElementById('editWarningActivation');
+        
+        if (editCheckbox && editWarning) {
+            editCheckbox.addEventListener('change', function() {
+                editWarning.style.display = this.checked ? 'block' : 'none';
+            });
+        }
+        
+        // Validation de la saisie du mois pour la suppression
+        const confirmInput = document.getElementById('confirm_mois_lettre');
+        const confirmBtn = document.getElementById('confirmDeleteBtn');
+        const moisAttendu = document.getElementById('mois_attendu');
+        
+        if (confirmInput && confirmBtn && moisAttendu) {
+            confirmInput.addEventListener('input', function() {
+                const expectedMois = moisAttendu.textContent.replace('Tapez: ', '');
+                const inputValue = this.value.trim();
+                
+                if (inputValue === expectedMois) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.classList.remove('btn-secondary');
+                    confirmBtn.classList.add('btn-danger');
+                } else {
+                    confirmBtn.disabled = true;
+                    confirmBtn.classList.remove('btn-danger');
+                    confirmBtn.classList.add('btn-secondary');
+                }
+            });
+        }
     });
 
     function voirDetailsMois(moisId) {
         // Charger les détails du mois via AJAX
         fetch(`traitement/recouvrement_t.php?action=get_details&id=${moisId}`)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Erreur HTTP: ' + response.status);
+                }
+                return response.text();
+            })
             .then(html => {
                 document.getElementById('moisDetailsContent').innerHTML = html;
                 const modal = new bootstrap.Modal(document.getElementById('detailsMoisModal'));
@@ -340,62 +560,76 @@ if (isset($_GET['success'])) {
             })
             .catch(error => {
                 console.error('Erreur:', error);
-                alert('Erreur lors du chargement des détails');
+                document.getElementById('moisDetailsContent').innerHTML = 
+                    '<div class="alert alert-danger">Erreur lors du chargement des détails du mois.</div>';
+                const modal = new bootstrap.Modal(document.getElementById('detailsMoisModal'));
+                modal.show();
             });
     }
 
     function activerMois(moisId) {
-        if (confirm('⚠️ ATTENTION : Cette action va désactiver le mois actuellement actif et activer le nouveau mois.\n\n' +
-                   '• Le mois actuel sera désactivé\n' +
-                   '• Toutes les nouvelles factures utiliseront ce nouveau mois\n' +
-                   '• Cette action peut avoir un impact sur la facturation\n\n' +
-                   'Êtes-vous vraiment sûr de vouloir continuer ?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'traitement/recouvrement_t.php';
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'activate_mois';
-            
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = 'mois_id';
-            idInput.value = moisId;
-            
-            form.appendChild(actionInput);
-            form.appendChild(idInput);
-            document.body.appendChild(form);
-            form.submit();
-        }
+        // Ouvrir le modal de confirmation d'activation
+        document.getElementById('activate_mois_id').value = moisId;
+        const modal = new bootstrap.Modal(document.getElementById('activateMoisModal'));
+        modal.show();
     }
 
     function editMois(moisId) {
-        // Implémenter l'édition des mois
-        alert('Fonctionnalité d\'édition des mois à implémenter');
+        // Charger les données du mois pour l'édition
+        fetch(`traitement/recouvrement_t.php?action=get_mois_data&id=${moisId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remplir le formulaire d'édition
+                    document.getElementById('edit_mois').value = data.mois.mois;
+                    document.getElementById('edit_date_facturation').value = data.mois.date_facturation;
+                    document.getElementById('edit_date_depot').value = data.mois.date_depot;
+                    document.getElementById('edit_id_constante').value = data.mois.id_constante;
+                    document.getElementById('edit_description').value = data.mois.description || '';
+                    document.getElementById('edit_est_actif').checked = data.mois.est_actif == 1;
+                    document.getElementById('edit_mois_id').value = moisId;
+                    
+                    // Afficher/masquer l'avertissement d'activation
+                    const warning = document.getElementById('editWarningActivation');
+                    if (warning) {
+                        warning.style.display = data.mois.est_actif == 1 ? 'none' : 'block';
+                    }
+                    
+                    // Ouvrir le modal d'édition
+                    const modal = new bootstrap.Modal(document.getElementById('editMoisModal'));
+                    modal.show();
+                } else {
+                    alert('Erreur lors du chargement des données: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des données');
+            });
     }
 
     function deleteMois(moisId) {
-        if (confirm('Êtes-vous sûr de vouloir supprimer ce mois de facturation ? Cette action est irréversible.')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'traitement/recouvrement_t.php';
-            
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'delete_mois';
-            
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = 'mois_id';
-            idInput.value = moisId;
-            
-            form.appendChild(actionInput);
-            form.appendChild(idInput);
-            document.body.appendChild(form);
-            form.submit();
-        }
+        // Récupérer le mois en lettres pour validation
+        fetch(`traitement/recouvrement_t.php?action=get_mois_lettre&id=${moisId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remplir les champs du modal
+                    document.getElementById('delete_mois_id').value = moisId;
+                    document.getElementById('mois_attendu').textContent = 'Tapez: ' + data.mois_lettre;
+                    document.getElementById('confirm_mois_lettre').value = '';
+                    document.getElementById('confirmDeleteBtn').disabled = true;
+                    
+                    // Ouvrir le modal
+                    const modal = new bootstrap.Modal(document.getElementById('deleteMoisModal'));
+                    modal.show();
+                } else {
+                    alert('Erreur lors du chargement des données: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors du chargement des données');
+            });
     }
 </script>

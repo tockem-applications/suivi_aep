@@ -708,149 +708,13 @@ class MoisFacturation_t
                         </table>
                         <div class="btn-group">
 
-                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete_<?php echo $id ?>">
-                                Suprimer
-                            </button>
-                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#update_<?php echo $id ?>">
-                                Modifier
-                            </button>
+<!--                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete_--><?php //echo $id ?><!--">-->
+<!--                                Suprimer-->
+<!--                            </button>-->
+<!--                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#update_--><?php //echo $id ?><!--">-->
+<!--                                Modifier-->
+<!--                            </button>-->
                             <a href="?list=mois_facturation&id_mois=<?php echo $id ?>" class="btn btn-primary">Afficher</a>
-                        </div>
-
-                        <!-- Modal Bootstrap pour la modification d'un mois -->
-
-                        <!-- Modal pour modifier un mois -->
-                        <div class="modal fade" id="update_<?php echo $id; ?>" tabindex="-1" role="dialog"
-                            aria-labelledby="updateModalLabel_<?php echo $id; ?>" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header bg-primary text-white">
-                                        <h5 class="modal-title" id="updateModalLabel_<?php echo $id; ?>">Modifier le mois de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?>
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <form id="update_form_<?php echo $id; ?>" method="post"
-                                            action="traitement/mois_facturation_t.php?update_mois=true&id_update=<?php echo $id; ?>">
-                                            <div class="row g-3">
-                                                <div class="col-md-6">
-                                                    <label for="mois_<?php echo $id; ?>" class="form-label fw-bold">Mois et Année
-                                                        <span class="text-danger">*</span></label>
-                                                    <div class="input-group">
-                                                        <span class="input-group-text bg-light"><i
-                                                                class="fas fa-calendar-month"></i></span>
-                                                        <input type="month" class="form-control shadow-sm"
-                                                            id="mois_<?php echo $id; ?>" name="mois"
-                                                            value="<?php echo htmlspecialchars($mois); ?>" required>
-                                                        <!-- Solution de secours pour navigateurs anciens :
-                                <select class="form-control shadow-sm" id="mois_<?php echo $id; ?>" name="mois">
-                                    <?php
-                                    $months = array(
-                                        1 => 'Janvier',
-                                        2 => 'Février',
-                                        3 => 'Mars',
-                                        4 => 'Avril',
-                                        5 => 'Mai',
-                                        6 => 'Juin',
-                                        7 => 'Juillet',
-                                        8 => 'Août',
-                                        9 => 'Septembre',
-                                        10 => 'Octobre',
-                                        11 => 'Novembre',
-                                        12 => 'Décembre'
-                                    );
-                                    foreach ($months as $value => $name) {
-                                        $selected = ($value == $mois) ? 'selected' : '';
-                                        echo "<option value=\"$value\" $selected>$name</option>";
-                                    }
-                                    ?>
-                                </select>
-                                -->
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <label for="description_<?php echo $id; ?>"
-                                                        class="form-label fw-bold">Description <span
-                                                            class="text-danger">*</span></label>
-                                                    <div class="input-group">
-                                                        <span class="input-group-text bg-light"><i
-                                                                class="fas fa-info-circle"></i></span>
-                                                        <textarea class="form-control shadow-sm" id="description_<?php echo $id; ?>"
-                                                            name="description" rows="3" placeholder="Entrez une description"
-                                                            required><?php echo htmlspecialchars($description); ?></textarea>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </form>
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="submit" class="btn btn-primary w-100 shadow-sm mt-3">Modifier</button>
-                                        <button type="button" class="btn btn-secondary w-100 shadow-sm"
-                                            data-bs-dismiss="modal">Annuler</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Modal pour supprimer un mois -->
-                        <div class="modal fade" id="delete_<?php echo $id; ?>" tabindex="-1" role="dialog"
-                            aria-labelledby="deleteModalLabel_<?php echo $id; ?>" aria-hidden="true">
-                            <div class="modal-dialog modal-lg">
-                                <div class="modal-content">
-                                    <div class="modal-header bg-danger text-white">
-                                        <h5 class="modal-title" id="deleteModalLabel_<?php echo $id; ?>">Suppression de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?>
-                                        </h5>
-                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                            aria-label="Close"></button>
-                                    </div>
-                                    <div class="modal-body">
-                                        <p class="font-weight-bold">Voulez-vous vraiment supprimer le mois de
-                                            <?php echo htmlspecialchars($mois_en_lettre); ?> ?
-                                        </p>
-                                        <p class="text-danger font-weight-bold">Cette action sera irréversible.</p>
-                                        <div class="form-group">
-                                            <label for="confirmation_text_<?php echo $id; ?>"
-                                                class="form-label fw-bold text-danger">Veuillez taper <strong>SUPPRIMER</strong>
-                                                pour confirmer :</label>
-                                            <div class="input-group">
-                                                <span class="input-group-text bg-light"><i
-                                                        class="fas fa-exclamation-circle"></i></span>
-                                                <input type="text" class="form-control shadow-sm"
-                                                    id="confirmation_text_<?php echo $id; ?>" placeholder="Tapez SUPPRIMER">
-                                            </div>
-                                        </div>
-
-                                    </div>
-                                    <div class="modal-footer">
-                                        <button type="button" class="btn btn-danger w-100 shadow-sm"
-                                            id="confirm_delete_<?php echo $id; ?>">Supprimer</button>
-                                        <button type="button" class="btn btn-secondary w-100 shadow-sm"
-                                            data-bs-dismiss="modal">Annuler</button>
-                                    </div>
-                                    <script>
-                                        // JavaScript intégré pour gérer la confirmation
-                                        (function () {
-                                            var confirmButton = document.getElementById('confirm_delete_<?php echo $id; ?>');
-                                            var inputText = document.getElementById('confirmation_text_<?php echo $id; ?>');
-                                            var modal = document.getElementById('delete_<?php echo $id; ?>');
-                                            confirmButton.addEventListener('click', function () {
-                                                if (inputText.value.trim().toUpperCase() === 'SUPPRIMER') {
-                                                    window.location.href = 'traitement/mois_facturation_t.php?delete_mois=true&id_delete=<?php echo $id; ?>';
-                                                } else {
-                                                    alert('Veuillez taper exactement "SUPPRIMER" pour confirmer.');
-                                                    inputText.focus();
-                                                }
-                                            });
-                                            modal.addEventListener('hidden.bs.modal', function () {
-                                                inputText.value = '';
-                                            });
-                                        })();
-                                    </script>
-                                </div>
-                            </div>
                         </div>
 
                         <?php
@@ -928,7 +792,7 @@ class MoisFacturation_t
         $mois = $mois[0]['mois'];
         $mois = getLetterMonth($mois);
         $aep_name = $_SESSION['libele_aep'];
-        Backup_t::phpSqlDump(Connexion::connect(), Connexion::$db_name, __DIR__ . "/../backups/Backup_Avant_Aupression_mois_$aep_name-$mois.sql");
+//        Backup_t::phpSqlDump(Connexion::connect(), Connexion::$db_name, __DIR__ . "/../backups/Backup_Avant_Aupression_mois_$aep_name-$mois.sql");
         var_dump($_GET);
         $id = htmlspecialchars($_GET['id_delete']);
 

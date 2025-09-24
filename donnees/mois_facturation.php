@@ -18,7 +18,7 @@ class MoisFacturation extends Manager
 
     public static function getAllMois($mois_debut, $mois_fin, $id_aep, $id_reseau = 0)
     {
-//        var_dump($id_reseau);
+        //        var_dump($id_reseau);
         if ($mois_debut == '') {
             $mois_debut = '1900-01';
         }
@@ -26,7 +26,7 @@ class MoisFacturation extends Manager
             $mois_fin = '2200-01';
         }
         $reseau_joining = '';
-//        var_dump($mois_fin);
+        //        var_dump($mois_fin);
         if ($id_reseau == 0) {
             // si l'id du reseau est null, il ne faut prendre toute les donnees sur les mois de facturation
             // mais aussi avec celle de tout les reseau
@@ -36,7 +36,8 @@ class MoisFacturation extends Manager
             $reseau_joining = 'inner join';
         }
 
-        return self::prepare_query("select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
+        return self::prepare_query(
+            "select m.*, count(f.id) nombre, sum(f.montant_verse) montant_versee,
 
                            sum(nouvel_index-ancien_index) conso, prix_metre_cube_eau, prix_entretient_compteur, prix_tva, r.nom as reseau
                         from mois_facturation m 
@@ -46,7 +47,8 @@ class MoisFacturation extends Manager
                             inner join abone a on a.id = f.id_abone
                             $reseau_joining reseau r on a.id_reseau=r.id and ( r.id = ? and r.id!=0)
                         where m.mois>=? and m.mois <=? and c.id_aep=?
-                        group by m.id order by mois desc ;", array($id_reseau, $mois_debut, $mois_fin, $id_aep)
+                        group by m.id order by mois desc ;",
+            array($id_reseau, $mois_debut, $mois_fin, $id_aep)
         );
     }
 
@@ -70,7 +72,8 @@ class MoisFacturation extends Manager
                             from mois_facturation m 
                                 inner join constante_reseau c on m.id_constante = c.id 
                             where mois>? and c.id_aep=?;",
-            array($mois, $id_aep));
+            array($mois, $id_aep)
+        );
         if (!$res)
             return false;
         $number = count($res->fetchAll());
@@ -82,6 +85,57 @@ class MoisFacturation extends Manager
         return self::prepare_query("select m.* from mois_facturation m where m.id = ?", array($selected_moi_id));
     }
 
+    public static function createBackupBeforeDeletion($mois_id, $id_aep)
+    {
+        try {
+            // Inclure la classe de sauvegarde
+            @include_once("../traitement/backup_t.php");
+
+            if (self::$bd == null)
+                self::$bd = Connexion::connect();
+
+            // Récupérer les informations du mois à supprimer avec le nom de l'AEP
+            $mois = self::prepare_query("
+                SELECT mf.*, cr.id_aep, a.libele as nom_aep
+                FROM mois_facturation mf 
+                INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+                INNER JOIN aep a ON cr.id_aep = a.id
+                WHERE mf.id = ? AND cr.id_aep = ?
+            ", array($mois_id, $id_aep))->fetch();
+
+            if (!$mois) {
+                return false;
+            }
+
+            // Convertir le mois en lettres
+            $moisLettre = getLetterMonth($mois['mois']);
+
+            // Nettoyer le nom de l'AEP pour le nom de fichier
+            $nomAepClean = preg_replace('/[^a-zA-Z0-9_-]/', '_', $mois['nom_aep']);
+
+            // Créer le nom du fichier de sauvegarde
+            $date = date('Y-m-d_H-i-s');
+            $filename = "avant_suppression_" . $nomAepClean . "_" . $moisLettre . "_" . $date . ".sql";
+            $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+
+            // Créer le dossier backups s'il n'existe pas
+            if (!is_dir($backupDir)) {
+                @mkdir($backupDir, 0777, true);
+            }
+
+            $backupPath = $backupDir . DIRECTORY_SEPARATOR . $filename;
+
+            // Utiliser la fonction de sauvegarde existante
+            Backup_t::phpSqlDump(self::$bd, 'suivi_aep_fokoue', $backupPath);
+
+            return true;
+
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+
     public static function deleteMonth($id, $id_aep)
     {
         //on fais que les anciens index deviennent les derniers pour le compteurs (mf.est_actif=1 and mf.id = ?)
@@ -89,6 +143,8 @@ class MoisFacturation extends Manager
         // et definit le mois le plus rescent comme le moi actif dans le meme aep (id_constante = (SELECT id FROM constante_reseau WHERE id_aep=?);).
         try {
 
+            // Créer une sauvegarde avant suppression
+            self::createBackupBeforeDeletion($id, $id_aep);
 
             if (self::$bd == null)
                 self::$bd = Connexion::connect();
@@ -102,16 +158,24 @@ class MoisFacturation extends Manager
                          where mf.est_actif=1 and mf.id = ?
                     ) as indexes, compteur as co
                  set derniers_index = ancien_index where co.id = indexes.id_compteur; ",
-                array($id));
+                array($id)
+            );
 
             self::prepare_query("delete from mois_facturation where id=? and est_actif=1", array($id));
 
-            self::prepare_query("UPDATE mois_facturation 
-                                    SET est_actif = 1 
-                                    WHERE mois = (SELECT max_mois FROM 
-                                        (SELECT MAX(mois) AS max_mois FROM mois_facturation) AS temp)
-                                        and id_constante = (SELECT id FROM constante_reseau WHERE id_aep=?);",
-                array($id_aep));
+            // Récupérer d'abord le mois maximum pour éviter l'erreur 1093
+            $maxMois = self::prepare_query("SELECT MAX(mf.mois) as max_mois FROM mois_facturation mf
+                INNER JOIN constante_reseau cr ON mf.id_constante = cr.id
+                WHERE cr.id_aep = ?", array($id_aep))->fetch();
+
+            if ($maxMois && $maxMois['max_mois']) {
+                self::prepare_query("UPDATE mois_facturation 
+                                        SET est_actif = 1 
+                                        WHERE mois = ? 
+                                        and id_constante in (SELECT id FROM constante_reseau cr WHERE cr.id_aep=?);",
+                    array($maxMois['max_mois'], $id_aep)
+                );
+            }
             self::$bd->commit();
             return true;
         } catch (Exception $e) {
@@ -141,24 +205,24 @@ class MoisFacturation extends Manager
 
     public static function updateIndexFronFile($data, $id_mois)
     {
-//        var_dump($data);
+        //        var_dump($data);
         try {
-        foreach ($data as $value) {
-            $aep = $value['data'];
+            foreach ($data as $value) {
+                $aep = $value['data'];
 
-            foreach ($aep as $ligne) {
-                $id_index = $ligne['id_index'];
-                $id_compteur = $ligne['id_compteur'];
-                $ancien_index = $ligne['ancien_index'];
-                $nouvel_index = $ligne['nouvel_index'];
-                self::updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index);
-                //                var_dump($ligne);
+                foreach ($aep as $ligne) {
+                    $id_index = $ligne['id_index'];
+                    $id_compteur = $ligne['id_compteur'];
+                    $ancien_index = $ligne['ancien_index'];
+                    $nouvel_index = $ligne['nouvel_index'];
+                    self::updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index);
+                    //                var_dump($ligne);
+                }
             }
-        }
         } catch (Exception $e) {
             return false;
         }
-//        exit();
+        //        exit();
         return true;
     }
 
@@ -179,7 +243,7 @@ class MoisFacturation extends Manager
                 set i.nouvel_index = ?, co.derniers_index = ?
                 where i.id=? and co.id = ? and i.id_mois_facturation = ? and i.nouvel_index <> ? and i.ancien_index <> ?
             ", array($index, $index, $id_index, $id_compteur, $id_mois, $index, $index));
-//            var_dump();
+            //            var_dump();
             return true;
         } catch (Exception $e) {
             return false;
@@ -195,12 +259,19 @@ class MoisFacturation extends Manager
 
     function getDonnee()
     {
-        return array('mois' => $this->mois
-        , 'date_facturation' => $this->date_facturation
-        , 'date_depot' => $this->date_depot
-        , 'id_constante' => $this->id_constante
-        , 'description' => $this->description
-        , 'est_actif' => $this->est_actif);
+        return array(
+            'mois' => $this->mois
+            ,
+            'date_facturation' => $this->date_facturation
+            ,
+            'date_depot' => $this->date_depot
+            ,
+            'id_constante' => $this->id_constante
+            ,
+            'description' => $this->description
+            ,
+            'est_actif' => $this->est_actif
+        );
     }
 
     function getNomTable()
@@ -238,7 +309,8 @@ class MoisFacturation extends Manager
                             inner join constante_reseau c on c.id=m.id_constante 
                         where c.id_aep=?
                         order by mois desc;',
-            array($id_aep));
+            array($id_aep)
+        );
     }
 
     public static function updateDateDepot($id_mois, $date_depot, $date_releve)
@@ -253,7 +325,7 @@ class MoisFacturation extends Manager
             require("../donnees/facture.php");
             $this->connecter();
             self::$bd->beginTransaction();
-//            echo "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk<br>";
+            //            echo "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk<br>";
             //on recupere la liste des ancienne factures pour avoir acces aux penalites et impayes
             $res = Facture::getAncienneFacture($id_aep);
             echo "oooooooooooooooooooooooooooooooooooooooo";
@@ -264,7 +336,8 @@ class MoisFacturation extends Manager
                             inner join constante_reseau c on m.id_constante = c.id  
                             set m.est_actif=false  
                             where m.est_actif=true and c.id_aep=?",
-                array($id_aep));
+                array($id_aep)
+            );
             $res = $this->ajouter();
             echo "bobobobobobobobooboboobobobooboboboboobbobobobob";
             // si l'ajout du nouveau mois fais proble on annule tout et on sort
@@ -286,10 +359,10 @@ class MoisFacturation extends Manager
             //nouvel index, ancien index, longitude, latitude, id  de l'abone etc
             foreach ($tab_index as $ligne_tab_index) {
                 echo "22222222222222222222222222222222222222222222222222222222222<br>";
-                $nouvel_index = (float)$ligne_tab_index['nouvel_index'];
-                $ancien_index = (float)$ligne_tab_index['ancien_index'];
-                $id_abone = (int)$ligne_tab_index['id'];
-                $id_compteur = (int)$ligne_tab_index['id_compteur'];
+                $nouvel_index = (float) $ligne_tab_index['nouvel_index'];
+                $ancien_index = (float) $ligne_tab_index['ancien_index'];
+                $id_abone = (int) $ligne_tab_index['id'];
+                $id_compteur = (int) $ligne_tab_index['id_compteur'];
 
                 //une fois que l'on a le nouvel index de l'abone, on le place dans l'abone pour un acces facile
                 //mais avant il faut se rassurer qu'il est au moins egal a l'ancien index. sinon on ne lui ajoute pas de facture
@@ -302,7 +375,7 @@ class MoisFacturation extends Manager
                 $nouvel_impaye = 0.00;
                 $found = false;
                 $nouvelle_penalite = 0.00;
-//                echo"*****************************************************************<br>";
+                //                echo"*****************************************************************<br>";
 //                echo"*****************************************************************<br>";
 //                echo"*****************************************************************<br>";
                 $impaye = 0;
@@ -311,19 +384,19 @@ class MoisFacturation extends Manager
                 var_dump(count($tab_ancienne_facture));
                 foreach ($tab_ancienne_facture as $ligne_ancienne_facture) {
                     echo "44444444444444444444444444444444444444444444444<br>";
-                    if ((int)$ligne_ancienne_facture['id_compteur'] == $id_compteur) {
+                    if ((int) $ligne_ancienne_facture['id_compteur'] == $id_compteur) {
 
                         $prix_eau = $ligne_ancienne_facture['prix_metre_cube_eau'];
                         $id_ancienne_facture = $ligne_ancienne_facture['id'];
-                        $prix_entretien = (int)$ligne_ancienne_facture['prix_entretient_compteur'];
-                        $montant_verse = (int)$ligne_ancienne_facture['montant_verse'];
-                        $impaye = (int)$ligne_ancienne_facture['impaye'];
-//                        $impaye = 0;
-                        $penalite = (int)$ligne_ancienne_facture['penalite'];
-                        $prix_tva = (float)$ligne_ancienne_facture['prix_tva'];
-                        $ex_nouvel_index = (float)$ligne_ancienne_facture['nouvel_index'];
+                        $prix_entretien = (int) $ligne_ancienne_facture['prix_entretient_compteur'];
+                        $montant_verse = (int) $ligne_ancienne_facture['montant_verse'];
+                        $impaye = (int) $ligne_ancienne_facture['impaye'];
+                        //                        $impaye = 0;
+                        $penalite = (int) $ligne_ancienne_facture['penalite'];
+                        $prix_tva = (float) $ligne_ancienne_facture['prix_tva'];
+                        $ex_nouvel_index = (float) $ligne_ancienne_facture['nouvel_index'];
                         $mois = $ligne_ancienne_facture['mois'];
-                        $ex_ancien_index = (float)$ligne_ancienne_facture['ancien_index'];
+                        $ex_ancien_index = (float) $ligne_ancienne_facture['ancien_index'];
 
                         if ($ex_nouvel_index != $ancien_index) {
                             $ancien_index = $ex_nouvel_index;
@@ -351,20 +424,31 @@ class MoisFacturation extends Manager
                     return 0;
                 }
 
-//                $estFacturable = Compteur::estFacturable($id_compteur);
+                //                $estFacturable = Compteur::estFacturable($id_compteur);
 
-                $nouvelle_facture = new Facture(0, $ancien_index
-                    , $nouvel_index
-                    , $impaye < 0 ? -$impaye : 0 // si l'ipaye est negatif on alors l'abonee avait verse plus du montant de la facture alors il fau reporter au mois suivant
-                    , '00/00/0000'
-                    , $nouvelle_penalite, $id_mois_facturation
-                    , $id_abone, '', $id_compteur);
+                $nouvelle_facture = new Facture(
+                    0,
+                    $ancien_index
+                    ,
+                    $nouvel_index
+                    ,
+                    $impaye < 0 ? -$impaye : 0 // si l'ipaye est negatif on alors l'abonee avait verse plus du montant de la facture alors il fau reporter au mois suivant
+                    ,
+                    '00/00/0000'
+                    ,
+                    $nouvelle_penalite,
+                    $id_mois_facturation
+                    ,
+                    $id_abone,
+                    '',
+                    $id_compteur
+                );
                 $res = $nouvelle_facture->save_facture();
                 //maintenant, si on reporte l'impaye negatif au mois suivant alors il doit etre suprimee
                 if ($impaye < 0) {
-                    Impaye::deleteByIdCacture((int)$id_ancienne_facture);
-                } else if ((int)$nouvel_impaye > 0) {
-                    $impaye_object = new Impaye('', (int)$id_ancienne_facture, (int)$nouvel_impaye, 0, '00/00/0000');
+                    Impaye::deleteByIdCacture((int) $id_ancienne_facture);
+                } else if ((int) $nouvel_impaye > 0) {
+                    $impaye_object = new Impaye('', (int) $id_ancienne_facture, (int) $nouvel_impaye, 0, '00/00/0000');
                     $impaye_object->ajouter();
                 }
                 if (!$res) {
@@ -380,7 +464,7 @@ class MoisFacturation extends Manager
             return 0;
         }
         self::$bd->commit();
-        return (int)$id_mois_facturation;
+        return (int) $id_mois_facturation;
     }
 
     public static function getMoisFacturationActive($id_aep)
@@ -405,7 +489,7 @@ class MoisFacturation extends Manager
         if ($res->rowCount() == 0) {
             return 0;
         }
-        return (int)$data[0]['id'];
+        return (int) $data[0]['id'];
     }
 
     public function __construct($id, $mois, $date_facturation, $date_depot, $id_constante, $description, $est_actif)

@@ -259,7 +259,7 @@ class Facture extends Manager
                 AND vaf.id_aep = ?
                 $id_reseau_string_condition
             ORDER BY 
-                vaf.nom_abone
+                id_abone ASC
             ", $data_array);
     }
 

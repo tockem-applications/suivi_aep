@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         case 'activate_mois':
             activerMois();
             break;
+        case 'update_mois':
+            modifierMois();
+            break;
         case 'delete_mois':
             supprimerMois();
             break;
@@ -45,6 +48,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     switch ($action) {
         case 'get_details':
             getDetailsMois();
+            break;
+        case 'get_mois_data':
+            getMoisData();
+            break;
+        case 'get_mois_lettre':
+            getMoisLettre();
             break;
         default:
             header('Location: ../?page=recouvrement&error=invalid_request');
@@ -198,38 +207,28 @@ function supprimerMois()
             throw new Exception('ID de mois invalide');
         }
 
-        // Vérifier que le mois appartient bien à l'AEP
+        // Vérifier que le mois appartient bien à l'AEP et qu'il est actif
         $mois = Manager::prepare_query(
             'SELECT mf.* FROM mois_facturation mf 
              INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
-             WHERE mf.id = ? AND cr.id_aep = ?',
+             WHERE mf.id = ? AND cr.id_aep = ? AND mf.est_actif = 1',
             array($moisId, $aepId)
         )->fetch();
 
         if (!$mois) {
-            throw new Exception('Mois introuvable ou non autorisé');
+            throw new Exception('Mois introuvable, non autorisé ou non actif. Seuls les mois actifs peuvent être supprimés.');
         }
 
-        // Vérifier qu'il n'y a pas de factures liées
-        $nbFactures = Manager::prepare_query(
-            'SELECT COUNT(*) as nb FROM vue_abones_facturation WHERE id_mois = ?',
-            array($moisId)
-        )->fetch()['nb'];
-
-        if ($nbFactures > 0) {
-            throw new Exception('Impossible de supprimer ce mois : ' . $nbFactures . ' facture(s) y sont liées');
-        }
-
-        // Supprimer le mois
-        $resultat = Manager::prepare_query(
-            'DELETE FROM mois_facturation WHERE id = ?',
-            array($moisId)
-        );
+        // Utiliser la fonction deleteMonth qui gère automatiquement :
+        // - La restauration des anciens index comme derniers index des compteurs
+        // - La suppression du mois actif
+        // - L'activation du mois le plus récent
+        $resultat = MoisFacturation::deleteMonth($moisId, $aepId);
 
         if ($resultat) {
             header('Location: ../?page=recouvrement&success=mois_deleted');
         } else {
-            throw new Exception('Impossible de supprimer le mois');
+            throw new Exception('Impossible de supprimer le mois de facturation');
         }
 
     } catch (Exception $e) {
@@ -274,14 +273,21 @@ function getDetailsMois()
             array($moisId)
         )->fetchAll();
 
-        // Calculer les statistiques
-        $totalFacture = array_sum(array_column($abonesFactures, 'montant_total'));
-        $totalVerse = array_sum(array_column($abonesFactures, 'montant_verse'));
-        $totalReste = array_sum(array_column($abonesFactures, 'reste_a_payer'));
+        // Calculer les statistiques (compatible PHP 5.3)
+        $totalFacture = 0;
+        $totalVerse = 0;
+        $totalReste = 0;
         $nbAbones = count($abonesFactures);
-        $nbImpayes = count(array_filter($abonesFactures, function ($a) {
-            return $a['reste_a_payer'] > 0;
-        }));
+        $nbImpayes = 0;
+
+        foreach ($abonesFactures as $abone) {
+            $totalFacture += (float) $abone['montant_total'];
+            $totalVerse += (float) $abone['montant_verse'];
+            $totalReste += (float) $abone['reste_a_payer'];
+            if ($abone['reste_a_payer'] > 0) {
+                $nbImpayes++;
+            }
+        }
 
         // Afficher les détails
         ?>
@@ -449,6 +455,175 @@ function getDetailsMois()
     } catch (Exception $e) {
         echo '<div class="alert alert-danger">Erreur lors du chargement des détails : ' . htmlspecialchars($e->getMessage()) . '</div>';
     }
+}
+
+function modifierMois()
+{
+    global $aepId;
+
+    try {
+        $moisId = (int) (isset($_POST['mois_id']) ? $_POST['mois_id'] : 0);
+        $mois = isset($_POST['mois']) ? trim($_POST['mois']) : '';
+        $dateFacturation = isset($_POST['date_facturation']) ? $_POST['date_facturation'] : '';
+        $dateDepot = isset($_POST['date_depot']) ? $_POST['date_depot'] : '';
+        $idConstante = (int) (isset($_POST['id_constante']) ? $_POST['id_constante'] : 0);
+        $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
+        $estActif = isset($_POST['est_actif']);
+
+        // Validation
+        if ($moisId <= 0) {
+            throw new Exception('ID de mois invalide');
+        }
+        if (empty($mois) || !preg_match('/^\d{4}-\d{2}$/', $mois)) {
+            throw new Exception('Format de mois invalide. Utilisez le format YYYY-MM');
+        }
+        if (empty($dateFacturation)) {
+            throw new Exception('Date de facturation requise');
+        }
+        if (empty($dateDepot)) {
+            throw new Exception('Date de dépôt requise');
+        }
+        if ($idConstante <= 0) {
+            throw new Exception('Tarif invalide');
+        }
+
+        // Vérifier que le mois appartient bien à l'AEP
+        $moisExistant = Manager::prepare_query(
+            'SELECT mf.* FROM mois_facturation mf 
+             INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+             WHERE mf.id = ? AND cr.id_aep = ?',
+            array($moisId, $aepId)
+        )->fetch();
+
+        if (!$moisExistant) {
+            throw new Exception('Mois introuvable ou non autorisé');
+        }
+
+        // Vérifier que le tarif appartient à l'AEP
+        $tarif = Manager::prepare_query(
+            'SELECT * FROM constante_reseau WHERE id = ? AND id_aep = ?',
+            array($idConstante, $aepId)
+        )->fetch();
+
+        if (!$tarif) {
+            throw new Exception('Tarif introuvable ou non autorisé');
+        }
+
+        // Si on veut activer le mois, désactiver tous les autres
+        if ($estActif) {
+            Manager::prepare_query(
+                'UPDATE mois_facturation mf 
+                 INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+                 SET mf.est_actif = false 
+                 WHERE cr.id_aep = ?',
+                array($aepId)
+            );
+        }
+
+        // Mettre à jour le mois
+        $resultat = Manager::prepare_query(
+            'UPDATE mois_facturation SET 
+                mois = ?, 
+                date_facturation = ?, 
+                date_depot = ?, 
+                id_constante = ?, 
+                description = ?, 
+                est_actif = ? 
+             WHERE id = ?',
+            array($mois, $dateFacturation, $dateDepot, $idConstante, $description, $estActif ? 1 : 0, $moisId)
+        );
+
+        if ($resultat) {
+            header('Location: ../?page=recouvrement&success=mois_updated');
+        } else {
+            throw new Exception('Impossible de mettre à jour le mois de facturation');
+        }
+
+    } catch (Exception $e) {
+        header('Location: ../?page=recouvrement&error=update_failed&message=' . urlencode($e->getMessage()));
+    }
+    exit;
+}
+
+function getMoisData()
+{
+    global $aepId;
+
+    try {
+        $moisId = (int) (isset($_GET['id']) ? $_GET['id'] : 0);
+
+        if ($moisId <= 0) {
+            throw new Exception('ID de mois invalide');
+        }
+
+        // Récupérer les données du mois
+        $mois = Manager::prepare_query(
+            'SELECT mf.* FROM mois_facturation mf 
+             INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+             WHERE mf.id = ? AND cr.id_aep = ?',
+            array($moisId, $aepId)
+        )->fetch();
+
+        if (!$mois) {
+            throw new Exception('Mois introuvable ou non autorisé');
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            'success' => true,
+            'mois' => $mois
+        ));
+
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            'success' => false,
+            'message' => $e->getMessage()
+        ));
+    }
+    exit;
+}
+
+function getMoisLettre()
+{
+    global $aepId;
+
+    try {
+        $moisId = (int) (isset($_GET['id']) ? $_GET['id'] : 0);
+
+        if ($moisId <= 0) {
+            throw new Exception('ID de mois invalide');
+        }
+
+        // Récupérer le mois
+        $mois = Manager::prepare_query(
+            'SELECT mf.* FROM mois_facturation mf 
+             INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+             WHERE mf.id = ? AND cr.id_aep = ?',
+            array($moisId, $aepId)
+        )->fetch();
+
+        if (!$mois) {
+            throw new Exception('Mois introuvable ou non autorisé');
+        }
+
+        // Convertir le mois en lettres
+        $moisLettre = getLetterMonth($mois['mois']);
+
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            'success' => true,
+            'mois_lettre' => $moisLettre
+        ));
+
+    } catch (Exception $e) {
+        header('Content-Type: application/json');
+        echo json_encode(array(
+            'success' => false,
+            'message' => $e->getMessage()
+        ));
+    }
+    exit;
 }
 
 // La fonction getLetterMonth() est déjà définie dans manager.php

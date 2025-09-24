@@ -13,7 +13,7 @@ foreach (glob($backupDir . DIRECTORY_SEPARATOR . '*.sql') as $f) {
     );
 }
 usort($files, function ($a, $b) {
-    return $b['mtime'] != $a['mtime'];
+    return $b['mtime'] - $a['mtime'];
 });
 
 // Gestion des messages de notification
