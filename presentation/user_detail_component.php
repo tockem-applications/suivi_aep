@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Récupérer l'ID de l'utilisateur
-$userId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$userId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 if ($userId <= 0) {
     header('Location: manage_users.php?error=invalid_user');
     exit;
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $prenom = trim($_POST['prenom']);
             $email = trim($_POST['email']);
             $numero_telephone = trim($_POST['numero_telephone']);
-            if (empty($nom) || empty($prenom) || empty($email)|| empty($numero_telephone)) {
+            if (empty($nom) || empty($prenom) || empty($email) || empty($numero_telephone)) {
                 $message = '<div class="alert alert-danger">Tous les champs sont requis.</div>';
             } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $message = '<div class="alert alert-danger">Adresse email invalide.</div>';
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 try {
                     $query = Manager::prepare_query(
                         "UPDATE users SET nom = ?, prenom = ?, email = ?, numero_telephone=? WHERE id = ?",
-                        array($nom, $prenom, $email, $numero_telephone,$userId)
+                        array($nom, $prenom, $email, $numero_telephone, $userId)
                     );
                     $message = '<div class="alert alert-success">Utilisateur mis à jour avec succès.</div>';
                     // Rafraîchir les données de l'utilisateur
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = '<div class="alert alert-danger">Erreur lors de la suppression : ' . htmlspecialchars($e->getMessage()) . '</div>';
             }
         } elseif ($_POST['action'] === 'add_role') {
-            $roleId = (int)$_POST['role_id'];
+            $roleId = (int) $_POST['role_id'];
             try {
                 Manager::prepare_query(
                     "INSERT INTO user_roles (user_id, role_id) VALUES (?, ?)",
@@ -120,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = '<div class="alert alert-danger">Erreur lors de l\'ajout du rôle : ' /* htmlspecialchars($e->getMessage())*/ . '</div>';
             }
         } elseif ($_POST['action'] === 'remove_role') {
-            $roleId = (int)$_POST['role_id'];
+            $roleId = (int) $_POST['role_id'];
             try {
                 Manager::prepare_query(
                     "DELETE FROM user_roles WHERE user_id = ? AND role_id = ?",
@@ -144,6 +144,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } catch (Exception $e) {
                 $message = '<div class="alert alert-danger">Erreur lors du retrait du rôle : ' . htmlspecialchars($e->getMessage()) . '</div>';
             }
+        } elseif ($_POST['action'] === 'change_password') {
+            $new_password = isset($_POST['new_password']) ? trim($_POST['new_password']) : '';
+            $confirm_password = isset($_POST['confirm_password']) ? trim($_POST['confirm_password']) : '';
+
+            if ($new_password === '' || $confirm_password === '') {
+                $message = '<div class="alert alert-danger">Veuillez remplir tous les champs du mot de passe.</div>';
+            } elseif (strlen($new_password) < 6) {
+                $message = '<div class="alert alert-danger">Le mot de passe doit contenir au moins 6 caractères.</div>';
+            } elseif ($new_password !== $confirm_password) {
+                $message = '<div class="alert alert-danger">Les mots de passe ne correspondent pas.</div>';
+            } else {
+                try {
+                    $salt = md5(uniqid(mt_rand(), true));
+                    $hashedPassword = hash('sha256', $new_password . $salt);
+                    Manager::prepare_query(
+                        "UPDATE users SET password = ?, salt = ? WHERE id = ?",
+                        array($hashedPassword, $salt, $userId)
+                    );
+                    $message = '<div class="alert alert-success">Mot de passe mis à jour avec succès.</div>';
+                } catch (Exception $e) {
+                    $message = '<div class="alert alert-danger">Erreur lors de la mise à jour du mot de passe : ' . htmlspecialchars($e->getMessage()) . '</div>';
+                }
+            }
         }
     }
 }
@@ -151,7 +174,8 @@ $_POST = array();
 ob_get_clean();
 ?>
 <div class="container-fluid mt-5">
-    <h2 class="mb-4">Détails de l'utilisateur : <?php echo htmlspecialchars($user['nom'] . ' ' . $user['prenom']); ?></h2>
+    <h2 class="mb-4">Détails de l'utilisateur : <?php echo htmlspecialchars($user['nom'] . ' ' . $user['prenom']); ?>
+    </h2>
     <?php echo $message; ?>
     <a href="?page=clefs" class="btn btn-secondary mb-3">Retour à la gestion des clefs</a>
 
@@ -165,25 +189,25 @@ ob_get_clean();
                         <div class="mb-3">
                             <label for="nom" class="form-label">Nom</label>
                             <input type="text" class="form-control" id="nom" name="nom"
-                                   value="<?php echo htmlspecialchars($user['nom']); ?>" required>
+                                value="<?php echo htmlspecialchars($user['nom']); ?>" required>
                             <div class="invalid-feedback">Veuillez entrer un nom.</div>
                         </div>
                         <div class="mb-3">
                             <label for="prenom" class="form-label">Prénom</label>
                             <input type="text" class="form-control" id="prenom" name="prenom"
-                                   value="<?php echo htmlspecialchars($user['prenom']); ?>" required>
+                                value="<?php echo htmlspecialchars($user['prenom']); ?>" required>
                             <div class="invalid-feedback">Veuillez entrer un prénom.</div>
                         </div>
                         <div class="mb-3">
                             <label for="numero_telephone" class="form-label">Numero de telephone</label>
                             <input type="text" class="form-control" id="numero_telephone" name="numero_telephone"
-                                   value="<?php echo htmlspecialchars($user['numero_telephone']); ?>" required>
+                                value="<?php echo htmlspecialchars($user['numero_telephone']); ?>" required>
                             <div class="invalid-feedback">Veuillez entrer un numero.</div>
                         </div>
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
                             <input type="text" class="form-control" id="email" name="email"
-                                   value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                                value="<?php echo htmlspecialchars($user['email']); ?>" required>
                             <div class="invalid-feedback">Veuillez entrer un Email.</div>
                         </div>
                         <input type="hidden" name="action" value="update_user">
@@ -191,7 +215,7 @@ ob_get_clean();
                             jour
                         </button>
                         <button type="button" class="btn btn-danger" data-bs-toggle="modal"
-                                data-bs-target="#deleteUserModal">Supprimer l'utilisateur
+                            data-bs-target="#deleteUserModal">Supprimer l'utilisateur
                         </button>
                     </form>
                 </div>
@@ -205,32 +229,32 @@ ob_get_clean();
                     <h3>Rôles associés</h3>
                     <table class="table table-striped table-bordered">
                         <thead class="table-dark">
-                        <tr>
-                            <th>ID</th>
-                            <th>Nom</th>
-                            <th>Actions</th>
-                        </tr>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nom</th>
+                                <th>Actions</th>
+                            </tr>
                         </thead>
                         <tbody>
-                        <?php if (count($userRoles) > 0): ?>
-                            <?php foreach ($userRoles as $role): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($role['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($role['nom']); ?></td>
-                                    <td>
-                                        <button type="button" class="btn btn-danger btn-sm action-btn"
+                            <?php if (count($userRoles) > 0): ?>
+                                <?php foreach ($userRoles as $role): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($role['id']); ?></td>
+                                        <td><?php echo htmlspecialchars($role['nom']); ?></td>
+                                        <td>
+                                            <button type="button" class="btn btn-danger btn-sm action-btn"
                                                 data-bs-toggle="modal" data-bs-target="#removeRoleModal"
                                                 data-role-id="<?php echo $role['id']; ?>"
                                                 data-role-name="<?php echo htmlspecialchars($role['nom']); ?>">Retirer
-                                        </button>
-                                    </td>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="3" class="text-center">Aucun rôle associé.</td>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="3" class="text-center">Aucun rôle associé.</td>
-                            </tr>
-                        <?php endif; ?>
+                            <?php endif; ?>
                         </tbody>
                     </table>
                     <!-- Formulaire pour ajouter un rôle -->
@@ -241,7 +265,8 @@ ob_get_clean();
                             <select class="form-select" id="role_id" name="role_id" required>
                                 <option value="">-- Choisir un rôle --</option>
                                 <?php foreach ($availableRoles as $role): ?>
-                                    <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['nom']); ?></option>
+                                    <option value="<?php echo $role['id']; ?>"><?php echo htmlspecialchars($role['nom']); ?>
+                                    </option>
                                 <?php endforeach; ?>
                             </select>
                             <div class="invalid-feedback">Veuillez sélectionner un rôle.</div>
@@ -255,6 +280,30 @@ ob_get_clean();
         </div>
     </div>
 
+    <!-- Modification du mot de passe -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card p-4 mb-4">
+                <h3>Modifier le mot de passe</h3>
+                <form id="changePasswordForm" method="POST" onsubmit="return validateChangePasswordForm()">
+                    <div class="mb-3">
+                        <label for="new_password" class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" id="new_password" name="new_password" required>
+                        <div class="invalid-feedback">Veuillez entrer un mot de passe (min. 6 caractères).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirmer le mot de passe</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                            required>
+                        <div class="invalid-feedback">Les mots de passe doivent être identiques.</div>
+                    </div>
+                    <input type="hidden" name="action" value="change_password">
+                    <button type="submit" class="btn btn-warning">Mettre à jour le mot de passe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Clés associées à l'utilisateur -->
     <div class="row">
         <div class="col-md-6">
@@ -262,24 +311,24 @@ ob_get_clean();
                 <h3>Clés associées</h3>
                 <table class="table table-striped table-bordered">
                     <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Valeur</th>
-                    </tr>
+                        <tr>
+                            <th>ID</th>
+                            <th>Valeur</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    <?php if (count($userClefs) > 0): ?>
-                        <?php foreach ($userClefs as $clef): ?>
+                        <?php if (count($userClefs) > 0): ?>
+                            <?php foreach ($userClefs as $clef): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($clef['id']); ?></td>
+                                    <td><?php echo htmlspecialchars($clef['value']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($clef['id']); ?></td>
-                                <td><?php echo htmlspecialchars($clef['value']); ?></td>
+                                <td colspan="2" class="text-center">Aucune clé associée.</td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="2" class="text-center">Aucune clé associée.</td>
-                        </tr>
-                    <?php endif; ?>
+                        <?php endif; ?>
                     </tbody>
                 </table>
                 <a href="?page=clefs" class="btn btn-primary">Gérer les clés</a>
@@ -380,7 +429,7 @@ ob_get_clean();
     }
 
     // Remplir le modal pour retirer un rôle
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         const button = event.target.closest('button[data-bs-target="#removeRoleModal"]');
         if (button) {
             const roleId = button.getAttribute('data-role-id');
@@ -389,4 +438,23 @@ ob_get_clean();
             document.getElementById('remove_role_name').textContent = roleName;
         }
     });
+
+    function validateChangePasswordForm() {
+        const newPassword = document.getElementById('new_password');
+        const confirmPassword = document.getElementById('confirm_password');
+        let valid = true;
+
+        newPassword.classList.remove('is-invalid');
+        confirmPassword.classList.remove('is-invalid');
+
+        if (newPassword.value.trim().length < 6) {
+            newPassword.classList.add('is-invalid');
+            valid = false;
+        }
+        if (confirmPassword.value.trim() !== newPassword.value.trim()) {
+            confirmPassword.classList.add('is-invalid');
+            valid = false;
+        }
+        return valid;
+    }
 </script>

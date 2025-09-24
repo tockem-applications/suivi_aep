@@ -229,11 +229,13 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                         <td><?php echo htmlspecialchars($aep['libele']); ?></td>
                         <td><?php echo htmlspecialchars($aep['date']); ?></td>
                         <td class="truncate"><?php echo htmlspecialchars($aep['description']); ?></td>
-                        <td>
+                        <td class="d-flex gap-2">
                             <button class="btn btn-info btn-sm action-btn" data-bs-toggle="modal"
                                 data-bs-target="#detailsModal" data-aep='<?php echo json_encode($aep); ?>'
                                 onclick="showDetails(this)">Détails
                             </button>
+                            <a class="btn btn-outline-secondary btn-sm action-btn"
+                                href="?page=aep_detail&aep_id=<?php echo $aep['id']; ?>">Page Détails</a>
                             <button class="btn btn-warning btn-sm action-btn" data-bs-toggle="modal"
                                 data-bs-target="#edit_Modal_<?php echo $aep['id']; ?>"
                                 data-aep='<?php echo json_encode($aep); ?>' onclick="showDetails(this)">Modifier

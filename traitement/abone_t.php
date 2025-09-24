@@ -6,6 +6,8 @@
 @include_once("donnees/facture.php");
 @include_once("traitement/reseau_t.php");
 @include_once("resau_t.php");
+@include_once("../donnees/branchement_abonne.php");
+@include_once("donnees/branchement_abonne.php");
 
 class Abone_t
 {
@@ -216,6 +218,7 @@ class Abone_t
         }
         $data = $res[0];
         $idCompteur = $data['id_compteur'];
+        $branchement = BranchementAbonne::getByAboneId($id_abone);
         //var_dump($data);
         ?>
 
@@ -239,6 +242,57 @@ class Abone_t
 
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <strong>Branchement</strong>
+                        <div>
+                            <?php if ($branchement): ?>
+                                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalEditBranchement">Modifier</button>
+                            <?php endif; ?>
+                            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalCreateBranchement" <?php echo $branchement ? 'disabled' : '' ?>>Créer</button>
+                            <?php if ($branchement): ?>
+                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalDeleteBranchement">Supprimer</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($branchement): ?>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Quartier</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['quartier']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Code abonné</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['code_abonne']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">N° Tél.</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['telephone']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Statut</div>
+                                    <div class="fw-bold text-success"><?php echo htmlspecialchars($branchement['statut']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Mois</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['mois']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Versement (FCFA)</div>
+                                    <div class="fw-bold text-success">
+                                        <?php echo number_format((int) $branchement['versement_fcfa'], 0, ',', ' '); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-muted">Aucune information de branchement. Cliquez sur "Créer".</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <table class="table table-bordered">
                     <h1 class="text-center text-dark my-3 h1"><?php echo $data['nom'] ?></h1>
                     <thead class="text-center">
@@ -339,6 +393,150 @@ class Abone_t
                         </tr>
                     </tbody>
                 </table>
+
+                <!-- Modal Créer branchement -->
+                <div class="modal fade" id="modalCreateBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Créer branchement</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="create_branchement">
+                                    <input type="hidden" name="id_abone" value="<?php echo (int) $id_abone; ?>">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Mois</label>
+                                            <input type="month" name="mois" class="form-control" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Montant</label>
+                                            <div class="input-group">
+                                                <input type="number" name="versement_fcfa" class="form-control" min="0"
+                                                    step="500" placeholder="0" aria-label="Montant en FCFA">
+                                                <span class="input-group-text">FCFA</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Statut</label>
+                                            <select name="statut" class="form-select">
+                                                <option value="OK" selected>OK</option>
+                                                <option value="en attente">En attente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Quartier</label>
+                                            <input name="quartier" class="form-control" placeholder="Ex: MBIH1" >
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Code abonné</label>
+                                            <input name="code_abonne" class="form-control" placeholder="Ex: 22M" >
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">N° Tél.</label>
+                                            <input name="telephone" class="form-control" placeholder="Ex: 694039998">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Modifier branchement -->
+                <div class="modal fade" id="modalEditBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-warning">
+                                    <h5 class="modal-title">Modifier branchement</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="update_branchement">
+                                    <input type="hidden" name="id_abone" value="<?php echo (int) $id_abone; ?>">
+                                    <input type="hidden" name="id_branchement"
+                                        value="<?php echo $branchement ? (int) $branchement['id'] : 0; ?>">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Mois</label>
+                                            <input type="month" name="mois" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['mois']) : '' ?>">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Montant</label>
+                                            <div class="input-group">
+                                                <input type="number" name="versement_fcfa" class="form-control" min="0"
+                                                    step="500"
+                                                    value="<?php echo $branchement ? (int) $branchement['versement_fcfa'] : 0 ?>">
+                                                <span class="input-group-text">FCFA</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Statut</label>
+                                            <select name="statut" class="form-select">
+                                                <option value="OK" <?php echo ($branchement && strtoupper(trim($branchement['statut'])) == 'OK') ? 'selected' : ''; ?>>OK
+                                                </option>
+                                                <option value="en attente" <?php echo ($branchement && strtolower(trim($branchement['statut'])) == 'en attente') ? 'selected' : ''; ?>>
+                                                    En attente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Quartier</label>
+                                            <input name="quartier" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['quartier']) : '' ?>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Code abonné</label>
+                                            <input name="code_abonne" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['code_abonne']) : '' ?>">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">N° Tél.</label>
+                                            <input name="telephone" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['telephone']) : '' ?>">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary" <?php echo $branchement ? '' : 'disabled' ?>>Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Supprimer branchement -->
+                <div class="modal fade" id="modalDeleteBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Supprimer le branchement</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Confirmez la suppression des informations de branchement.</p>
+                                    <input type="hidden" name="action" value="delete_branchement">
+                                    <input type="hidden" name="id_branchement"
+                                        value="<?php echo $branchement ? (int) $branchement['id'] : 0; ?>">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-danger" <?php echo $branchement ? '' : 'disabled' ?>>Supprimer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Modal de confirmation de suppression -->
                 <div class="modal fade" id="modalSuppressionAbone<?php echo $id_abone ?>" tabindex="-1"
@@ -1034,6 +1232,55 @@ class Abone_t
         }
     }
 
+    public static function handleBranchementActions()
+    {
+        if (!isset($_POST['action']))
+            return;
+        $action = $_POST['action'];
+        if ($action === 'create_branchement') {
+            $data = array(
+                'id_abone' => isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0,
+                'quartier' => isset($_POST['quartier']) ? trim($_POST['quartier']) : '',
+                'code_abonne' => isset($_POST['code_abonne']) ? trim($_POST['code_abonne']) : '',
+                'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
+                'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
+                'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0
+            );
+            if ($data['id_abone'] > 0)
+                BranchementAbonne::create($data);
+            header('Location: ../index.php?page=info_abone&id=' . $data['id_abone']);
+            exit;
+        } elseif ($action === 'update_branchement') {
+            $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+            $id_branchement = isset($_POST['id_branchement']) ? (int) $_POST['id_branchement'] : 0;
+            $data = array(
+                'quartier' => isset($_POST['quartier']) ? trim($_POST['quartier']) : '',
+                'code_abonne' => isset($_POST['code_abonne']) ? trim($_POST['code_abonne']) : '',
+                'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
+                'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
+                'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0
+            );
+            if ($id_branchement > 0)
+                BranchementAbonne::update($id_branchement, $data);
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            exit;
+        } elseif ($action === 'delete_branchement') {
+            $id_abone = 0;
+            if (isset($_POST['id_branchement'])) {
+                $id_branchement = (int) $_POST['id_branchement'];
+                // try to get id_abone to redirect properly
+                $row = Manager::prepare_query('SELECT id_abone FROM branchement_abonne WHERE id = ?', array($id_branchement));
+                $r = $row ? $row->fetch() : array('id_abone' => 0);
+                $id_abone = isset($r['id_abone']) ? (int) $r['id_abone'] : 0;
+                BranchementAbonne::delete($id_branchement);
+            }
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            exit;
+        }
+    }
+
 }
 
 //var_dump($_POST);
@@ -1045,6 +1292,7 @@ Abone_t::handleSingleFielAboneUpdate();
 Abone_t::getJsonDataToExport();
 Abone_t::applyPenalite();
 Abone_t::cancelPenalite();
+Abone_t::handleBranchementActions();
 //tarif_t::getAll();
 
 

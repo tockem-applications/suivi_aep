@@ -109,7 +109,8 @@ function display_aep_to_select()
                                         <div class="p-2 bg-light rounded border">
                                             <div class="small text-muted">Recouvré</div>
                                             <div class="fw-bold text-success">
-                                                <?php echo number_format($montantVerse, 0, ',', ' '); ?> FCFA</div>
+                                                <?php echo number_format($montantVerse, 0, ',', ' '); ?> FCFA
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="col-12">
@@ -125,9 +126,9 @@ function display_aep_to_select()
                                     class="btn btn-primary flex-fill">
                                     Sélectionner
                                 </a>
-<!--                                <a href="?page=aep_dashboard&aep_id=--><?php //echo $aepId; ?><!--" class="btn btn-outline-secondary">-->
-<!--                                    Tableau de bord-->
-<!--                                </a>-->
+                                <a href="?page=aep_detail&aep_id=<?php echo $aepId; ?>" class="btn btn-outline-secondary flex-fill">
+                                    Détails AEP
+                                </a>
                             </div>
                         </div>
                     </div>

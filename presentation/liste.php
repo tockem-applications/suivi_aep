@@ -321,6 +321,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/aep_page.php';
     } else if ($_GET['page'] == 'aep_dashboard') {
         require_once 'presentation/aep_dashbord.php';
+    } else if ($_GET['page'] == 'aep_detail') {
+        require_once 'presentation/aep_detail_page.php';
     } else if ($_GET['page'] == 'register') {
         require_once 'presentation/register_component.php';
     } else if ($_GET['page'] == 'role') {
@@ -332,7 +334,7 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'fokoue_data') {
         include("presentation/import_fokoue_data.php");
     } else if ($_GET['page'] == 'download_index') {
-        header("location: traitement/abone_t.php?action=export_index&id_mois=".(isset($_GET['id_mois']) ? $_GET['id_mois'] : 0));
+        header("location: traitement/abone_t.php?action=export_index&id_mois=" . (isset($_GET['id_mois']) ? $_GET['id_mois'] : 0));
     } else if ($_GET['page'] == 'role_detail') {
         require_once 'presentation/role_detail_component.php';
     } else if ($_GET['page'] == 'clefs') {
