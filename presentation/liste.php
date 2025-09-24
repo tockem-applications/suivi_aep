@@ -364,6 +364,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/user_detail_component.php';
     } elseif ($_GET['page'] == 'transaction') {
         require_once "presentation/transactions_component.php";
+    } else if ($_GET['page'] == 'branchements') {
+        require_once 'presentation/branchements_page.php';
     } else if ($_GET['page'] == 'edit_aep') {
         require_once 'presentation/aep_edit.php';
     } else if ($_GET['page'] == 'cle') {

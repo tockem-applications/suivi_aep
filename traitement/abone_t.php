@@ -401,7 +401,8 @@ class Abone_t
                             <form method="POST" action="traitement/abone_t.php">
                                 <div class="modal-header bg-success text-white">
                                     <h5 class="modal-title">Créer branchement</h5>
-                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <input type="hidden" name="action" value="create_branchement">
@@ -428,11 +429,11 @@ class Abone_t
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Quartier</label>
-                                            <input name="quartier" class="form-control" placeholder="Ex: MBIH1" >
+                                            <input name="quartier" class="form-control" placeholder="Ex: MBIH1">
                                         </div>
                                         <div class="col-md-6">
                                             <label class="form-label">Code abonné</label>
-                                            <input name="code_abonne" class="form-control" placeholder="Ex: 22M" >
+                                            <input name="code_abonne" class="form-control" placeholder="Ex: 22M">
                                         </div>
                                         <div class="col-12">
                                             <label class="form-label">N° Tél.</label>

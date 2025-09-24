@@ -126,9 +126,9 @@ function display_aep_to_select()
                                     class="btn btn-primary flex-fill">
                                     Sélectionner
                                 </a>
-                                <a href="?page=aep_detail&aep_id=<?php echo $aepId; ?>" class="btn btn-outline-secondary flex-fill">
-                                    Détails AEP
-                                </a>
+<!--                                <a href="?page=aep_detail&aep_id=--><?php //echo $aepId; ?><!--" class="btn btn-outline-secondary flex-fill">-->
+<!--                                    Détails AEP-->
+<!--                                </a>-->
                             </div>
                         </div>
                     </div>
