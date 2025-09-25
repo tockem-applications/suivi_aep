@@ -1,7 +1,6 @@
 @echo off
 echo [INFO] Demarrage du script update_git.bat
 echo [INFO] Dossier courant: %CD%
-pause
 setlocal ENABLEDELAYEDEXPANSION
 
 REM ==============================
@@ -30,8 +29,16 @@ if errorlevel 1 (
 REM Vérif Git
 echo [DEBUG] Test de Git avec: %GIT_BIN%
 "%GIT_BIN%" --version || (
-  echo [ERREUR] Git introuvable. Modifiez GIT_BIN dans ce script si besoin.
+  echo.
+  echo ========================================
+  echo            ERREUR CRITIQUE
+  echo ========================================
+  echo.
+  echo [ERROR] Git introuvable !
+  echo [ERROR] Modifiez GIT_BIN dans ce script si besoin.
   echo [DEBUG] Chemin teste: %GIT_BIN%
+  echo.
+  echo Appuyez sur une touche pour fermer...
   pause
   exit /b 1
 )
@@ -47,13 +54,20 @@ if not exist ".git" (
   echo [INFO] Aucun depot Git detecte dans ce dossier.
   echo [INFO] Clonage du depot depuis: %GIT_REMOTE%
   echo [INFO] Branche par defaut: %DEFAULT_BRANCH%
-  pause
   
   REM Clonage simple
   echo [INFO] Clonage en cours...
   call "%GIT_BIN%" clone -b "%DEFAULT_BRANCH%" "%GIT_REMOTE%" suivi_reseau
   if errorlevel 1 (
-    echo [ERREUR] Echec du clonage.
+    echo.
+    echo ========================================
+    echo            ERREUR DE CLONAGE
+    echo ========================================
+    echo.
+    echo [ERROR] Echec du clonage du depot !
+    echo [ERROR] Verifiez l'URL et votre connexion Internet.
+    echo.
+    echo Appuyez sur une touche pour fermer...
     pause
     exit /b 2
   )
@@ -64,14 +78,21 @@ if not exist ".git" (
   REM Naviguer vers le nouveau répertoire
   cd suivi_reseau
   if errorlevel 1 (
-    echo [ERREUR] Impossible de naviguer vers le dossier suivi_reseau
+    echo.
+    echo ========================================
+    echo            ERREUR DE NAVIGATION
+    echo ========================================
+    echo.
+    echo [ERROR] Impossible de naviguer vers le dossier suivi_reseau !
+    echo [ERROR] Verifiez les permissions d'acces.
+    echo.
+    echo Appuyez sur une touche pour fermer...
     pause
     exit /b 3
   )
   
   echo [INFO] Relance du script dans le nouveau repertoire...
   echo [INFO] Dossier courant: %CD%
-  pause
   
   REM Relancer le script dans le nouveau répertoire
   call "%~dp0%~nx0" %*
@@ -89,7 +110,15 @@ call "%GIT_BIN%" status -sb
 REM Déterminer la branche courante
 for /f "usebackq tokens=*" %%b in (`"%GIT_BIN%" rev-parse --abbrev-ref HEAD`) do set "BRANCH=%%b"
 if not defined BRANCH (
-  echo [ERREUR] Impossible de determiner la branche courante.
+  echo.
+  echo ========================================
+  echo            ERREUR DE BRANCHE
+  echo ========================================
+  echo.
+  echo [ERROR] Impossible de determiner la branche courante !
+  echo [ERROR] Verifiez que vous etes dans un depot Git valide.
+  echo.
+  echo Appuyez sur une touche pour fermer...
   pause
   exit /b 3
 )
@@ -117,7 +146,15 @@ REM Fetch & Pull
 echo [INFO] Fetch distant...
 call "%GIT_BIN%" fetch --all --prune
 if errorlevel 1 (
-  echo [ERREUR] Echec du fetch.
+  echo.
+  echo ========================================
+  echo            ERREUR DE FETCH
+  echo ========================================
+  echo.
+  echo [ERROR] Echec du fetch du depot distant !
+  echo [ERROR] Verifiez votre connexion Internet et l'URL du depot.
+  echo.
+  echo Appuyez sur une touche pour fermer...
   pause
   exit /b 4
 )
@@ -125,7 +162,16 @@ if errorlevel 1 (
 echo [INFO] Pull depuis origin/%BRANCH% ...
 call "%GIT_BIN%" pull origin "%BRANCH%"
 if errorlevel 1 (
-  echo [ERREUR] Echec du pull. Verifiez le suivi de branche et les conflits.
+  echo.
+  echo ========================================
+  echo            ERREUR DE PULL
+  echo ========================================
+  echo.
+  echo [ERROR] Echec du pull depuis le depot distant !
+  echo [ERROR] Verifiez le suivi de branche et les conflits.
+  echo [ERROR] Vous pouvez avoir des modifications locales non committees.
+  echo.
+  echo Appuyez sur une touche pour fermer...
   pause
   exit /b 5
 )
@@ -144,6 +190,38 @@ call "%GIT_BIN%" log -1 --oneline
 REM Copier les scripts sur le bureau pour un accès facile
 echo [INFO] Copie des scripts sur le bureau...
 
+REM Copier update_git.bat
+echo [INFO] Copie de update_git.bat...
+copy "update_git.bat" "%DESKTOP%\Update Suivi Reseau.bat" >nul
+if errorlevel 1 (
+    echo [WARN] Impossible de copier update_git.bat sur le bureau
+) else (
+    echo [OK] update_git.bat copie sur le bureau
+)
+
+REM Copier start.bat
+echo [INFO] Copie de start.bat...
+copy "start.bat" "%DESKTOP%\Start Suivi Reseau.bat" >nul
+if errorlevel 1 (
+    echo [WARN] Impossible de copier start.bat sur le bureau
+) else (
+    echo [OK] start.bat copie sur le bureau
+)
+
+echo [OK] Scripts copies sur le bureau:
+echo   - Update Suivi Reseau.bat
+echo   - Start Suivi Reseau.bat
+
+REM Message de succès final
+echo.
+echo ========================================
+echo           MISE A JOUR REUSSIE
+echo ========================================
+echo.
+echo [SUCCESS] Le depot Git a ete mis a jour avec succes !
+echo [SUCCESS] Branche: %BRANCH%
+echo [SUCCESS] Scripts copies sur le bureau
+echo [SUCCESS] Vous pouvez maintenant utiliser l'application
 echo.
 echo Appuyez sur une touche pour fermer...
 pause
