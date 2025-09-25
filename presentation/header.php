@@ -89,7 +89,6 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li><a class="dropdown-item" href="?page=branchements">Branchements</a></li>
                             <li><a class="dropdown-item" href="?page=recouvrement">Mois de Recouvrement</a></li>
 
-                            <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
@@ -112,18 +111,13 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Relève manuelle</a></li>-->
                             <li><a class="dropdown-item" href="?page=role">Gestion des roles</a></li>
                             <li><a class="dropdown-item" href="?page=clefs">Gestion des clefs</a></li>
+                            <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item" href="?page=backup">Sauvegarde & Restauration</a></li>
                         </ul>
                     </li>
-                    <!-- Connexion/Déconnexion -->
-                    <!--                    <li class="nav-item">-->
-                    <!--                        <a class="nav-link text-white fw-medium" href="--><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? '../traitement/admin_t.php?deconnecter=true' : 'index.php?form=login'; ?><!--" style="transition: color 0.3s ease;">-->
-                    <!--                            --><?php //echo isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) ? 'Se déconnecter' : 'Se connecter'; ?>
-                    <!--                        </a>-->
-                    <!--                    </li>-->
                 </ul>
 
                 <!-- AEP Label et Formulaire de recherche -->

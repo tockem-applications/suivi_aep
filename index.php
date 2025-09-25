@@ -16,7 +16,7 @@
     <!-- <script src="presentation/js.js"></script> -->
 
     <script>
-        var addresse_serveur_reseau = '<?php echo $_SERVER['SERVER_ADDR']=="127.0.0.1"?"localhost":$_SERVER['SERVER_ADDR']?>';
+        var addresse_serveur_reseau = '<?php echo $_SERVER['SERVER_ADDR']=="127.0.0.1"?"localhost":$_SERVER['SERVER_ADDR'].str_replace("/index.php", "", $_SERVER['PHP_SELF'])?>';
     </script>
     <script src="presentation/assets/@canvasjs/charts/canvasjs.min.js"></script>
     <script src="presentation/assets/jquery.js"></script>
@@ -327,6 +327,8 @@ include_once("presentation/header.php");
     </aside> -->
     <article class="rigth_side_body overflow-x-hidden content" id="" style="">
         <?php
+
+//        var_dump($_SERVER['SERVER_ADDR'].str_replace("/index.php", "", $_SERVER['PHP_SELF']));
         ob_start();
 
 

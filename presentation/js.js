@@ -1,6 +1,5 @@
 // import CanvasJS from '';
-//let server_address = 'localhost://fokoue/suivi_reseau/traitement';
-let server_address = 'http://'+addresse_serveur_reseau+'/fokoue/suivi_reseau/traitement';
+let server_address = 'http://'+addresse_serveur_reseau+'/traitement';
 console.log(server_address);
 
 function sentDatat(uri, data, method = 'POST') {
