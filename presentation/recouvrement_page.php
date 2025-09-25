@@ -80,7 +80,7 @@ if (isset($_GET['success'])) {
 <div class="container-fluid mt-5">
     <h2 class="mb-4">Gestion des Mois de Recouvrement</h2>
     <?php echo $message; ?>
-    <a href="dashboard.php" class="btn btn-secondary mb-3">Retour au tableau de bord</a>
+    <a href="?page=aep_dashboard&aep_id=<?php echo $_SESSION['id_aep']?>" class="btn btn-secondary mb-3">Retour au tableau de bord</a>
 
     <!-- Section des Mois de Recouvrement -->
     <div class="card">

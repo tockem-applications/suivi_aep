@@ -3,7 +3,12 @@ include_once 'traitement/aep_traitement.php';
 @include_once("donnees/manager.php");
 //var_dump($_SESSION);
 // Récupérer l'ID de l'AEP depuis l'URL
-$aepId = isset($_GET['aep_id']) ? intval($_GET['aep_id']) : null;
+//var_dump($_SESSION);
+if(isset($_GET['aep_id']))
+    header("location:index.php?page=aep_dashboard");
+
+
+$aepId = isset($_SESSION['id_aep']) ? intval($_SESSION['id_aep']) : null;
 $aepIdError = !$aepId;
 
 // Initialiser le modèle

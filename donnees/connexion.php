@@ -15,9 +15,9 @@ function connexion(){
 
 class Connexion{
     static public $db_name = 'suivi_aep_fokoue';
-    static private $db_user = 'root';
-    static private $db_host = 'localhost';
-    static private $db_password = '';
+    static public $db_user = 'root';
+    static public $db_host = 'localhost';
+    static public $db_password = '';
     static private $bdd = null;
     public static function connect(){
         if(self::$bdd != null)

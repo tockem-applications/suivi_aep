@@ -1,4 +1,7 @@
 <?php
+@include_once ("../donnees/connexion.php");
+@include_once ("donnees/connexion.php");
+
 class FacturationTable
 {
     private static $bd = null;
@@ -34,10 +37,10 @@ class FacturationTable
     {
         try {
             // Informations de connexion (doivent correspondre à Connexion.php)
-            $db_host = 'localhost';
-            $db_name = 'suivi_aep_fokoue';
-            $db_user = 'root';
-            $db_pass = ''; // Remplacez par votre mot de passe si nécessaire
+            $db_host = Connexion::$db_host;
+            $db_name = Connexion::$db_name;
+            $db_user = Connexion::$db_user;
+            $db_pass = Connexion::$db_password; // Remplacez par votre mot de passe si nécessaire
 
             // Chemin pour le fichier temporaire
             $backup_path = 'C:/wamp/www/fokoue/suivi_reseau/backups/';

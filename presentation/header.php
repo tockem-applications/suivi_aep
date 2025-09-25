@@ -35,12 +35,10 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
                             <li><a class="dropdown-item" href="?page=reseaux">Réseaux</a></li>
-                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
                             <li><a class="dropdown-item" href="?page=abonne">Abonnés</a></li>
-<!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->
+<!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
+                            <li><a class="dropdown-item" href="?page=aep">AEPs</a></li>
+                            <!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->
                             <!-- <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <li><a class="dropdown-item" href="?list=compteur_reseau">Liste des compteurs réseau</a></li>
                             <li><a class="dropdown-item" href="?list=distribution_simple">Liste des abonnés</a></li> -->
@@ -87,13 +85,16 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
                             <li><a class="dropdown-item" href="?page=tarif_aep">Tarifs</a></li>
                             <li><a class="dropdown-item" href="?page=branchements">Branchements</a></li>
                             <li><a class="dropdown-item" href="?page=recouvrement">Mois de Recouvrement</a></li>
 
-                            <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
                             <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
+                            <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
                         </ul>
                     </li>
 
@@ -111,7 +112,6 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Relève manuelle</a></li>-->
                             <li><a class="dropdown-item" href="?page=role">Gestion des roles</a></li>
                             <li><a class="dropdown-item" href="?page=clefs">Gestion des clefs</a></li>
-                            <li><a class="dropdown-item" href="?page=aep">Gestion des AEP</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
