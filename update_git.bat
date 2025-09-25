@@ -1,38 +1,81 @@
 @echo off
+echo [INFO] Demarrage du script update_git.bat
+echo [INFO] Dossier courant: %CD%
+pause
 setlocal ENABLEDELAYEDEXPANSION
 
 REM ==============================
-REM  Script de mise à jour Git (sans clonage)
+REM  Script de mise à jour Git (avec clonage automatique)
 REM  Usage:
 REM    update_git.bat [--auto-stash] [--submodules]
 REM  Notes:
-REM    - A lancer dans un dossier qui contient déjà un dépôt Git (.git)
+REM    - Clone automatiquement le dépôt s'il n'existe pas
 REM    - Nécessite Git installé
 REM ==============================
 
+REM Configuration du dépôt distant
+set "GIT_REMOTE=https://github.com/tockem-applications/suivi_aep"
+set "DEFAULT_BRANCH=recouvrement_branch"
+
 REM 1) Détection de Git
+echo [DEBUG] Detection de Git...
 set "GIT_BIN=git"
 where %GIT_BIN% >nul 2>nul
 if errorlevel 1 (
+  echo [DEBUG] Git non trouve dans PATH, essai du chemin par defaut...
   REM Chemin par défaut Git pour Windows (adapter si besoin)
   set "GIT_BIN=C:\Program Files\Git\bin\git.exe"
 )
 
 REM Vérif Git
+echo [DEBUG] Test de Git avec: %GIT_BIN%
 "%GIT_BIN%" --version || (
   echo [ERREUR] Git introuvable. Modifiez GIT_BIN dans ce script si besoin.
+  echo [DEBUG] Chemin teste: %GIT_BIN%
   pause
   exit /b 1
 )
+echo [DEBUG] Git trouve et fonctionnel.
 
 REM Empêcher les prompts interactifs (bloquants)
 set "GIT_TERMINAL_PROMPT=0"
+set "GIT_MERGE_AUTOEDIT=no"
+set "GIT_EDITOR=true"
 
 REM Vérifier la présence d'un dépôt
 if not exist ".git" (
-  echo [ERREUR] Aucun depot Git detecte dans ce dossier. Placez-vous dans le projet puis relancez.
+  echo [INFO] Aucun depot Git detecte dans ce dossier.
+  echo [INFO] Clonage du depot depuis: %GIT_REMOTE%
+  echo [INFO] Branche par defaut: %DEFAULT_BRANCH%
   pause
-  exit /b 2
+  
+  REM Clonage simple
+  echo [INFO] Clonage en cours...
+  call "%GIT_BIN%" clone -b "%DEFAULT_BRANCH%" "%GIT_REMOTE%" suivi_reseau
+  if errorlevel 1 (
+    echo [ERREUR] Echec du clonage.
+    pause
+    exit /b 2
+  )
+  
+  echo [OK] Depot clone avec succes dans le dossier: suivi_reseau
+  echo [INFO] Navigation vers le nouveau repertoire...
+  
+  REM Naviguer vers le nouveau répertoire
+  cd suivi_reseau
+  if errorlevel 1 (
+    echo [ERREUR] Impossible de naviguer vers le dossier suivi_reseau
+    pause
+    exit /b 3
+  )
+  
+  echo [INFO] Relance du script dans le nouveau repertoire...
+  echo [INFO] Dossier courant: %CD%
+  pause
+  
+  REM Relancer le script dans le nouveau répertoire
+  call "%~dp0%~nx0" %*
+  exit /b %errorlevel%
 )
 
 REM Marquer le dépôt courant comme sûr (safe.directory)
@@ -41,7 +84,7 @@ for /f "delims=" %%P in ("%CD%") do set "REPO_DIR=%%~fP"
 "%GIT_BIN%" config --global --add safe.directory "%REPO_DIR:\=/%" >nul 2>nul
 
 REM État initial
-call "%GIT_BIN%" status -sb | more
+call "%GIT_BIN%" status -sb
 
 REM Déterminer la branche courante
 for /f "usebackq tokens=*" %%b in (`"%GIT_BIN%" rev-parse --abbrev-ref HEAD`) do set "BRANCH=%%b"
@@ -70,16 +113,17 @@ if /I "%DO_STASH%"=="true" (
   )
 )
 
-REM Fetch & Pull (ff-only)
+REM Fetch & Pull
 echo [INFO] Fetch distant...
-call "%GIT_BIN%" fetch --all --prune || (
+call "%GIT_BIN%" fetch --all --prune
+if errorlevel 1 (
   echo [ERREUR] Echec du fetch.
   pause
   exit /b 4
 )
 
-echo [INFO] Pull ff-only depuis origin/%BRANCH% ...
-call "%GIT_BIN%" pull --ff-only origin "%BRANCH%"
+echo [INFO] Pull depuis origin/%BRANCH% ...
+call "%GIT_BIN%" pull origin "%BRANCH%"
 if errorlevel 1 (
   echo [ERREUR] Echec du pull. Verifiez le suivi de branche et les conflits.
   pause
