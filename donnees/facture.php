@@ -23,7 +23,8 @@ class Facture extends Manager
 
     public $indexes;
 
-    public static function formatFinancier($nombre) {
+    public static function formatFinancier($nombre)
+    {
         // Convertir en float pour gérer les chaînes ou entiers
         $nombre = floatval($nombre);
 
@@ -86,15 +87,15 @@ class Facture extends Manager
     {
         return array(
             'montant_verse' => $this->montant_verse
-        ,
+            ,
             'date_paiement' => $this->date_paiement
-        ,
+            ,
             'penalite' => $this->penalite
-        ,
+            ,
             'id_indexes' => $this->indexes->id
-        ,
+            ,
             'id_abone' => $this->id_abone
-        ,
+            ,
             'message' => $this->message
         );
     }
@@ -106,62 +107,62 @@ class Facture extends Manager
 
     public static function calculeMontantConsoTva($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau)
     {
-        $res = self::calculeMontantConsoEntretienCompteur($nouvel_index, $ancien_index, $entretient, $prix_eau) * ((int)((float)$tva / 100) + 1);
-//        echo $res . '<br>';
+        $res = self::calculeMontantConsoEntretienCompteur($nouvel_index, $ancien_index, $entretient, $prix_eau) * ((int) ((float) $tva / 100) + 1);
+        //        echo $res . '<br>';
         return $res;
     }
 
     public static function calculeMontantConsoEntretienCompteur($nouvel_index, $ancien_index, $entretient, $prix_eau)
     {
-        $res = self::calculeMontantConso($nouvel_index, $ancien_index, $prix_eau) + (int)$entretient;
-//        echo $res . '<br>';
+        $res = self::calculeMontantConso($nouvel_index, $ancien_index, $prix_eau) + (int) $entretient;
+        //        echo $res . '<br>';
         return $res;
     }
 
     public static function calculeImpaye($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $montant_verse, $penalite)
     {
         $res = self::calculeMontantConsoTva($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau) + $penalite + $impaye - $montant_verse;
-//        echo $res . '<br>';
+        //        echo $res . '<br>';
         return $res;
     }
 
     public static function calculeMontantConso($nouvel_index, $ancien_index, $prix_eau)
     {
-        $res = self::calculeConso($nouvel_index, $ancien_index) * (int)$prix_eau;
-//        echo $res . '<br>';
+        $res = self::calculeConso($nouvel_index, $ancien_index) * (int) $prix_eau;
+        //        echo $res . '<br>';
         return $res;
     }
 
     public static function calculeMontantTotal($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite)
     {
         $tmp = self::calculeMontantConsoTva($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau);
-        $res = $tmp + (int)$penalite + (int)$impaye;
-//        echo $res . '  tmp2 = '.$tmp."<br> (int)$penalite  (int)$impaye <br>";
+        $res = $tmp + (int) $penalite + (int) $impaye;
+        //        echo $res . '  tmp2 = '.$tmp."<br> (int)$penalite  (int)$impaye <br>";
         return $res;
     }
 
     public static function calculeMontantRestant($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite, $montant_versee)
     {
-        $tmp =(int)(self::calculeMontantTotal($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite)+ 0.0000001);
-//        echo $tmp . '  ------------------------------<br>';
+        $tmp = (int) (self::calculeMontantTotal($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite) + 0.0000001);
+        //        echo $tmp . '  ------------------------------<br>';
 //        echo (int)$tmp . '  ------------------------------<br>';
 //        var_dump($tmp);
-        $res = $tmp - (int)$montant_versee;
-//        echo $res . '    --------------------tmp=' . $tmp . " impaye = $impaye  montant _versee= (int)$montant_versee<br>  ";
+        $res = $tmp - (int) $montant_versee;
+        //        echo $res . '    --------------------tmp=' . $tmp . " impaye = $impaye  montant _versee= (int)$montant_versee<br>  ";
         return $res;
     }
 
     public static function calculeMontantAValider($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite, $montant_versee)
     {
         $result = self::calculeMontantTotal($nouvel_index, $ancien_index, $tva, $entretient, $prix_eau, $impaye, $penalite);
-//        echo $result . '<br>';
+        //        echo $result . '<br>';
         return $result <= $montant_versee ? $result : $montant_versee;
     }
 
     public static function calculeConso($nouvel_index, $ancien_index)
     {
-        $res = (float)$nouvel_index - (float)$ancien_index;
-//        echo $res . '<br>';
+        $res = (float) $nouvel_index - (float) $ancien_index;
+        //        echo $res . '<br>';
         return $res;
     }
 
@@ -222,7 +223,7 @@ class Facture extends Manager
     }
     public static function getMonthFacture2($id_mois, $id_aep, $id_reseau)
     {
-//        var_dump($id_mois, $id_aep);
+        //        var_dump($id_mois, $id_aep);
         if (!is_int($id_mois))
             return false;
         $mois = self::prepare_query("select mois from mois_facturation where id = ? ", array($id_mois));
@@ -231,7 +232,7 @@ class Facture extends Manager
 
         $data_array = array($mois, $id_mois, $id_aep);
         $id_reseau_string_condition = "";
-        if($id_reseau){
+        if ($id_reseau) {
             $data_array = array($mois, $id_mois, $id_aep, $id_reseau);
             $id_reseau_string_condition = "AND vaf.id_reseau = ?";
         }
@@ -265,7 +266,7 @@ class Facture extends Manager
 
     public static function getMonthAllFactureData($id_mois, $id_aep)
     {
-//        var_dump($id_mois, $id_aep);
+        //        var_dump($id_mois, $id_aep);
         if (!is_int($id_mois))
             return false;
         $mois = self::prepare_query("select mois from mois_facturation where id = ?", array($id_mois));
@@ -345,12 +346,12 @@ class Facture extends Manager
 
     public static function getMonthIndexes($id_mois, $id_aep)
     {
-//        var_dump($id_mois);
+        //        var_dump($id_mois);
         if (!is_int($id_mois))
             return false;
         return self::prepare_query("
                 select id.id, co.id as id_compteur, r.id id_reseau,  m.id id_mois, coalesce(a.nom, concat('@Compteur ',r.nom)) as nom, m.mois, ancien_index, nouvel_index, co.numero_compteur,
-             date_facturation, r.nom reseau
+             date_facturation, r.nom reseau, @row_number := @row_number + 1 as rang
                 from indexes id
                     inner join compteur co on id.id_compteur = co.id
                     left join compteur_abone c_a on c_a.id_compteur = co.id
@@ -358,6 +359,7 @@ class Facture extends Manager
                     left join reseau r on r.id = c_re.id_reseau
                     left join abone a on a.id = c_a.id_abone
                     inner join mois_facturation m on id.id_mois_facturation =m.id 
+                    cross join (select @row_number := 0) rn
                 where  m.id=?
                 order by coalesce(a.nom, concat('@Compteur ',r.nom))
             ", array($id_mois));
@@ -382,12 +384,13 @@ class Facture extends Manager
                         c.id_aep=?
                 group by f.id
                 ;
-            ", array($id_aep)
+            ",
+            array($id_aep)
         );
     }
 
 
-    public static function getPeriodData($id_aep, $date_deut='2000-01', $date_fin='2100-12')
+    public static function getPeriodData($id_aep, $date_deut = '2000-01', $date_fin = '2100-12')
     {
         var_dump($date_deut, $date_fin);
         return self::prepare_query("
@@ -422,18 +425,19 @@ class Facture extends Manager
 
     public static function effectuerRecouvrement($id_indexes, $montant_verse, $date_versement)
     {
-        $id_facture = (int)$id_indexes;
-        $montant_verse = (int)($montant_verse+0.000000001);
+        $id_facture = (int) $id_indexes;
+        $montant_verse = (int) ($montant_verse + 0.000000001);
         return self::prepare_query("update facture f 
                                     inner join indexes i on f.id_indexes=i.id
                                     set montant_verse=?, date_paiement=? where i.id=?",
-            array($montant_verse, $date_versement, $id_indexes));
+            array($montant_verse, $date_versement, $id_indexes)
+        );
     }
 
     public static function effectuerreleve($id_indexes, $index)
     {
-        $id_indexes = (int)$id_indexes;
-        $index = (float)$index;
+        $id_indexes = (int) $id_indexes;
+        $index = (float) $index;
         return self::prepare_query("update indexes 
                                          set nouvel_index=? 
                                          where id=?", array($index, $id_indexes));
@@ -447,7 +451,7 @@ class Facture extends Manager
         $estFacturable = Compteur::estFacturable($this->indexes->id_compteur);
         if (!$estFacturable)
             return 1;
-//        $this-> = $this->indexes->id;
+        //        $this-> = $this->indexes->id;
         return $this->ajouter();
     }
 

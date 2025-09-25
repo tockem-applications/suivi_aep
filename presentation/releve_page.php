@@ -188,6 +188,7 @@ function addDaysAndFormat($string_date, $days = 10)
                             <label for="releve_sort_by" class="form-label">Trier par</label>
                             <div class="input-group">
                                 <select id="releve_sort_by" class="form-select">
+                                    <option value="rang">Rang</option>
                                     <option value="numero">N° compteur</option>
                                     <option value="nom" selected>Nom</option>
                                     <option value="ancien">Ancien index</option>
@@ -211,6 +212,9 @@ function addDaysAndFormat($string_date, $days = 10)
                     </thead>
                     <tbody>
                         <tr>
+                            <th onclick="sortTable(0, 'rang')" style="cursor: pointer;">
+                                Rang <i class="bi bi-arrow-up-down"></i>
+                            </th>
                             <th>N° compteur</th>
                             <th>Nom et Prenom</th>
                             <th>Ancien index</th>
@@ -237,7 +241,9 @@ function addDaysAndFormat($string_date, $days = 10)
                             <tr class="p-0 m-0" data-numero="<?php echo htmlspecialchars($numero_attr); ?>"
                                 data-nom="<?php echo htmlspecialchars($nom_attr); ?>"
                                 data-ancien="<?php echo $ancien_attr; ?>" data-nouvel="<?php echo $nouvel_attr; ?>"
-                                data-ecart="<?php echo $ecart_attr; ?>" data-status="<?php echo $status_value; ?>">
+                                data-ecart="<?php echo $ecart_attr; ?>" data-status="<?php echo $status_value; ?>"
+                                data-rang="<?php echo $data['rang']; ?>">
+                                <td class="text-center fw-bold"><?php echo $data['rang'] ?></td>
                                 <td><?php echo $data['numero_compteur'] ?> </td>
                                 <td> <?php echo $data['nom'] ?> </td>
                                 <td id="ancien_index<?php echo $data['id'] ?>"> <?php echo $data['ancien_index'] ?></td>
@@ -698,8 +704,14 @@ function addDaysAndFormat($string_date, $days = 10)
                             if (av > bv) return 1 * dir;
                             return 0;
                         }
-                        av = parseFloat(a.getAttribute('data-' + key) || '0');
-                        bv = parseFloat(b.getAttribute('data-' + key) || '0');
+                        // Gestion spécifique pour le rang
+                        if (key === 'rang') {
+                            av = parseInt(a.getAttribute('data-rang') || '0');
+                            bv = parseInt(b.getAttribute('data-rang') || '0');
+                        } else {
+                            av = parseFloat(a.getAttribute('data-' + key) || '0');
+                            bv = parseFloat(b.getAttribute('data-' + key) || '0');
+                        }
                         if (av < bv) return -1 * dir;
                         if (av > bv) return 1 * dir;
                         return 0;
@@ -731,6 +743,84 @@ function addDaysAndFormat($string_date, $days = 10)
                     // Première exécution
                     render();
                 })();
+
+                // Fonction de tri par colonne
+                function sortTable(columnIndex, dataAttribute) {
+                    var table = document.querySelector('.table tbody');
+                    var rows = Array.from(table.querySelectorAll('tr'));
+
+                    // Supprimer la première ligne (en-tête) si elle est incluse
+                    if (rows[0] && rows[0].querySelector('th')) {
+                        rows.shift();
+                    }
+
+                    var isAscending = true;
+                    var currentSort = table.getAttribute('data-sort');
+                    var currentDir = table.getAttribute('data-dir');
+
+                    if (currentSort === dataAttribute && currentDir === 'asc') {
+                        isAscending = false;
+                    }
+
+                    rows.sort(function (a, b) {
+                        var aVal, bVal;
+
+                        if (dataAttribute === 'rang') {
+                            aVal = parseInt(a.getAttribute('data-rang')) || 0;
+                            bVal = parseInt(b.getAttribute('data-rang')) || 0;
+                        } else if (dataAttribute === 'numero') {
+                            aVal = a.getAttribute('data-numero') || '';
+                            bVal = b.getAttribute('data-numero') || '';
+                        } else if (dataAttribute === 'nom') {
+                            aVal = a.getAttribute('data-nom') || '';
+                            bVal = b.getAttribute('data-nom') || '';
+                        } else if (dataAttribute === 'ancien') {
+                            aVal = parseFloat(a.getAttribute('data-ancien')) || 0;
+                            bVal = parseFloat(b.getAttribute('data-ancien')) || 0;
+                        } else if (dataAttribute === 'nouvel') {
+                            aVal = parseFloat(a.getAttribute('data-nouvel')) || 0;
+                            bVal = parseFloat(b.getAttribute('data-nouvel')) || 0;
+                        } else if (dataAttribute === 'ecart') {
+                            aVal = parseFloat(a.getAttribute('data-ecart')) || 0;
+                            bVal = parseFloat(b.getAttribute('data-ecart')) || 0;
+                        } else {
+                            return 0;
+                        }
+
+                        if (typeof aVal === 'string') {
+                            return isAscending ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+                        } else {
+                            return isAscending ? aVal - bVal : bVal - aVal;
+                        }
+                    });
+
+                    // Vider le tableau et réinsérer les lignes triées
+                    table.innerHTML = '';
+                    rows.forEach(function (row) {
+                        table.appendChild(row);
+                    });
+
+                    // Mettre à jour les attributs de tri
+                    table.setAttribute('data-sort', dataAttribute);
+                    table.setAttribute('data-dir', isAscending ? 'asc' : 'desc');
+
+                    // Mettre à jour l'icône de tri
+                    var headers = document.querySelectorAll('th[onclick]');
+                    headers.forEach(function (header) {
+                        var icon = header.querySelector('i');
+                        if (icon) {
+                            icon.className = 'bi bi-arrow-up-down';
+                        }
+                    });
+
+                    var currentHeader = document.querySelector('th[onclick*="' + dataAttribute + '"]');
+                    if (currentHeader) {
+                        var icon = currentHeader.querySelector('i');
+                        if (icon) {
+                            icon.className = isAscending ? 'bi bi-arrow-up' : 'bi bi-arrow-down';
+                        }
+                    }
+                }
             </script>
         </div>
     </div>

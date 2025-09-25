@@ -141,6 +141,9 @@ echo.
 echo [OK] Mise a jour terminee sur %BRANCH%.
 call "%GIT_BIN%" log -1 --oneline
 
+REM Copier les scripts sur le bureau pour un accès facile
+echo [INFO] Copie des scripts sur le bureau...
+
 echo.
 echo Appuyez sur une touche pour fermer...
 pause
