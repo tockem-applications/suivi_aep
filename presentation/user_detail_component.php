@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 Manager::prepare_query("DELETE FROM user_clefs WHERE user_id = ?", array($userId));
                 // Supprimer l'utilisateur
                 Manager::prepare_query("DELETE FROM users WHERE id = ?", array($userId));
-                header('Location: manage_users.php?success=user_deleted');
+                header('Location: ?page=clefs&success=user_deleted');
                 exit;
             } catch (Exception $e) {
                 $message = '<div class="alert alert-danger">Erreur lors de la suppression : ' . htmlspecialchars($e->getMessage()) . '</div>';
