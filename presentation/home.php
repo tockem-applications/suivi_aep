@@ -27,7 +27,7 @@ if (isset($_GET['page'])) {
                             ressources.</p>
                     </div>
                     <div class="col-md-4 feature">
-                        <h3>Support Communautaire</h3>
+                        <h3>Supports Communautaire</h3>
                         <p>Participez à notre communauté pour échanger des conseils et des bonnes pratiques.</p>
                     </div>
                 </div>
