@@ -3,6 +3,12 @@ id_indexes: 1224
 nouvel_index: 1.5
 id_compteur: 307\nrecouvrement: 1
 id_indexes: 1224
+nouvel_index: 55
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
+nouvel_index: 1.5
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
 nouvel_index: 2
 id_compteur: 307\nrecouvrement: 1
 id_indexes: 1205

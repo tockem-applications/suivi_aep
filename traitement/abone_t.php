@@ -293,6 +293,182 @@ class Abone_t
                         <?php endif; ?>
                     </div>
                 </div>
+
+                <!-- Section Gestion des Index par Mois -->
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <strong>Gestion des Index par Mois</strong>
+                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalEditIndexes">
+                            <i class="fas fa-edit"></i> Modifier les index
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        // Récupérer l'historique des index pour ce compteur
+                        $indexes = self::getIndexesByCompteur($idCompteur);
+                        if (count($indexes) > 0):
+                            ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Ancien Index</th>
+                                            <th>Nouvel Index</th>
+                                            <th>Consommation</th>
+                                            <th>Date Facturation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($indexes as $index): ?>
+                                            <tr>
+                                                <td><?php echo getLetterMonth($index['mois']); ?></td>
+                                                <td class="text-end"><?php echo number_format($index['ancien_index'], 2); ?></td>
+                                                <td class="text-end fw-bold"><?php echo number_format($index['nouvel_index'], 2); ?>
+                                                </td>
+                                                <td class="text-end text-primary">
+                                                    <?php echo number_format($index['nouvel_index'] - $index['ancien_index'], 2); ?> m³
+                                                </td>
+                                                <td class="text-center">
+                                                    <?php echo $index['date_paiement'] ? date('d/m/Y', strtotime($index['date_paiement'])) : '-'; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-muted text-center py-3">
+                                <i class="fas fa-info-circle"></i> Aucun historique d'index disponible
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Modal Modification des Index -->
+                <div class="modal fade" id="modalEditIndexes" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php" id="formEditIndexes">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-edit"></i> Modifier les index par mois
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="update_indexes">
+                                    <input type="hidden" name="id_compteur" value="<?php echo $idCompteur; ?>">
+
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>Attention :</strong> La modification des index peut affecter les calculs de
+                                        facturation.
+                                        L'ancien index peut être inférieur à 0 pour les cas de remise à zéro du compteur.
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Mois</th>
+                                                    <th>Ancien Index</th>
+                                                    <th>Nouvel Index</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="indexesTableBody">
+                                                <?php foreach ($indexes as $index): ?>
+                                                    <tr data-index-id="<?php echo $index['id']; ?>">
+                                                        <td><?php echo getLetterMonth($index['mois']); ?></td>
+                                                        <td>
+                                                            <input type="number" name="ancien_index[<?php echo $index['id']; ?>]"
+                                                                class="form-control form-control-sm"
+                                                                value="<?php echo $index['ancien_index']; ?>" step="0.01"
+                                                                min="-999999"
+                                                                data-original-value="<?php echo $index['ancien_index']; ?>">
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" name="nouvel_index[<?php echo $index['id']; ?>]"
+                                                                class="form-control form-control-sm"
+                                                                value="<?php echo $index['nouvel_index']; ?>" step="0.01" min="0"
+                                                                data-original-value="<?php echo $index['nouvel_index']; ?>">
+                                                        </td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                                onclick="resetIndexRow(this)">
+                                                                <i class="fas fa-undo"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </button>
+                                    <button type="submit" class="btn btn-warning" id="btnSaveIndexes">
+                                        <i class="fas fa-save"></i> Enregistrer les modifications
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function resetIndexRow(button) {
+                        const row = button.closest('tr');
+                        const ancienInput = row.querySelector('input[name*="ancien_index"]');
+                        const nouvelInput = row.querySelector('input[name*="nouvel_index"]');
+
+                        ancienInput.value = ancienInput.getAttribute('data-original-value');
+                        nouvelInput.value = nouvelInput.getAttribute('data-original-value');
+                    }
+
+                    // Validation du formulaire
+                    document.getElementById('formEditIndexes').addEventListener('submit', function (e) {
+                        const inputs = this.querySelectorAll('input[type="number"]');
+                        let hasChanges = false;
+
+                        inputs.forEach(input => {
+                            if (input.value !== input.getAttribute('data-original-value')) {
+                                hasChanges = true;
+                            }
+
+                            // Validation : nouvel index doit être >= ancien index
+                            if (input.name.includes('nouvel_index')) {
+                                const row = input.closest('tr');
+                                const ancienIndex = parseFloat(row.querySelector('input[name*="ancien_index"]').value);
+                                const nouvelIndex = parseFloat(input.value);
+
+                                if (nouvelIndex < ancienIndex) {
+                                    e.preventDefault();
+                                    alert('Le nouvel index ne peut pas être inférieur à l\'ancien index pour le mois ' +
+                                        row.querySelector('td:first-child').textContent);
+                                    input.focus();
+                                    return false;
+                                }
+                            }
+                        });
+
+                        if (!hasChanges) {
+                            e.preventDefault();
+                            alert('Aucune modification détectée.');
+                            return false;
+                        }
+
+                        if (!confirm('Êtes-vous sûr de vouloir modifier ces index ? Cette action peut affecter les calculs de facturation.')) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    });
+                </script>
+
                 <table class="table table-bordered">
                     <h1 class="text-center text-dark my-3 h1"><?php echo $data['nom'] ?></h1>
                     <thead class="text-center">
@@ -786,7 +962,7 @@ class Abone_t
     public static function getAllAboneInfoByid($id = 0)
     {
 
-        $req = Abones::getAllAboneInfoByid();
+        $req = Abones::getAllAboneInfoByid($id);
         $req = $req->fetchAll();
         foreach ($req as $ligne) {
             $id = $ligne['Id'];
@@ -1233,6 +1409,131 @@ class Abone_t
         }
     }
 
+    public static function getIndexesByCompteur($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return array();
+        }
+
+        $query = "
+            SELECT 
+                i.id,
+                i.ancien_index,
+                i.nouvel_index,
+                mf.mois,
+                f.date_paiement
+            FROM indexes i
+            INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+            LEFT JOIN facture f ON f.id_indexes = i.id
+            WHERE i.id_compteur = ?
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array($id_compteur));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function updateIndexes()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'update_indexes') {
+            $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+            $ancien_indexes = isset($_POST['ancien_index']) ? $_POST['ancien_index'] : array();
+            $nouvel_indexes = isset($_POST['nouvel_index']) ? $_POST['nouvel_index'] : array();
+
+            if ($id_compteur <= 0) {
+                $_SESSION['error_message'] = "ID compteur invalide.";
+                header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                exit;
+            }
+
+            try {
+                $updated = 0;
+                foreach ($ancien_indexes as $index_id => $ancien_index) {
+                    $index_id = (int) $index_id;
+                    $ancien_index = (float) $ancien_index;
+                    $nouvel_index = isset($nouvel_indexes[$index_id]) ? (float) $nouvel_indexes[$index_id] : 0;
+
+                    // Validation : nouvel index doit être >= ancien index
+                    if ($nouvel_index < $ancien_index) {
+                        $_SESSION['error_message'] = "Le nouvel index ne peut pas être inférieur à l'ancien index.";
+                        header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                        exit;
+                    }
+
+                    // Mettre à jour l'index
+                    $updateQuery = "
+                        UPDATE indexes 
+                        SET ancien_index = ?, nouvel_index = ? 
+                        WHERE id = ? AND id_compteur = ?
+                    ";
+
+                    $result = Manager::prepare_query($updateQuery, array(
+                        $ancien_index,
+                        $nouvel_index,
+                        $index_id,
+                        $id_compteur
+                    ));
+
+                    if ($result) {
+                        $updated++;
+                    }
+                }
+
+                if ($updated > 0) {
+                    // Mettre à jour le dernier index du compteur
+                    $lastIndexQuery = "
+                        SELECT nouvel_index 
+                        FROM indexes 
+                        WHERE id_compteur = ? 
+                        ORDER BY id DESC 
+                        LIMIT 1
+                    ";
+                    $lastIndexResult = Manager::prepare_query($lastIndexQuery, array($id_compteur));
+                    if ($lastIndexResult) {
+                        $lastIndex = $lastIndexResult->fetch();
+                        if ($lastIndex) {
+                            Manager::prepare_query(
+                                "UPDATE compteur SET derniers_index = ? WHERE id = ?",
+                                array($lastIndex['nouvel_index'], $id_compteur)
+                            );
+                        }
+                    }
+
+                    $_SESSION['success_message'] = "Index modifiés avec succès ($updated modification(s)).";
+                } else {
+                    $_SESSION['error_message'] = "Aucune modification effectuée.";
+                }
+
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = "Erreur lors de la modification : " . $e->getMessage();
+            }
+
+            header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+            exit;
+        }
+    }
+
+    public static function getAboneIdByCompteur($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return 0;
+        }
+
+        $query = "
+            SELECT ca.id_abone 
+            FROM compteur_abone ca 
+            WHERE ca.id_compteur = ? 
+            LIMIT 1
+        ";
+
+        $result = Manager::prepare_query($query, array($id_compteur));
+        if ($result) {
+            $row = $result->fetch();
+            return $row ? (int) $row['id_abone'] : 0;
+        }
+        return 0;
+    }
+
     public static function handleBranchementActions()
     {
         if (!isset($_POST['action']))
@@ -1294,6 +1595,7 @@ Abone_t::getJsonDataToExport();
 Abone_t::applyPenalite();
 Abone_t::cancelPenalite();
 Abone_t::handleBranchementActions();
+Abone_t::updateIndexes();
 //tarif_t::getAll();
 
 
