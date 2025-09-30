@@ -16,7 +16,7 @@
     <!-- <script src="presentation/js.js"></script> -->
 
     <script>
-        var addresse_serveur_reseau = '<?php echo $_SERVER['SERVER_ADDR']=="127.0.0.1"?"localhost":$_SERVER['SERVER_ADDR'].str_replace("/index.php", "", $_SERVER['PHP_SELF'])?>';
+        var addresse_serveur_reseau = '<?php echo ($_SERVER['SERVER_ADDR']=="127.0.0.1"?"localhost":$_SERVER['SERVER_ADDR']).str_replace("/index.php", "", $_SERVER['PHP_SELF'])?>';
     </script>
     <script src="presentation/assets/@canvasjs/charts/canvasjs.min.js"></script>
     <script src="presentation/assets/jquery.js"></script>
@@ -340,6 +340,9 @@ include_once("presentation/header.php");
         $libele = explode('=', $present_request[0]);
         //        var_dump($libele);
         $page = new Page(0, $libele[1], $present_request[0], "");
+//        $data =  ($_SERVER['SERVER_ADDR'] == "127.0.0.1" ? "localhost" : $_SERVER['SERVER_ADDR']) . str_replace("/index.php", "", $_SERVER['PHP_SELF']);
+
+
         try {
             $page->ajouter();
             Page::prepare_query("Insert into page_role_aep (page_id, role_id, write_access) values (?, ?, ?)", array($page->id, 1, 1));
@@ -351,6 +354,8 @@ include_once("presentation/header.php");
         include_once("traitement/user_t.php");
         $access_level = AuthManager::checkPageAccess($_SESSION['user_id'], $libele[1]);
         ob_get_clean();
+//        var_dump($data);
+//        var_dump($data);
         //        var_dump($access_level);
         //        var_dump($_SESSION, $access_level <= 0 && isset($_SESSION['id_aep'], $_SESSION['user_id']));
         if (isset($_GET['page'])) {
