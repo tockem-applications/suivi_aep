@@ -72,7 +72,7 @@ foreach ($results as $row) {
 
     <!-- Tableau des résultats -->
     <div class="table-responsive">
-        <table class="table table-striped table-bordered">
+        <table class="table table-striped table-bordered table_searching">
             <thead class="table-dark">
             <tr>
                 <!--                <th>ID Mois Facturation</th>-->
@@ -151,7 +151,7 @@ foreach ($results as $row) {
 
     <!-- Tableau des versements -->
     <div class="table-responsive">
-        <table class="table table-striped table-bordered">
+        <table class="table_searching table table-striped table-bordered">
             <thead class="table-dark">
             <tr>
                 <th>ID</th>

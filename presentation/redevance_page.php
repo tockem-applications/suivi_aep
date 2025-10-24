@@ -89,7 +89,7 @@ if (isset($_GET['success'])) {
 
             <!-- Tableau des redevances -->
             <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+                <table class="table_searching table table-striped table-bordered">
                     <thead class="table-dark">
                         <tr>
                             <th>Libellé</th>

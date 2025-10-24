@@ -220,7 +220,7 @@ for ($i = 0; $i < count($labels); $i++) {
                 <div class="card-body">
                     <?php if ($nbCompteurs > 0): ?>
                         <div class="table-responsive">
-                            <table class="table table-striped table-hover">
+                            <table class="table_searching table table-striped table-hover">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>#</th>

@@ -265,6 +265,9 @@ if (isset($_GET['list'])) {
 
         ?>
         <div class="row container-fluid p-5">
+            <!-- Inclusion du script d'évaluation des pénalités -->
+            <script src="js/penalty_evaluation.js"></script>
+
             <!-- Affichage des messages de succès/erreur -->
             <?php if (isset($_SESSION['success_message'])): ?>
                 <div class="alert alert-success alert-dismissible fade show" role="alert">

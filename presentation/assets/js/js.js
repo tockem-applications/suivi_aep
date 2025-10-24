@@ -30,7 +30,7 @@ function recherche(le_input) {
     document.getElementById(le_input).addEventListener('input', (event) => {
         let val = event.target.value;
         // console.log('bonjour');
-        const a = document.getElementsByClassName('table table-striped');
+        const a = document.getElementsByClassName('table_searching');
         if (a.length > 0) {
             const tab = a[0];
             const bal = tab.getElementsByTagName('tr');

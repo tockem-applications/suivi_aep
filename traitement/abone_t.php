@@ -150,7 +150,7 @@ class Abone_t
             ?>
 
             <!--            ceation de l'entete du tableau      -->
-            <table class="table table-striped">
+            <table class="table_searching table table-striped">
                 <thead>
                     <h3 style="text-align: center; margin-top: 20px;">
                         <?= $titre ?>
@@ -814,7 +814,7 @@ class Abone_t
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
     {
         ?>
-                <table class="table table-striped table-bordered">
+                <table class="table_searching table table-striped table-bordered">
                     <thead>
                         <h3 style="text-align: center; margin-top: 20px;">
                             <?php echo $titre ?>
@@ -1155,7 +1155,7 @@ class Abone_t
                             <input type="hidden" name="action" value="apply_penalite">
                             <input type="hidden" name="id_compteur" value="' . $id_compteur . '">
                             <input type="hidden" name="id_mois" value="' . $moisActifId . '">
-                            <input type="number" name="penalite_montant" class="form-control" value="2500" min="0" step="100" required>
+                            <input type="number" name="penalite_montant" class="form-control" value="2500" min="0" step="100" style="width: 100px;" required>
                             <button type="submit" class="btn btn-warning btn-sm" ' . ($moisActifId == 0 ? 'disabled' : '') . '>
                                 <i class="fas fa-plus"></i> Pénaliser
                             </button>
@@ -1180,6 +1180,25 @@ class Abone_t
         }
 
         echo '</div></div>';
+
+        // Section d'analyse des pénalités avec graphiques
+        echo '<div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line"></i> Analyse avant pénalité
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="penaltyAnalysisContent' . $id_compteur . '">
+                    <div class="text-center">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">Analyse de l\'historique de paiement...</p>
+                    </div>
+                </div>
+            </div>
+        </div>';
 
         echo '<script>
 (function(){
@@ -1245,6 +1264,9 @@ class Abone_t
         }
     });
 })();
+
+// Charger automatiquement lanalyse de la penalite
+loadPenaltyAnalysis(' . $id_compteur . ');
 </script>';
 
         $sum = 0;
@@ -1534,6 +1556,250 @@ class Abone_t
         return 0;
     }
 
+    public static function getPenaltyEvaluation()
+    {
+        if (isset($_GET['action']) && $_GET['action'] === 'get_penalty_evaluation') {
+            // Nettoyer le buffer de sortie pour éviter les caractères parasites
+            if (ob_get_level()) {
+                ob_clean();
+            }
+            
+            $id_compteur = isset($_GET['id_compteur']) ? (int) $_GET['id_compteur'] : 0;
+            
+            if ($id_compteur <= 0) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => false, 'message' => 'ID compteur invalide'));
+                exit;
+            }
+
+            try {
+                // Récupérer d'abord l'historique des 12 derniers mois en utilisant la vue
+                $query = "
+                    SELECT 
+                        v.mois,
+                        mf.est_actif,
+                        v.montant_verse,
+                        v.penalite,
+                        v.date_facturation as date_paiement,
+                        v.ancien_index,
+                        v.nouvel_index,
+                        v.consommation,
+                        v.prix_metre_cube_eau,
+                        v.prix_tva,
+                        v.prix_entretient_compteur,
+                        v.montant_total,
+                        v.montant_restant
+                    FROM vue_abones_facturation v
+                    LEFT JOIN mois_facturation mf ON mf.id = v.id_mois_facturation
+                    WHERE v.id_compteur = ?
+                    ORDER BY v.mois DESC
+                    LIMIT 12
+                ";
+
+                $result = Manager::prepare_query($query, array($id_compteur));
+                $data = $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+
+                // Calculer le nombre de mois non payés consécutifs depuis le dernier paiement
+                $consecutiveUnpaid = 0;
+                if (!empty($data)) {
+                    foreach ($data as $row) {
+                        $montant_verse = (float) $row['montant_verse'];
+                        $montant_total = (float) $row['montant_total'];
+                        
+                        if ($montant_verse < $montant_total) {
+                            $consecutiveUnpaid++;
+                        } else {
+                            break; // Arrêter dès qu'on trouve un mois payé
+                        }
+                    }
+                }
+
+
+                // Calculer le score de pénalité
+                $evaluation = self::calculatePenaltyScore($data, $consecutiveUnpaid);
+                
+                header('Content-Type: application/json');
+                echo json_encode(array(
+                    'success' => true,
+                    'penalty_score' => $evaluation['score'],
+                    'positive_factors' => $evaluation['positive_factors'],
+                    'risk_factors' => $evaluation['risk_factors'],
+                    'recommendation_text' => $evaluation['recommendation_text'],
+                    'chart_labels' => $evaluation['chart_labels'],
+                    'chart_factured' => $evaluation['chart_factured'],
+                    'chart_paid' => $evaluation['chart_paid'],
+                    'chart_remaining' => $evaluation['chart_remaining'],
+                    'consecutive_unpaid' => $consecutiveUnpaid
+                ));
+                exit;
+
+            } catch (Exception $e) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => false, 'message' => $e->getMessage()));
+                exit;
+            }
+        }
+    }
+
+    private static function calculatePenaltyScore($data, $consecutiveUnpaid = 0)
+    {
+        $score = 0;
+        $positive_factors = array();
+        $risk_factors = array();
+        $chart_labels = array();
+        $chart_factured = array();
+        $chart_paid = array();
+        $chart_remaining = array();
+
+        if (empty($data)) {
+            return array(
+                'score' => 0,
+                'positive_factors' => array('Aucun historique disponible'),
+                'risk_factors' => array(),
+                'recommendation_text' => 'Aucun historique de paiement disponible pour évaluer.',
+                'chart_labels' => array(),
+                'chart_factured' => array(),
+                'chart_paid' => array(),
+                'chart_remaining' => array()
+            );
+        }
+
+        $total_months = count($data);
+        $paid_months = 0;
+        $late_payments = 0;
+        $unpaid_months = 0;
+        $total_debt = 0;
+        $consecutive_late = $consecutiveUnpaid; // Utiliser la valeur calculée par SQL
+        $max_consecutive_late = $consecutiveUnpaid; // Utiliser la valeur calculée par SQL
+        $recent_payment_trend = 0;
+
+        foreach ($data as $index => $row) {
+            // Vérifier si la fonction getLetterMonth existe
+            $mois = function_exists('getLetterMonth') ? getLetterMonth($row['mois']) : date('M Y', strtotime($row['mois'] . '-01'));
+            $chart_labels[] = $mois;
+            
+            $montant_total = (float) $row['montant_total'];
+            $montant_verse = (float) $row['montant_verse'];
+            $montant_restant = (float) $row['montant_restant'];
+            
+            $chart_factured[] = $montant_total;
+            $chart_paid[] = $montant_verse;
+            $chart_remaining[] = $montant_restant;
+
+            // Calculer les facteurs
+            if ($montant_verse >= $montant_total) {
+                $paid_months++;
+            } else {
+                $unpaid_months++;
+                $total_debt += $montant_restant;
+                
+                // Vérifier si c'est un paiement en retard (pas le mois actuel)
+                if (!$row['est_actif'] && $montant_verse < $montant_total) {
+                    $late_payments++;
+                }
+            }
+
+            // Analyser la tendance récente (3 derniers mois)
+            if ($index < 3) {
+                if ($montant_verse >= $montant_total) {
+                    $recent_payment_trend++;
+                }
+            }
+        }
+
+        // Calcul du score (0-100)
+        
+        // Facteur 1: Pourcentage de mois payés (40% du score)
+        $payment_rate = ($total_months > 0) ? ($paid_months / $total_months) * 100 : 0;
+        $score += (100 - $payment_rate) * 0.4;
+
+        // Facteur 2: Dette totale (20% du score)
+        if ($total_debt > 50000) {
+            $score += 20;
+        } elseif ($total_debt > 25000) {
+            $score += 15;
+        } elseif ($total_debt > 10000) {
+            $score += 10;
+        }
+
+        // Facteur 3: Paiements consécutifs en retard (20% du score)
+        if ($max_consecutive_late >= 3) {
+            $score += 20;
+        } elseif ($max_consecutive_late >= 2) {
+            $score += 15;
+        } elseif ($max_consecutive_late >= 1) {
+            $score += 10;
+        }
+
+        // Facteur 4: Tendance récente (20% du score)
+        if ($recent_payment_trend == 0) {
+            $score += 20; // Aucun paiement récent
+        } elseif ($recent_payment_trend == 1) {
+            $score += 10; // 1 paiement sur 3
+        }
+
+        $score = min(100, max(0, round($score)));
+
+        // Générer les facteurs positifs et de risque
+        if ($payment_rate >= 80) {
+            $positive_factors[] = "Excellent historique de paiement (" . round($payment_rate) . "%)";
+        } elseif ($payment_rate >= 60) {
+            $positive_factors[] = "Bon historique de paiement (" . round($payment_rate) . "%)";
+        }
+
+        if ($recent_payment_trend >= 2) {
+            $positive_factors[] = "Paiements récents satisfaisants";
+        }
+
+        if ($total_debt < 10000) {
+            $positive_factors[] = "Dette totale faible (" . number_format($total_debt) . " FCFA)";
+        }
+
+        if ($max_consecutive_late == 0) {
+            $positive_factors[] = "Aucun retard consécutif";
+        }
+
+        if ($payment_rate < 50) {
+            $risk_factors[] = "Historique de paiement préoccupant (" . round($payment_rate) . "%)";
+        }
+
+        if ($total_debt > 50000) {
+            $risk_factors[] = "Dette élevée (" . number_format($total_debt) . " FCFA)";
+        }
+
+        if ($max_consecutive_late >= 3) {
+            $risk_factors[] = "Retards consécutifs répétés (" . $max_consecutive_late . " mois)";
+        }
+
+        if ($recent_payment_trend == 0) {
+            $risk_factors[] = "Aucun paiement récent";
+        }
+
+        if ($late_payments > $total_months * 0.5) {
+            $risk_factors[] = "Nombreux retards de paiement";
+        }
+
+        // Générer la recommandation
+        if ($score >= 70) {
+            $recommendation_text = "L'abonné présente un profil de risque élevé. Une pénalité est fortement recommandée pour encourager le paiement.";
+        } elseif ($score >= 40) {
+            $recommendation_text = "L'abonné présente un profil de risque modéré. Une pénalité peut être appliquée selon le contexte local et la situation de l'abonné.";
+        } else {
+            $recommendation_text = "L'abonné présente un bon profil de paiement. Une pénalité n'est pas recommandée dans le contexte rural actuel.";
+        }
+
+        return array(
+            'score' => $score,
+            'positive_factors' => $positive_factors,
+            'risk_factors' => $risk_factors,
+            'recommendation_text' => $recommendation_text,
+            'chart_labels' => array_reverse($chart_labels),
+            'chart_factured' => array_reverse($chart_factured),
+            'chart_paid' => array_reverse($chart_paid),
+            'chart_remaining' => array_reverse($chart_remaining)
+        );
+    }
+
     public static function handleBranchementActions()
     {
         if (!isset($_POST['action']))
@@ -1586,6 +1852,8 @@ class Abone_t
 }
 
 //var_dump($_POST);
+// Appeler getPenaltyEvaluation en premier pour éviter les conflits de sortie
+Abone_t::getPenaltyEvaluation();
 Abone_t::ajout();
 Abone_t::update();
 Abone_t::delete();

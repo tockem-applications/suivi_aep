@@ -157,7 +157,7 @@ class Reseau_t
             ?>
 
             <!--            ceation de l'entete du tableau      -->
-            <table class="table table-striped">
+            <table class="table_searching table table-striped">
                 <thead>
                     <h3 style="text-align: center; margin-top: 20px;">
                         <?= $titre ?>

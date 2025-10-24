@@ -102,7 +102,7 @@ $users = Manager::prepare_query("SELECT id, nom, prenom FROM users", array())->f
 
     <!-- Tableau des clés -->
     <div class="table-responsive">
-        <table class="table table-striped table-bordered">
+        <table class="table table-striped table-bordered table_searching">
             <thead class="table-dark">
             <tr>
                 <th>ID</th>

@@ -207,7 +207,7 @@ function addDaysAndFormat($string_date, $days = 10)
                     </div>
                 </div>
 
-                <table class="table table-striped table-bordered table-hover">
+                <table class="table_searching table table-striped table-bordered table-hover">
                     <thead>
                     </thead>
                     <tbody>

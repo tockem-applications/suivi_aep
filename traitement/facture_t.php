@@ -217,7 +217,7 @@ class Facture_t
         ob_start();
         ?>
 
-                <table class="table table-striped table-bordered table-hover">
+                <table class="table_searching table table-striped table-bordered table-hover">
                     <thead class="table-dark">
                         <tr>
         <!--                    <th>Id</th>-->
@@ -367,7 +367,7 @@ class Facture_t
                     </h4>
 
                 </div>
-                <table class="table table-striped table-bordered table-hover ">
+                <table class="table_searching table table-striped table-bordered table-hover ">
                     <thead class="table-dark">
         <!--                <a href="?list=recouvrement#abone_compteur_id_1263">bonjour les fous</a>-->
                         <tr>
@@ -880,7 +880,7 @@ class Facture_t
                     </div>
                     <div>
 
-                        <table class="table table-striped table-bordered">
+                        <table class="table_searching table table-striped table-bordered">
                             <tr>
                                 <th>Rubrique Facture</th>
                                 <th class="text-center">Ancien index</th>

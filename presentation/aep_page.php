@@ -212,7 +212,7 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
 
     <!-- Tableau des AEP -->
     <div class="table-responsive">
-        <table class="table table-striped table-hover">
+        <table class="table_searching table table-striped table-hover">
             <thead>
                 <tr>
                     <th>Libellé</th>

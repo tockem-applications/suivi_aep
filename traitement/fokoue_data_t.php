@@ -804,7 +804,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     <div class="card p-4 shadow-sm">
         <?php echo $message; ?>
         <?php if (!empty($data)): ?>
-            <table class="table table-striped table-bordered">
+            <table class="table_searching table table-striped table-bordered">
                 <thead>
                 <tr>
                     <?php foreach ($data[0] as $header => $value): ?>

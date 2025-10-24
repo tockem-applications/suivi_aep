@@ -227,7 +227,7 @@ ob_get_clean();
             <div class="col-md-12">
                 <div class="card p-4 mb-4">
                     <h3>Rôles associés</h3>
-                    <table class="table table-striped table-bordered">
+                    <table class="table_searching table table-striped table-bordered">
                         <thead class="table-dark">
                             <tr>
                                 <th>ID</th>
@@ -309,7 +309,7 @@ ob_get_clean();
         <div class="col-md-6">
             <div class="card p-4 mb-4">
                 <h3>Clés associées</h3>
-                <table class="table table-striped table-bordered">
+                <table class="table_searching table table-striped table-bordered">
                     <thead class="table-dark">
                         <tr>
                             <th>ID</th>

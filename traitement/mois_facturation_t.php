@@ -396,7 +396,7 @@ class MoisFacturation_t
             ?>
 
             <!--            ceation de l'entete du tableau      -->
-            <table class="table table-striped">
+            <table class="table_searching table table-striped">
                 <thead>
                     <h3 style="text-align: center; margin-top: 20px;">
                         <?= $titre ?>
@@ -455,7 +455,7 @@ class MoisFacturation_t
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
     {
         ?>
-        <table class="table table-striped table-bordered">
+        <table class="table_searching table table-striped table-bordered">
             <thead>
                 <h3 style="text-align: center; margin-top: 20px;">
                     <?php echo $titre ?>
@@ -688,7 +688,7 @@ class MoisFacturation_t
                         <!--                <div class="card">-->
                         <!--                  <div class="card-body">-->
                         <p class="card-text"><?php echo htmlspecialchars($description) ?></p>
-                        <table class="table table table-striped table-active table-bordered">
+                        <table class="table table_searching table-striped table-active table-bordered">
                             <tr>
                                 <th>element</th>
                                 <th>Valeur</th>
