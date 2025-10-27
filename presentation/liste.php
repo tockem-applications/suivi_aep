@@ -131,7 +131,7 @@ if (isset($_GET['list'])) {
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
         //        var_dump($_GET);
-        echo "<div class='container-fluid'><div id='a_imprimer'>";
+        echo "<div class='container-fluid'><div id=''>";
         require_once("traitement/facture_t.php");
         display_printing_button("", 'Cette action enclancher l\'impression des factures');
         //        echo  "ooooooooooooooooooooooooooooooooooooo";

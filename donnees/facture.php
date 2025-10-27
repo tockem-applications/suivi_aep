@@ -307,6 +307,47 @@ class Facture extends Manager
         //                                                                       where a.id=a2.id and id2.id_mois_facturation<?)
     }
 
+    public static function getAbonesListForNavigation($id_mois, $id_aep)
+    {
+        if (!is_int($id_mois))
+            return false;
+
+        $mois_query = self::prepare_query("select mois from mois_facturation where id = ?", array($id_mois));
+        $mois_data = $mois_query->fetch();
+        if (!$mois_data) {
+            return false;
+        }
+        $mois = $mois_data['mois'];
+
+        return self::prepare_query("
+            SELECT 
+                vaf.id_abone,
+                vaf.nom_abone,
+                vaf.montant_total + COALESCE(vaf_imp.impayer_cumule, 0) as total_a_verser,
+                COALESCE(vaf_imp.impayer_cumule, 0) as impaye_anticipation,
+                vaf.montant_verse as verse,
+                vaf.montant_total + COALESCE(vaf_imp.impayer_cumule, 0) - COALESCE(vaf.montant_verse, 0) as restant,
+                c.numero_compteur,
+                r.nom as reseau,
+                vaf.id_facture
+            FROM 
+                vue_abones_facturation vaf
+                inner join compteur c on c.id=vaf.id_compteur
+                LEFT JOIN ( 
+                    SELECT SUM(montant_total - montant_verse) as impayer_cumule, id_abone
+                    FROM vue_abones_facturation vaf2
+                    WHERE vaf2.mois < ?
+                    GROUP BY id_abone
+                ) as vaf_imp ON vaf_imp.id_abone = vaf.id_abone
+                INNER JOIN reseau r ON r.id = vaf.id_reseau
+            WHERE 
+                vaf.id_mois = ? 
+                AND vaf.id_aep = ?
+            ORDER BY 
+                vaf.nom_abone
+        ", array($mois, $id_mois, $id_aep));
+    }
+
     public static function getAboneMonthIndexes($id_mois, $id_aep)
     {
         if (!is_int($id_mois))

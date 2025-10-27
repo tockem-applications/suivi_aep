@@ -202,8 +202,8 @@ if (isset($_GET['form'])) {
                 </div>
             </div>
             <div class="mb-3">
-                <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Décrivez votre AEP" required></textarea>
+                <label for="description" class="form-label">Description <span class="text-danger"></span></label>
+                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Décrivez votre AEP"></textarea>
                 <div class="error-message">La description doit contenir au moins 10 caractères.</div>
             </div>
         </div>
@@ -320,9 +320,9 @@ if (isset($_GET['form'])) {
                         isValid = false;
                     } else if (input.id === 'libele' && input.value.trim().length < 3) {
                         isValid = false;
-                    } else if (input.id === 'description' && input.value.trim().length < 10) {
+                    } /*else if (input.id === 'description' && input.value.trim().length < 10) {
                         isValid = false;
-                    } else if (input.id === 'nom_banque' && input.value.trim().length > 100) {
+                    } */else if (input.id === 'nom_banque' && input.value.trim().length > 100) {
                         isValid = false;
                     } else if (input.id === 'numero_compte' && input.value.trim() && !/^[a-zA-Z0-9-]{1,50}$/.test(input.value.trim())) {
                         isValid = false;

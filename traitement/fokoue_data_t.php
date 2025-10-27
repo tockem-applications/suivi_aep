@@ -644,9 +644,9 @@ function createAllForMonth2(
                 ''
             );
             var_dump($row_data);
-            if($row_data['est_depose'] == 1 and $deposer){
-                deposer_compteur($relation['id_abone']);
-            }
+//            if($row_data['est_depose'] == 1 and $deposer){
+//                deposer_compteur($relation['id_abone']);
+//            }
             // Ajout des IDs générés aux données de la ligne
             $row_data['id_reseau'] = $id_reseau;
             $row_data['id_constante_reseau'] = $id_constante_reseau;
@@ -710,7 +710,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
 //                        var_dump($rowData);
                         $network = $rowData['network'];
                         $nom_abone = $rowData['client_name'];
-                        $rang = $rowData['N'];
+//                        var_dump(isset($rowData["toto"]));
+                        $rang = $rowData["N"];
+//                        var_dump($rowData);
                         $ancien_index_socle = $rowData['old_old_index'];
                         $ancien_index = $rowData['old_index'];
                         $montant_verse = $rowData['anticipation_account'];

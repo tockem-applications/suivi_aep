@@ -15,7 +15,7 @@
                 </div>
                 <div class="col-md-6">
                     <label for="moisActuel" class="form-label">Mois actuel</label>
-                    <input type="month" class="form-control" id="moisActuel" name="moisActuel" value="2025-08" required>
+                    <input type="month" class="form-control" id="moisActuel" name="moisActuel" value="2025-10" required>
                     <small class="form-text text-muted">Mois courant pour les données actuelles.</small>
                 </div>
             </div>
@@ -24,7 +24,7 @@
                     <h5>Tarifs socle</h5>
                     <div class="mb-2">
                         <label for="prixM3Socle" class="form-label">Prix m³ d'eau (FCFA)</label>
-                        <input type="number" step="0.01" min="0" class="form-control" id="prixM3Socle" name="prixM3Socle" value="300" required>
+                        <input type="number" step="0.01" min="0" class="form-control" id="prixM3Socle" name="prixM3Socle" value="500" required>
                     </div>
                     <div class="mb-2">
                         <label for="entretienSocle" class="form-label">Entretien compteur (FCFA)</label>
@@ -39,7 +39,7 @@
                     <h5>Tarifs actuels</h5>
                     <div class="mb-2">
                         <label for="prixM3Actuel" class="form-label">Prix m³ d'eau (FCFA)</label>
-                        <input type="number" step="0.01" min="0" class="form-control" id="prixM3Actuel" name="prixM3Actuel" value="300" required>
+                        <input type="number" step="0.01" min="0" class="form-control" id="prixM3Actuel" name="prixM3Actuel" value="500" required>
                     </div>
                     <div class="mb-2">
                         <label for="entretienActuel" class="form-label">Entretien compteur (FCFA)</label>

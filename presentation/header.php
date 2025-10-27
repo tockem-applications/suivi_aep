@@ -109,6 +109,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <!--                            <li><a class="dropdown-item" href="?page=download_index&action=export_index" target="_blank">Exporter vers mobile</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?form=import_index">Relève automatique</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Relève manuelle</a></li>-->
+<!--                            <li><a class="dropdown-item" href="?page=aep">Gestion des aep</a></li>-->
                             <li><a class="dropdown-item" href="?page=role">Gestion des roles</a></li>
                             <li><a class="dropdown-item" href="?page=clefs">Gestion des clefs</a></li>
                             <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
