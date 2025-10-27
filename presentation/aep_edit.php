@@ -84,8 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <input type="date" class="form-control" id="date" name="date" value="<?php echo htmlspecialchars($aep_data['date']); ?>" required>
                 </div>
                 <div class="mb-3">
-                    <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
-                    <textarea class="form-control" id="description" name="description" rows="3" required><?php echo htmlspecialchars($aep_data['description']); ?></textarea>
+                    <label for="description" class="form-label">Description <span class="text-danger"></span></label>
+                    <textarea class="form-control" id="description" name="description" rows="3"><?php echo htmlspecialchars($aep_data['description']); ?></textarea>
                 </div>
                 <div class="mb-3">
                     <label for="nom_banque" class="form-label">Nom de la banque</label>

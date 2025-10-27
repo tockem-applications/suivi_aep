@@ -549,7 +549,7 @@ class Facture_t
 
                 .navigation-panel {
                     width: 350px;
-                    max-height: calc(100vh - 150px);
+                    max-height: calc(100vh - 110px);
                     overflow-y: auto;
                     background: #f8f9fa;
                     border-radius: 10px;
@@ -720,7 +720,7 @@ class Facture_t
                 .factures-content {
                     flex: 1;
                     overflow-y: auto;
-                    max-height: calc(100vh - 150px);
+                    max-height: calc(100vh - 110px);
                     padding-right: 10px;
                 }
             </style>
@@ -1730,9 +1730,9 @@ class Facture_t
                             </table>
 
                             <div class="text-center fs-">
-                                <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 671938259 ou le
+                                <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 690409882 ou le
                                     695794780</span><br>
-                                <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 658077979 ou le
+                                <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 656256504 ou le
                                     670905523</span><br>
                                 <span class="fw-bold">NB : Les mauvais usages concernent la revente de l’eau au voisinage et les
                                     branchements frauduleux.</span>
