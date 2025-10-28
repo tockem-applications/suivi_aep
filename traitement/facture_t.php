@@ -753,7 +753,7 @@ class Facture_t
                                     <div class="abone-summary">
                                         <div class="summary-item">
                                             <span>Total:</span>
-                                            <strong><?php echo number_format($abone['restant_cumule'], 0, ',', ' '); ?> FCFA</strong>
+                                            <strong><?php echo number_format($abone['total_cumule'], 0, ',', ' '); ?> FCFA</strong>
                                         </div>
                                         <div
                                             class="summary-item <?php echo $abone['impayer_cumule'] < 0 ? 'positive' : ($abone['impayer_cumule'] > 0 ? 'negative' : ''); ?>">

@@ -39,10 +39,6 @@ if (!$aepId) {
                     <?php echo $aepId ? '' : 'disabled'; ?>>
                     <i class="bi bi-plus-circle"></i> Nouveau Réseau
                 </button>
-                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addMoisModal"
-                    <?php echo $aepId ? '' : 'disabled'; ?>>
-                    <i class="bi bi-calendar-plus"></i> Nouveau Mois
-                </button>
             </div>
         </div>
         <div class="card-body">
@@ -141,69 +137,6 @@ if (!$aepId) {
                     <p class="mt-2">Aucun réseau pour cet AEP</p>
                 </div>
             <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Modal création mois de facturation -->
-    <div class="modal fade" id="addMoisModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nouveau Mois de Facturation</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="post" action="traitement/mois_facturation_t.php">
-                    <input type="hidden" name="action" value="create_month_auto">
-                    <input type="hidden" name="id_constante"
-                        value="<?php echo $tarifActif ? (int) $tarifActif['id'] : 0; ?>">
-                    <div class="modal-body">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Mois *</label>
-                                <input type="month" class="form-control" name="mois" value="<?php echo date('Y-m'); ?>"
-                                    required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Date de facturation *</label>
-                                <input type="date" class="form-control" name="date_facturation"
-                                    value="<?php echo date('Y-m-d'); ?>" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Date de dépôt *</label>
-                                <input type="date" class="form-control" name="date_depot"
-                                    value="<?php echo date('Y-m-d'); ?>" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Description</label>
-                                <textarea class="form-control" name="description" rows="3"
-                                    placeholder="Description du mois..."></textarea>
-                            </div>
-                        </div>
-
-                        <div class="mt-3 p-3 bg-light border rounded">
-                            <strong>Tarif appliqué</strong>
-                            <?php if ($tarifActif): ?>
-                                <ul class="mb-0">
-                                    <li>Prix eau: <?php echo htmlspecialchars($tarifActif['prix_metre_cube_eau']); ?>
-                                        FCFA/m³</li>
-                                    <li>Entretien compteur:
-                                        <?php echo htmlspecialchars($tarifActif['prix_entretient_compteur']); ?> FCFA/mois
-                                    </li>
-                                    <li>TVA: <?php echo htmlspecialchars($tarifActif['prix_tva']); ?> %</li>
-                                    <li>Créé le: <?php echo htmlspecialchars($tarifActif['date_creation']); ?></li>
-                                </ul>
-                            <?php else: ?>
-                                <div class="text-danger">Aucun tarif actif pour cet AEP. Veuillez activer un tarif.</div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                        <button type="submit" class="btn btn-primary" <?php echo $tarifActif ? '' : 'disabled'; ?>>Créer
-                            le mois</button>
-                    </div>
-                </form>
-            </div>
         </div>
     </div>
 
