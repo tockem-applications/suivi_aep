@@ -24,13 +24,13 @@ class Compteur_t
                 if ($compteur instanceof Compteur) {
                     $res = $compteur->save_compteur_reseau($id_reseau);
                     if ($res)
-                        header("Location: ../index.php?page=reseau&id_reseau=$id_reseau&operation=success");
+                        header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=success");
                     else
-                        header("Location: ../index.php?page=reseau&id_reseau=$id_reseau&operation=error&message=erreurd'ajour");
+                        header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=error&message=erreurd'ajour");
                 }
             } catch (Exception $e) {
                 echo $e->getMessage();
-                header("Location: ../index.php?page=reseau&id_reseau=$id_reseau&operation=error&message=erreur innattendu dau programme");
+                header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=error&message=erreur innattendu dau programme");
             }
         }
     }
