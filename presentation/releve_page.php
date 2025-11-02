@@ -269,7 +269,7 @@ function addDaysAndFormat($string_date, $days = 10)
             </div>
 
             <?php
-            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
+//            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
             ?>
             <br>
 

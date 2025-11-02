@@ -18,7 +18,7 @@ vendor/
 /tmp/
 /.idea/
 /.vscode/
-
+/tmp/*
 
 # Sauvegardes et exports volumineux
 /backups/
@@ -56,7 +56,6 @@ composer.lock
 # Dumps SQL dans backups/exports (garder schémas à la racine)
 /backups/**/*.sql
 /donnees/exports/**/*.sql
-
 # Divers
 *.swp
 *.swo
