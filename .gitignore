@@ -18,8 +18,8 @@ vendor/
 /tmp/
 /.idea/
 /.vscode/
+/tmp/*/*
 /tmp/*
-
 # Sauvegardes et exports volumineux
 /backups/
 /donnees/exports/
