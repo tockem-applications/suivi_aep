@@ -225,13 +225,13 @@ if ($aepId) {
         <div class="col-6 col-md-4 col-lg-2">
             <div class="card kpi p-3">
                 <div class="small text-muted">Abonnés</div>
-                <div class="fs-4 fw-bold"><?php echo $kpis['abonnes']; ?></div>
+                <div class="fs-5 fw-bold"><?php echo $kpis['abonnes']; ?></div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-lg-2">
             <div class="card kpi p-3">
                 <div class="small text-muted">Mois courant</div>
-                <div class="fs-6 fw-bold">
+                <div class="fs-5 fw-bold">
                     <?php echo $kpis['mois_courant'] ? htmlspecialchars($kpis['mois_courant']) : '—'; ?>
                 </div>
             </div>
@@ -254,7 +254,7 @@ if ($aepId) {
         <div class="col-6 col-md-4 col-lg-2">
             <div class="card kpi p-3">
                 <div class="small text-muted">Taux recouvrement</div>
-                <div class="fs-4 fw-bold"><?php echo $kpis['taux_recouvrement_mois']; ?>%</div>
+                <div class="fs-5 fw-bold"><?php echo $kpis['taux_recouvrement_mois']; ?>%</div>
             </div>
         </div>
         <div class="col-6 col-md-4 col-lg-2">
