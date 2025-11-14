@@ -1570,7 +1570,7 @@ class Facture_t
                                     <?php echo getLetterMonth($mois) ?></h3>
                             </div>
                             <div class="logo_commune text-center align-self-center col-9 ">
-                                <div class="h3 fs-2 fw-bold m-0">FACTURE D’EAU POTABLE</div>
+                                <div class="h3 fs-2 fw-bold m-0">FACTURE D’EAU POTABLE. <span class="fst-italic">N° <?php echo $id_facture?></span></div>
                                 <div class="fs-4 m-0 fst-italic fw-bold">N° de Compte <?php echo htmlspecialchars($nom_banque) ?> :
                                     <?php echo htmlspecialchars($numero_compte_banque) ?></div>
                                 <div class="fs-4 m-0 fw-bold " style="color: #5B9BD5">Merci de payer dans les délais</div>
