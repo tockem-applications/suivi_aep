@@ -117,7 +117,9 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                     'flux_financier-' . $_SESSION["libele_aep"] . '-' . $mois . '.csv',
                                     "Vous allez exporter les donnees financiere de " . $mois . 'au format csv'
                                 );
-                                $somme = 0;
+                                $somme_algebrique = 0;
+                                $somme_sortie = 0;
+                                $somme_entree = 0;
 
                                 foreach ($tousFlux as $flux) {
 //                                    var_dump($flux);
@@ -131,8 +133,8 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                     echo '<td>' . htmlspecialchars($flux['date']) . '</td>';
                                     echo '<td>' . htmlspecialchars(getLetterMonth($flux['mois'])) . '</td>';
                                     echo '<td data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars($flux['description']) . '">' . htmlspecialchars($flux['libele']) . '</td>';
-                                    echo '<td>' . htmlspecialchars($flux['prix']) . ' FCFA</td>';
-                                    echo '<td>' . htmlspecialchars($flux['type']) . '</td>';
+                                    echo '<td class="text-end">' . htmlspecialchars($flux['prix']) . ' FCFA</td>';
+                                    echo '<td class="text-center">' . htmlspecialchars($flux['type']) . '</td>';
                                     echo '<td>';
                                     // Afficher les boutons d'action seulement pour les flux financiers (pas pour les paiements)
                                     if (!$no_actions) {
@@ -143,12 +145,26 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                     }
                                     echo '</td>';
                                     echo '</tr>';
-                                    $somme += ($flux['type'] == 'sortie' ? -1 : 1) * (int) $flux['prix'];
+                                    $somme_algebrique += ($flux['type'] == 'sortie' ? -1 : 1) * (int) $flux['prix'];
+                                    $somme_sortie += ($flux['type'] == 'sortie' ? -1 : 0) * (int) $flux['prix'];
+                                    $somme_entree += ($flux['type'] == 'sortie' ? 0 : 1) * (int) $flux['prix'];
                                 }
                                 ?>
-                                <tr class="bg-light fw-bold">
-                                    <td colspan="4" class="px-5">Total</td>
-                                    <td colspan="3" class="text-end px-5"><?php echo $somme; ?> FCFA</td>
+                                <tr><td colspan="6" class="table-dark"></td></tr>
+                                <tr class="bg-light fw-bold ">
+                                    <td colspan="3" class="px-5 text-danger">Total soties</td>
+                                    <td colspan="1" class="text-end text-danger" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des sorties"><?php echo $somme_sortie; ?> FCFA</td>
+                                    <td colspan="2" class="text-center">Sorties</td>
+                                </tr>
+                                <tr class="bg-light fw-bold" >
+                                    <td colspan="3" class="px-5 text-success">Total entrées</td>
+                                    <td colspan="1" class="text-end text-success"data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées"><?php echo $somme_algebrique; ?> FCFA</td>
+                                    <td colspan="2" class="text-center">Entrées</td>
+                                </tr>
+
+                                <tr class="table-dark fw-bold" >
+                                    <td colspan="3" class="px-5">Total</td>
+                                    <td colspan="4" class="text-center px-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées et des sorties"><?php echo $somme_entree; ?> FCFA</td>
                                 </tr>
                             </tbody>
                         </table>

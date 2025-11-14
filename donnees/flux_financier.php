@@ -47,7 +47,7 @@ class FluxFinancier extends Manager
             INNER JOIN indexes i on f.id_indexes = i.id
             INNER JOIN mois_facturation mf ON i.id_mois_facturation = mf.id
             inner join constante_reseau cr on mf.id_constante = cr.id
-            WHERE cr.id_aep = ? AND f.montant_verse > 0
+            WHERE cr.id_aep = ? AND f.montant_verse > 0 and mf.mois <> '2020-01'
             group by mf.id
             
             union
@@ -66,7 +66,7 @@ class FluxFinancier extends Manager
             INNER JOIN compteur c on c.id = ca.id_compteur
             INNER JOIN reseau r on a.id_reseau = r.id
             INNER JOIN branchement_abonne as ba on ba.id_abone = a.id
-            WHERE r.id_aep =?
+            WHERE r.id_aep =? 
             group by ba.mois) as rq
             ORDER BY rq.date DESC;
         ", array($id_aep, $id_aep, $id_aep, $id_aep));
