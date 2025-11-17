@@ -1,5 +1,10 @@
 <?php
-display_printing_button('', 'Imprimer la liste des entree sortie')
+display_printing_button('', 'Imprimer la liste des entree sortie');
+
+function moneyFormatter($montant)
+{
+    return number_format($montant, 0, ',', ' ');
+}
 
     ?>
 <div class="container mt-4" id="a_imprimer">
@@ -68,7 +73,7 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                     <th>Date</th>
                                     <th>Mois</th>
                                     <th>Libellé</th>
-                                    <th>Prix</th>
+                                    <th>Prix en FCFA</th>
                                     <th>Type</th>
                                     <th>Actions</th>
                                 </tr>
@@ -133,8 +138,8 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                     echo '<td>' . htmlspecialchars($flux['date']) . '</td>';
                                     echo '<td>' . htmlspecialchars(getLetterMonth($flux['mois'])) . '</td>';
                                     echo '<td data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars($flux['description']) . '">' . htmlspecialchars($flux['libele']) . '</td>';
-                                    echo '<td class="text-end">' . htmlspecialchars($flux['prix']) . ' FCFA</td>';
-                                    echo '<td class="text-center">' . htmlspecialchars($flux['type']) . '</td>';
+                                    echo '<td class="text-end">' . htmlspecialchars(moneyFormatter($flux['prix'])) . '</td>';
+                                    echo '<td class="text-center">' . htmlspecialchars($flux['type']=='sortie'?"depense": "Recette") . '</td>';
                                     echo '<td>';
                                     // Afficher les boutons d'action seulement pour les flux financiers (pas pour les paiements)
                                     if (!$no_actions) {
@@ -152,19 +157,19 @@ display_printing_button('', 'Imprimer la liste des entree sortie')
                                 ?>
                                 <tr><td colspan="6" class="table-dark"></td></tr>
                                 <tr class="bg-light fw-bold ">
-                                    <td colspan="3" class="px-5 text-danger">Total soties</td>
-                                    <td colspan="1" class="text-end text-danger" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des sorties"><?php echo $somme_sortie; ?> FCFA</td>
-                                    <td colspan="2" class="text-center">Sorties</td>
+                                    <td colspan="3" class="px-5 text-danger">Total dépenses</td>
+                                    <td colspan="1" class="text-end text-danger" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des sorties"><?php echo moneyFormatter($somme_sortie); ?></td>
+                                    <td colspan="2" class="text-center">Denpense</td>
                                 </tr>
                                 <tr class="bg-light fw-bold" >
-                                    <td colspan="3" class="px-5 text-success">Total entrées</td>
-                                    <td colspan="1" class="text-end text-success"data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées"><?php echo $somme_algebrique; ?> FCFA</td>
-                                    <td colspan="2" class="text-center">Entrées</td>
+                                    <td colspan="3" class="px-5 text-success">Total recettes</td>
+                                    <td colspan="1" class="text-end text-success"data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées"><?php echo moneyFormatter($somme_entree); ?></td>
+                                    <td colspan="2" class="text-center">Recette</td>
                                 </tr>
 
                                 <tr class="table-dark fw-bold" >
-                                    <td colspan="3" class="px-5">Total</td>
-                                    <td colspan="4" class="text-center px-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées et des sorties"><?php echo $somme_entree; ?> FCFA</td>
+                                    <td colspan="3" class="px-5">Solde</td>
+                                    <td colspan="4" class="text-center px-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées et des sorties"><?php echo moneyFormatter($somme_algebrique); ?></td>
                                 </tr>
                             </tbody>
                         </table>
