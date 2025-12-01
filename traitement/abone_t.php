@@ -1331,6 +1331,119 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
             echo '</table>';
         }
+
+        $idAboneForTools = self::getAboneIdByCompteur($id_compteur);
+        if ($idAboneForTools > 0) {
+            $availableMonthsTools = self::getAvailableMonthsForManualFacture($idAboneForTools);
+            $existingMonthsTools = self::getExistingMonthsForAbone($idAboneForTools);
+            $lastKnownIndexTools = self::getCompteurLastIndex($id_compteur);
+
+            echo '<div class="card mb-3">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <strong>Ajouter une facture manquante</strong>';
+            if (!empty($availableMonthsTools)) {
+                echo '<span class="badge bg-light text-dark">' . count($availableMonthsTools) . ' mois disponibles</span>';
+            }
+            echo '</div>
+                <div class="card-body">';
+
+            if (empty($availableMonthsTools)) {
+                echo '<div class="alert alert-secondary mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Toutes les factures existantes couvrent déjà les mois disponibles pour cet abonné.
+                    </div>';
+            } else {
+                echo '<form class="row g-3" method="POST" action="traitement/abone_t.php">
+                        <input type="hidden" name="action" value="add_missing_facture">
+                        <input type="hidden" name="id_abone" value="' . (int) $idAboneForTools . '">
+                        <input type="hidden" name="id_compteur" value="' . (int) $id_compteur . '">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Mois à facturer</label>
+                            <select name="id_mois_facturation" class="form-select" required>
+                                <option value="">Sélectionner un mois...</option>';
+                foreach ($availableMonthsTools as $month) {
+                    echo '<option value="' . (int) $month['id'] . '">' . htmlspecialchars(getLetterMonth($month['mois'])) . '</option>';
+                }
+                echo '</select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Ancien index</label>
+                            <input type="number" name="ancien_index" class="form-control" step="0.01" min="0" required placeholder="0,00">
+                            <div class="form-text">
+                                Dernier index connu : <strong>' . number_format($lastKnownIndexTools, 2, ',', ' ') . '</strong>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Nouvel index</label>
+                            <input type="number" name="nouvel_index" class="form-control" step="0.01" min="0" required placeholder="0,00">
+                            <div class="form-text">Doit être ≥ à l\'ancien index et non négatif.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <div class="alert alert-info py-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Le nouvel index doit être supérieur ou égal à l\'ancien index et ne peut pas être négatif. Une facture et un relevé seront créés pour le mois sélectionné.
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="fas fa-plus-circle me-1"></i> Créer la facture manquante
+                            </button>
+                        </div>
+                    </form>';
+            }
+
+            echo '</div></div>';
+
+            echo '<div class="card mb-3">
+                <div class="card-header bg-dark text-white">
+                    <strong>Retirer une facture existante</strong>
+                </div>
+                <div class="card-body">';
+
+            if (empty($existingMonthsTools)) {
+                echo '<div class="alert alert-secondary mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Aucune facture disponible pour suppression.
+                    </div>';
+            } else {
+                echo '<form class="row g-3" method="POST" action="traitement/abone_t.php" onsubmit="return confirm(\'Confirmez-vous la suppression de cette facture ? Les index et pénalités associés seront perdus.\');">
+                        <input type="hidden" name="action" value="remove_facture_month">
+                        <input type="hidden" name="id_abone" value="' . (int) $idAboneForTools . '">
+                        <input type="hidden" name="id_compteur" value="' . (int) $id_compteur . '">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Mois à retirer</label>
+                            <select name="id_mois_facturation" class="form-select" required>
+                                <option value="">Sélectionner un mois...</option>';
+                foreach ($existingMonthsTools as $month) {
+                    echo '<option value="' . (int) $month['id'] . '">' . htmlspecialchars(getLetterMonth($month['mois'])) . '</option>';
+                }
+                echo '</select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Cette action supprime la facture, les index associés et toute pénalité éventuelle sur le mois sélectionné. Le dernier index du compteur sera recalculé.
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Retirer la facture
+                            </button>
+                        </div>
+                    </form>';
+            }
+
+            echo '</div></div>';
+        }
+
         return ob_get_clean();
     }
 
@@ -1453,6 +1566,80 @@ loadPenaltyAnalysis(' . $id_compteur . ');
 
         $result = Manager::prepare_query($query, array($id_compteur));
         return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getAvailableMonthsForManualFacture($id_abone)
+    {
+        if ($id_abone <= 0) {
+            return array();
+        }
+
+        $aepReq = Manager::prepare_query("
+            SELECT r.id_aep 
+            FROM abone a 
+            INNER JOIN reseau r ON r.id = a.id_reseau 
+            WHERE a.id = ? 
+            LIMIT 1
+        ", array($id_abone));
+        $aepRow = $aepReq ? $aepReq->fetch(PDO::FETCH_ASSOC) : false;
+
+        if (!$aepRow) {
+            return array();
+        }
+
+        $query = "
+            SELECT mf.id, mf.mois
+            FROM mois_facturation mf
+            INNER JOIN constante_reseau cr ON cr.id = mf.id_constante
+            WHERE cr.id_aep = ?
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM facture f
+                    INNER JOIN indexes i ON i.id = f.id_indexes
+                    WHERE f.id_abone = ?
+                      AND i.id_mois_facturation = mf.id
+                )
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array((int) $aepRow['id_aep'], $id_abone));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getExistingMonthsForAbone($id_abone)
+    {
+        if ($id_abone <= 0) {
+            return array();
+        }
+
+        $query = "
+            SELECT DISTINCT mf.id, mf.mois
+            FROM facture f
+            INNER JOIN indexes i ON i.id = f.id_indexes
+            INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+            WHERE f.id_abone = ?
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array($id_abone));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getCompteurLastIndex($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return 0;
+        }
+
+        $query = "SELECT derniers_index FROM compteur WHERE id = ? LIMIT 1";
+        $result = Manager::prepare_query($query, array($id_compteur));
+        if ($result) {
+            $row = $result->fetch(PDO::FETCH_ASSOC);
+            if ($row && isset($row['derniers_index'])) {
+                return (float) $row['derniers_index'];
+            }
+        }
+        return 0;
     }
 
     public static function updateIndexes()
@@ -1800,6 +1987,171 @@ loadPenaltyAnalysis(' . $id_compteur . ');
         );
     }
 
+    public static function handleManualFactureCreation()
+    {
+        if (!isset($_POST['action']) || $_POST['action'] !== 'add_missing_facture') {
+            return;
+        }
+
+        $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+        $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+        $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
+        $ancien_index = isset($_POST['ancien_index']) ? (float) $_POST['ancien_index'] : null;
+        $nouvel_index = isset($_POST['nouvel_index']) ? (float) $_POST['nouvel_index'] : null;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+
+        try {
+            if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
+                throw new Exception("Données invalides.");
+            }
+            if ($ancien_index === null || $nouvel_index === null) {
+                throw new Exception("Veuillez renseigner les index.");
+            }
+            if ($nouvel_index < 0) {
+                throw new Exception("Le nouvel index ne peut pas être négatif.");
+            }
+            if ($nouvel_index < $ancien_index) {
+                throw new Exception("Le nouvel index doit être supérieur ou égal à l'ancien index.");
+            }
+
+            $aboneInfoReq = Manager::prepare_query("
+                SELECT a.id, r.id_aep, ca.id_compteur, c.derniers_index
+                FROM abone a
+                INNER JOIN reseau r ON r.id = a.id_reseau
+                INNER JOIN compteur_abone ca ON ca.id_abone = a.id
+                INNER JOIN compteur c ON c.id = ca.id_compteur
+                WHERE a.id = ?
+                LIMIT 1
+            ", array($id_abone));
+            $aboneInfo = $aboneInfoReq ? $aboneInfoReq->fetch(PDO::FETCH_ASSOC) : false;
+            if (!$aboneInfo) {
+                throw new Exception("Abonné introuvable.");
+            }
+            if ((int) $aboneInfo['id_compteur'] !== $id_compteur) {
+                throw new Exception("Compteur incompatible.");
+            }
+
+            $monthReq = Manager::prepare_query("
+                SELECT mf.mois, cr.id_aep
+                FROM mois_facturation mf
+                INNER JOIN constante_reseau cr ON cr.id = mf.id_constante
+                WHERE mf.id = ?
+                LIMIT 1
+            ", array($id_mois));
+            $monthRow = $monthReq ? $monthReq->fetch(PDO::FETCH_ASSOC) : false;
+            if (!$monthRow) {
+                throw new Exception("Mois de facturation introuvable.");
+            }
+            if ((int) $monthRow['id_aep'] !== (int) $aboneInfo['id_aep']) {
+                throw new Exception("Ce mois n'appartient pas à l'AEP de l'abonné.");
+            }
+
+            $existingReq = Manager::prepare_query("
+                SELECT 1
+                FROM facture f
+                INNER JOIN indexes i ON i.id = f.id_indexes
+                WHERE f.id_abone = ? AND i.id_mois_facturation = ?
+                LIMIT 1
+            ", array($id_abone, $id_mois));
+            if ($existingReq && $existingReq->fetch()) {
+                throw new Exception("Une facture existe déjà pour ce mois.");
+            }
+
+            $facture = new Facture(
+                0,
+                $ancien_index,
+                $nouvel_index,
+                0,
+                '0000-00-00',
+                0,
+                $id_mois,
+                $id_abone,
+                'Ajout manuel depuis info_abone',
+                $id_compteur
+            );
+
+            $saved = $facture->save_facture();
+            if (!$saved) {
+                throw new Exception("La création de la facture a échoué.");
+            }
+
+            if ($nouvel_index > (float) $aboneInfo['derniers_index']) {
+                Manager::prepare_query(
+                    "UPDATE compteur SET derniers_index = ? WHERE id = ?",
+                    array($nouvel_index, $id_compteur)
+                );
+            }
+
+            $volume = $nouvel_index - $ancien_index;
+            $_SESSION['success_message'] = sprintf(
+                "Facture ajoutée pour %s (%.2f m³).",
+                getLetterMonth($monthRow['mois']),
+                $volume
+            );
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Ajout manuel impossible : " . $e->getMessage();
+        }
+
+        header('Location: ' . $redirectUrl);
+        exit;
+    }
+
+    public static function handleManualFactureRemoval()
+    {
+        if (!isset($_POST['action']) || $_POST['action'] !== 'remove_facture_month') {
+            return;
+        }
+
+        $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+        $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+        $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+
+        try {
+            if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
+                throw new Exception("Données invalides.");
+            }
+
+            $factureReq = Manager::prepare_query("
+                SELECT f.id, f.id_indexes, i.nouvel_index, mf.mois
+                FROM facture f
+                INNER JOIN indexes i ON i.id = f.id_indexes
+                INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                WHERE f.id_abone = ? AND i.id_compteur = ? AND i.id_mois_facturation = ?
+                LIMIT 1
+            ", array($id_abone, $id_compteur, $id_mois));
+            $factureRow = $factureReq ? $factureReq->fetch(PDO::FETCH_ASSOC) : false;
+
+            if (!$factureRow) {
+                throw new Exception("Facture introuvable pour le mois sélectionné.");
+            }
+
+            Manager::prepare_query("DELETE FROM facture WHERE id = ?", array($factureRow['id']));
+            Manager::prepare_query("DELETE FROM indexes WHERE id = ?", array($factureRow['id_indexes']));
+
+            $maxReq = Manager::prepare_query("
+                SELECT MAX(nouvel_index) AS max_index
+                FROM indexes
+                WHERE id_compteur = ?
+            ", array($id_compteur));
+            $maxRow = $maxReq ? $maxReq->fetch(PDO::FETCH_ASSOC) : false;
+            $newLastIndex = ($maxRow && $maxRow['max_index'] !== null) ? (float) $maxRow['max_index'] : 0;
+
+            Manager::prepare_query("UPDATE compteur SET derniers_index = ? WHERE id = ?", array($newLastIndex, $id_compteur));
+
+            $_SESSION['success_message'] = sprintf(
+                "Facture du mois %s supprimée. Dernier index ajusté à %.2f.",
+                getLetterMonth($factureRow['mois']),
+                $newLastIndex
+            );
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Suppression impossible : " . $e->getMessage();
+        }
+
+        header('Location: ' . $redirectUrl);
+        exit;
+    }
+
     public static function handleBranchementActions()
     {
         if (!isset($_POST['action']))
@@ -1862,6 +2214,8 @@ Abone_t::handleSingleFielAboneUpdate();
 Abone_t::getJsonDataToExport();
 Abone_t::applyPenalite();
 Abone_t::cancelPenalite();
+Abone_t::handleManualFactureCreation();
+Abone_t::handleManualFactureRemoval();
 Abone_t::handleBranchementActions();
 Abone_t::updateIndexes();
 //tarif_t::getAll();

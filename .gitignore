@@ -24,6 +24,8 @@ vendor/
 /backups/
 /donnees/exports/
 /donnees/imports/
+/donnees/backups/
+/donnees/csv/
 
 # Fichiers de données générés et logs
 *.log
