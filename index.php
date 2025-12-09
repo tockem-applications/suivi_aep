@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">zz
+    <meta charset="UTF-8">
     <link rel="icon" type="image/x-icon" href="presentation/assets/images/favicon.png">
     <link rel="stylesheet" href="presentation/style.css">
     <link rel="stylesheet" href="presentation/assets/css/recouvrement.css">
