@@ -35,7 +35,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
                             <li><a class="dropdown-item" href="?page=reseaux">Réseaux</a></li>
-                            <li><a class="dropdown-item" href="?page=abonne">Abonnés</a></li>
+                            <li><a class="dropdown-item" href="?page=abonne">Abonnés (BP)</a></li>
+                            <li><a class="dropdown-item" href="?page=borne_fontaine"><i class="bi bi-droplet me-1"></i> Bornes Fontaines</a></li>
 <!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
                             <li><a class="dropdown-item" href="?page=aep">AEPs</a></li>
                             <!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->
@@ -61,6 +62,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFacturation">
                             <li><a class="dropdown-item" href="index.php?list=recouvrement">Recouvrement</a></li>
+                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i class="bi bi-star-fill text-warning me-1"></i> Recouvrement V2</a></li>
                             <!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
                             <li><a class="dropdown-item" href="index.php?page=releves">Relèves</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation">Mois Facturés</a></li>

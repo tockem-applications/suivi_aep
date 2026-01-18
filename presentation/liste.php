@@ -240,6 +240,12 @@ if (isset($_GET['list'])) {
         include_once("facture_component.php");
         display_tab_facture_by_month();
 
+    } else if ($_GET['list'] == 'recouvrement_v2') {
+        // var_dump("recouvrement_v2");
+        include_once("recouvrement_page_v2.php");
+        // var_dump("recouvrement_v2");
+        display_recouvrement_v2();
+
     } else if ($_GET['list'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
         Proprietaire_t::getAll('Liste Des Prooprietaires');
@@ -363,12 +369,22 @@ if (isset($_GET['list'])) {
         require_once 'presentation/redevance_deatails_page.php';
     } else if ($_GET['page'] == 'redevance') {
         require_once 'presentation/redevance_page.php';
+    } else if ($_GET['page'] == 'redevance_versements') {
+        require_once 'presentation/redevance_versements_page.php';
+    } else if ($_GET['page'] == 'redevance_versements_detail') {
+        require_once 'presentation/redevance_versements_detail_page.php';
     } else if ($_GET['page'] == 'tarif_aep') {
         require_once 'presentation/tarif_page.php';
+    } else if ($_GET['page'] == 'detail_tarif') {
+        require_once 'presentation/detail_tarif_page.php';
     } else if ($_GET['page'] == 'recouvrement') {
         require_once 'presentation/recouvrement_page.php';
     } else if ($_GET['page'] == 'abonne') {
         require_once 'presentation/abonne_page.php';
+    } else if ($_GET['page'] == 'borne_fontaine') {
+        require_once 'presentation/borne_fontaine_page.php';
+    } else if ($_GET['page'] == 'info_bf') {
+        require_once 'presentation/info_bf_page.php';
     } else if ($_GET['page'] == 'reseaux') {
 
         require_once 'presentation/reseaux_page.php';

@@ -524,6 +524,29 @@ class Abone_t
                                     class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>">
                                     <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a></th>
                         </tr>
+                        <?php
+                        // Récupérer tarif_differencie_autorise depuis la base de données
+                        $tarifDiffAutorise = Manager::prepare_query(
+                            "SELECT tarif_differencie_autorise FROM abone WHERE id = ?",
+                            array($id_abone)
+                        )->fetch();
+                        $tarifDiffAutorise = $tarifDiffAutorise ? (int)$tarifDiffAutorise['tarif_differencie_autorise'] : 1;
+                        ?>
+                        <tr>
+                            <th>Tarif différencié</th>
+                            <th>
+                                <span class="badge <?php echo $tarifDiffAutorise ? 'bg-success' : 'bg-secondary'; ?>">
+                                    <?php echo $tarifDiffAutorise ? 'Autorisé' : 'Non autorisé'; ?>
+                                </span>
+                            </th>
+                            <th>
+                                <select class="form-select" onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
+                                    <option value="1" <?php echo $tarifDiffAutorise ? 'selected' : ''; ?>>Autorisé</option>
+                                    <option value="0" <?php echo !$tarifDiffAutorise ? 'selected' : ''; ?>>Non autorisé</option>
+                                </select>
+                                <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la consommation</small>
+                            </th>
+                        </tr>
                         <!--                        <tr>-->
                         <!--                            <th>Type</th>-->
                         <!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
@@ -865,6 +888,8 @@ class Abone_t
                 $value = (int) $value;
             else if ($key == 'derniers_index')
                 $value = (float) $value;
+            else if ($key == 'tarif_differencie_autorise')
+                $value = (int) $value; // 0 ou 1
 
             $res = Abones::updateSingleValue($id_abone, $key, $value);
             if (!$res)
