@@ -187,6 +187,22 @@ echo.
 echo [OK] Mise a jour terminee sur %BRANCH%.
 call "%GIT_BIN%" log -1 --oneline
 
+REM Exécuter la migration de la base de données
+echo.
+echo [INFO] Execution de la migration de la base de donnees...
+if exist "donnees\bd\update_database_9_to_10.php" (
+    echo [INFO] Migration trouvee: donnees\bd\update_database_9_to_10.php
+    php "donnees\bd\update_database_9_to_10.php" 2>nul
+    if errorlevel 1 (
+        echo [WARN] La migration a genere des erreurs (peut etre normal si deja executee)
+    ) else (
+        echo [OK] Migration executee avec succes
+    )
+) else (
+    echo [WARN] Fichier de migration non trouve: donnees\bd\update_database_9_to_10.php
+    echo [WARN] Les mises a jour de la BD ne seront pas appliquees automatiquement
+)
+
 REM Copier les scripts sur le bureau pour un accès facile
 echo [INFO] Copie des scripts sur le bureau...
 
