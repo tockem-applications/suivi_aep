@@ -14,6 +14,7 @@ class MoisFacturation extends Manager
     public $date_depot;
     public $id_constante;
     public $est_actif;
+    public $est_mois_base;
     public $description;
 
     public static function getAllMois($mois_debut, $mois_fin, $id_aep, $id_reseau = 0)
@@ -46,7 +47,7 @@ class MoisFacturation extends Manager
                             inner join facture f on id.id = f.id_indexes
                             inner join abone a on a.id = f.id_abone
                             $reseau_joining reseau r on a.id_reseau=r.id and ( r.id = ? and r.id!=0)
-                        where m.mois>=? and m.mois <=? and c.id_aep=?
+                        where m.mois>=? and m.mois <=? and c.id_aep=? and m.est_mois_base = 0
                         group by m.id order by mois desc ;",
             array($id_reseau, $mois_debut, $mois_fin, $id_aep)
         );
@@ -271,6 +272,8 @@ class MoisFacturation extends Manager
             'description' => $this->description
             ,
             'est_actif' => $this->est_actif
+            ,
+            'est_mois_base' => isset($this->est_mois_base) ? $this->est_mois_base : 0
         );
     }
 

@@ -400,6 +400,14 @@ if (isset($_GET['list'])) {
         require_once 'presentation/user_detail_component.php';
     } elseif ($_GET['page'] == 'transaction') {
         require_once "presentation/transactions_component.php";
+    } else if ($_GET['page'] == 'compte_rendu_financier') {
+        require_once 'presentation/compte_rendu_financier_page.php';
+    } else if ($_GET['page'] == 'compte_rendu_tableau') {
+        require_once 'presentation/compte_rendu_financier_tableau_page.php';
+    } else if ($_GET['page'] == 'config_compte_rendu') {
+        require_once 'presentation/config_compte_rendu_page.php';
+    } else if ($_GET['page'] == 'categories_flux_manuel') {
+        require_once 'presentation/categories_flux_manuel_page.php';
     } else if ($_GET['page'] == 'branchements') {
         require_once 'presentation/branchements_page.php';
     } else if ($_GET['page'] == 'edit_aep') {

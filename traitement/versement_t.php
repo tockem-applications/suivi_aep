@@ -58,20 +58,51 @@ class VersementProcessor
                     return array('success' => false, 'message' => 'Redevance introuvable.');
                 }
 
-                // Calculer le montant total estimatif
-                $moisFacturation = Manager::prepare_query(
-                    "SELECT m.id 
-                     FROM mois_facturation m 
-                     INNER JOIN constante_reseau c ON m.id_constante = c.id 
-                     WHERE c.id_aep = ? AND m.mois >= ?
-                     ORDER BY m.mois DESC",
-                    array($redevance['id_aep'], $redevance['mois_debut'] ? $redevance['mois_debut'] : '1900-01')
-                )->fetchAll();
-
                 $montantTotalEstimatif = 0;
-                foreach ($moisFacturation as $mois) {
-                    $montant_estimatif = Redevance::calculerMontantEstimatif($id_redevance, $mois['id']);
-                    $montantTotalEstimatif += $montant_estimatif;
+                
+                // Calculer le montant total estimatif selon le base_calcul
+                if ($redevance['base_calcul'] == 'branchements') {
+                    // Pour les branchements, calculer à partir des branchements
+                    $mois_debut = $redevance['mois_debut'] ? $redevance['mois_debut'] : '1900-01';
+                    $moisBranchements = Manager::prepare_query(
+                        "SELECT 
+                            b.mois, 
+                            SUM(IFNULL(b.versement_fcfa, 0)) as total_facture, 
+                            COUNT(b.mois) as nombre_branchement
+                         FROM branchement_abonne b
+                         INNER JOIN abone a ON b.id_abone = a.id
+                         INNER JOIN reseau r ON a.id_reseau = r.id
+                         WHERE b.mois >= ? AND r.id_aep = ?
+                         GROUP BY b.mois
+                         ORDER BY b.mois DESC",
+                        array($mois_debut, $redevance['id_aep'])
+                    )->fetchAll();
+                    
+                    foreach ($moisBranchements as $moisBranchement) {
+                        $total_facture = (float)$moisBranchement['total_facture'];
+                        $nombre_branchement = (int)$moisBranchement['nombre_branchement'];
+                        
+                        if ($redevance['type_calcul'] == 'montant_fixe') {
+                            $montantTotalEstimatif += $nombre_branchement * (float)$redevance['montant_par_m3'];
+                        } else {
+                            $montantTotalEstimatif += $total_facture * (float)$redevance['pourcentage'] / 100;
+                        }
+                    }
+                } else {
+                    // Pour vente_eau, utiliser les mois de facturation
+                    $moisFacturation = Manager::prepare_query(
+                        "SELECT m.id 
+                         FROM mois_facturation m 
+                         INNER JOIN constante_reseau c ON m.id_constante = c.id 
+                         WHERE c.id_aep = ? AND m.mois >= ?
+                         ORDER BY m.mois DESC",
+                        array($redevance['id_aep'], $redevance['mois_debut'] ? $redevance['mois_debut'] : '1900-01')
+                    )->fetchAll();
+
+                    foreach ($moisFacturation as $mois) {
+                        $montant_estimatif = Redevance::calculerMontantEstimatif($id_redevance, $mois['id']);
+                        $montantTotalEstimatif += $montant_estimatif;
+                    }
                 }
 
                 // Récupérer le montant total déjà versé
@@ -84,7 +115,8 @@ class VersementProcessor
                 
                 $montantTotalVerse = $result ? (float)$result['total_verse'] : 0;
                 
-                if ($montantTotalVerse + $montant > $montantTotalEstimatif) {
+                // Ne valider que si le montant estimatif est > 0
+                if ($montantTotalEstimatif > 0 && $montantTotalVerse + $montant > $montantTotalEstimatif) {
                     return array('success' => false, 'message' => 'Le montant total versé ne peut pas dépasser le montant estimatif total (' . number_format($montantTotalEstimatif, 0, ',', ' ') . ' FCFA). Reste à verser: ' . number_format($montantTotalEstimatif - $montantTotalVerse, 0, ',', ' ') . ' FCFA');
                 }
                 
@@ -152,8 +184,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         elseif ($_POST['action'] === 'add_versement' || (isset($_GET['action']) && $_GET['action'] === 'add_versement')) {
             $montant = isset($_POST['montant']) ? (float)$_POST['montant'] : 0;
             $date_versement = isset($_POST['date_versement']) ? $_POST['date_versement'] : date('Y-m-d');
-            $id_mois_facturation = isset($_POST['id_mois_facturation']) ? (int)$_POST['id_mois_facturation'] : 0;
+            $id_mois_facturation = isset($_POST['id_mois_facturation']) && $_POST['id_mois_facturation'] != '' ? (int)$_POST['id_mois_facturation'] : 0;
             $id_redevance = isset($_POST['id_redevance']) ? (int)$_POST['id_redevance'] : 0;
+
+            // Validation basique avant traitement
+            if ($id_redevance <= 0) {
+                header('Location: ?page=redevance_versements&id_redevance=0&error=add_failed&message=' . urlencode('ID de redevance invalide.'));
+                exit;
+            }
+            
+            if ($montant <= 0) {
+                header('Location: ?page=redevance_versements&id_redevance=' . $id_redevance . '&error=add_failed&message=' . urlencode('Le montant doit être supérieur à 0.'));
+                exit;
+            }
 
             $result = VersementProcessor::addVersement($montant, $date_versement, $id_mois_facturation, $id_redevance);
             if ($result['success']) {

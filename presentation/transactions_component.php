@@ -73,6 +73,7 @@ function moneyFormatter($montant)
                                     <th>Date</th>
                                     <th>Mois</th>
                                     <th>Libellé</th>
+                                    <th>Catégorie</th>
                                     <th>Prix en FCFA</th>
                                     <th>Type</th>
                                     <th>Actions</th>
@@ -138,6 +139,7 @@ function moneyFormatter($montant)
                                     echo '<td>' . htmlspecialchars($flux['date']) . '</td>';
                                     echo '<td>' . htmlspecialchars(getLetterMonth($flux['mois'])) . '</td>';
                                     echo '<td data-bs-toggle="tooltip" data-bs-placement="top" title="' . htmlspecialchars($flux['description']) . '">' . htmlspecialchars($flux['libele']) . '</td>';
+                                    echo '<td>' . htmlspecialchars(isset($flux['categorie_nom']) ? $flux['categorie_nom'] : '-') . '</td>';
                                     echo '<td class="text-end">' . htmlspecialchars(moneyFormatter($flux['prix'])) . '</td>';
                                     echo '<td class="text-center">' . htmlspecialchars($flux['type']=='sortie'?"depense": "Recette") . '</td>';
                                     echo '<td>';
@@ -155,21 +157,26 @@ function moneyFormatter($montant)
                                     $somme_entree += ($flux['type'] == 'sortie' ? 0 : 1) * (int) $flux['prix'];
                                 }
                                 ?>
-                                <tr><td colspan="6" class="table-dark"></td></tr>
+                                <tr><td colspan="7" class="table-dark"></td></tr>
                                 <tr class="bg-light fw-bold ">
                                     <td colspan="3" class="px-5 text-danger">Total dépenses</td>
+                                    <td colspan="1" class="text-center">-</td>
                                     <td colspan="1" class="text-end text-danger" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des sorties"><?php echo moneyFormatter($somme_sortie); ?></td>
-                                    <td colspan="2" class="text-center">Denpense</td>
+                                    <td colspan="1" class="text-center">Dépense</td>
+                                    <td colspan="1" class="text-center">-</td>
                                 </tr>
                                 <tr class="bg-light fw-bold" >
                                     <td colspan="3" class="px-5 text-success">Total recettes</td>
-                                    <td colspan="1" class="text-end text-success"data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées"><?php echo moneyFormatter($somme_entree); ?></td>
-                                    <td colspan="2" class="text-center">Recette</td>
+                                    <td colspan="1" class="text-center">-</td>
+                                    <td colspan="1" class="text-end text-success" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées"><?php echo moneyFormatter($somme_entree); ?></td>
+                                    <td colspan="1" class="text-center">Recette</td>
+                                    <td colspan="1" class="text-center">-</td>
                                 </tr>
-
                                 <tr class="table-dark fw-bold" >
-                                    <td colspan="3" class="px-5">Solde</td>
-                                    <td colspan="4" class="text-center px-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées et des sorties"><?php echo moneyFormatter($somme_algebrique); ?></td>
+                                    <td colspan="4" class="px-5">Solde</td>
+                                    <td colspan="1" class="text-center px-5" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Cumule des entrées et des sorties"><?php echo moneyFormatter($somme_algebrique); ?></td>
+                                    <td colspan="1" class="text-center">-</td>
+                                    <td colspan="1" class="text-center">-</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -236,10 +243,48 @@ function moneyFormatter($montant)
                             <label for="type" class="form-label fw-bold">Type <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light"><i class="fas fa-exchange-alt"></i></span>
-                                <select class="form-select shadow-sm" id="type" name="type" required>
+                                <select class="form-select shadow-sm" id="type" name="type" required onchange="updateCategories(this.value)">
                                     <option value="sortie" selected>Sortie</option>
                                     <option value="entree">Entrée</option>
                                 </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_categorie" class="form-label fw-bold">Catégorie</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-tags"></i></span>
+                                        <select class="form-select shadow-sm" id="id_categorie" name="id_categorie">
+                                            <option value="">Aucune catégorie</option>
+                                            <?php
+                                            @include_once("../donnees/categorie_flux_manuel.php");
+                                            @include_once("donnees/categorie_flux_manuel.php");
+                                            $id_aep = isset($_SESSION['id_aep']) ? $_SESSION['id_aep'] : null;
+                                            // Charger toutes les catégories (recettes et charges)
+                                            $res_cat_recette = CategorieFluxManuel::getAllActives('recette', $id_aep);
+                                            $res_cat_charge = CategorieFluxManuel::getAllActives('charge', $id_aep);
+                                            
+                                            $activite_labels = array(
+                                                'branchements' => 'Branchements',
+                                                'vente_eau' => 'Vente d\'eau',
+                                                'autre' => 'Autre'
+                                            );
+                                            
+                                            while ($cat = $res_cat_recette->fetch(PDO::FETCH_ASSOC)) {
+                                                $code_budgetaire = !empty($cat['code_budgetaire']) ? $cat['code_budgetaire'] : '-';
+                                                $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+                                                $activite_label = isset($activite_labels[$activite]) ? $activite_labels[$activite] : 'Autre';
+                                                $display_text = $code_budgetaire . ': ' . htmlspecialchars($cat['nom']) . ' -> ' . $activite_label;
+                                                echo '<option value="' . $cat['id'] . '" data-type="' . $cat['type_flux'] . '">' . $display_text . '</option>';
+                                            }
+                                            while ($cat = $res_cat_charge->fetch(PDO::FETCH_ASSOC)) {
+                                                $code_budgetaire = !empty($cat['code_budgetaire']) ? $cat['code_budgetaire'] : '-';
+                                                $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+                                                $activite_label = isset($activite_labels[$activite]) ? $activite_labels[$activite] : 'Autre';
+                                                $display_text = $code_budgetaire . ': ' . htmlspecialchars($cat['nom']) . ' -> ' . $activite_label;
+                                                echo '<option value="' . $cat['id'] . '" data-type="' . $cat['type_flux'] . '">' . $display_text . '</option>';
+                                            }
+                                            ?>
+                                        </select>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -327,11 +372,50 @@ function moneyFormatter($montant)
                                     <div class="input-group">
                                         <span class="input-group-text bg-light"><i class="fas fa-exchange-alt"></i></span>
                                         <select class="form-select shadow-sm" id="type_<?php echo $flux['id']; ?>" name="type"
-                                            required>
+                                            required onchange="updateCategoriesEdit('<?php echo $flux['id']; ?>', this.value)">
                                             <option value="entree" <?php echo $flux['type'] === 'entree' ? 'selected' : ''; ?>>
                                                 Entrée</option>
                                             <option value="sortie" <?php echo $flux['type'] === 'sortie' ? 'selected' : ''; ?>>
                                                 Sortie</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_categorie_<?php echo $flux['id']; ?>" class="form-label fw-bold">Catégorie</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="fas fa-tags"></i></span>
+                                        <select class="form-select shadow-sm" id="id_categorie_<?php echo $flux['id']; ?>" name="id_categorie">
+                                            <option value="">Aucune catégorie</option>
+                                            <?php
+                                            $type_flux = $flux['type'] === 'entree' ? 'recette' : 'charge';
+                                            // Charger toutes les catégories pour permettre le changement de type
+                                            $res_cat_recette = CategorieFluxManuel::getAllActives('recette', $id_aep);
+                                            $res_cat_charge = CategorieFluxManuel::getAllActives('charge', $id_aep);
+                                            $current_cat = isset($flux['id_categorie_flux_manuel']) ? $flux['id_categorie_flux_manuel'] : null;
+                                            
+                                            $activite_labels = array(
+                                                'branchements' => 'Branchements',
+                                                'vente_eau' => 'Vente d\'eau',
+                                                'autre' => 'Autre'
+                                            );
+                                            
+                                            while ($cat = $res_cat_recette->fetch(PDO::FETCH_ASSOC)) {
+                                                $selected = ($current_cat == $cat['id']) ? 'selected' : '';
+                                                $code_budgetaire = !empty($cat['code_budgetaire']) ? $cat['code_budgetaire'] : '-';
+                                                $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+                                                $activite_label = isset($activite_labels[$activite]) ? $activite_labels[$activite] : 'Autre';
+                                                $display_text = $code_budgetaire . ': ' . htmlspecialchars($cat['nom']) . ' -> ' . $activite_label;
+                                                echo '<option value="' . $cat['id'] . '" data-type="' . $cat['type_flux'] . '" ' . $selected . '>' . $display_text . '</option>';
+                                            }
+                                            while ($cat = $res_cat_charge->fetch(PDO::FETCH_ASSOC)) {
+                                                $selected = ($current_cat == $cat['id']) ? 'selected' : '';
+                                                $code_budgetaire = !empty($cat['code_budgetaire']) ? $cat['code_budgetaire'] : '-';
+                                                $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+                                                $activite_label = isset($activite_labels[$activite]) ? $activite_labels[$activite] : 'Autre';
+                                                $display_text = $code_budgetaire . ': ' . htmlspecialchars($cat['nom']) . ' -> ' . $activite_label;
+                                                echo '<option value="' . $cat['id'] . '" data-type="' . $cat['type_flux'] . '" ' . $selected . '>' . $display_text . '</option>';
+                                            }
+                                            ?>
                                         </select>
                                     </div>
                                 </div>
@@ -395,3 +479,62 @@ function moneyFormatter($montant)
         <?php endif; ?>
     <?php endforeach; ?>
 </div>
+
+<script>
+function updateCategories(type) {
+    var select = document.getElementById('id_categorie');
+    if (!select) return;
+    
+    var type_flux = type === 'entree' ? 'recette' : 'charge';
+    
+    // Filtrer les options selon le type
+    var options = select.querySelectorAll('option[data-type]');
+    options.forEach(function(option) {
+        if (option.value === '') {
+            option.style.display = 'block';
+        } else if (option.getAttribute('data-type') === type_flux) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    // Réinitialiser la sélection si la catégorie actuelle n'est pas compatible
+    var currentOption = select.options[select.selectedIndex];
+    if (currentOption && currentOption.getAttribute('data-type') && currentOption.getAttribute('data-type') !== type_flux) {
+        select.value = '';
+    }
+}
+
+function updateCategoriesEdit(fluxId, type) {
+    var select = document.getElementById('id_categorie_' + fluxId);
+    if (!select) return;
+    
+    var type_flux = type === 'entree' ? 'recette' : 'charge';
+    
+    // Filtrer les options selon le type
+    var options = select.querySelectorAll('option[data-type]');
+    options.forEach(function(option) {
+        if (option.value === '') {
+            option.style.display = 'block';
+        } else if (option.getAttribute('data-type') === type_flux) {
+            option.style.display = 'block';
+        } else {
+            option.style.display = 'none';
+        }
+    });
+    // Ne pas réinitialiser si une catégorie est déjà sélectionnée et compatible
+    var currentValue = select.value;
+    var currentOption = select.querySelector('option[value="' + currentValue + '"]');
+    if (currentOption && currentOption.getAttribute('data-type') && currentOption.getAttribute('data-type') !== type_flux && currentValue !== '') {
+        select.value = '';
+    }
+}
+
+// Initialiser les catégories au chargement de la page pour le formulaire de création
+document.addEventListener('DOMContentLoaded', function() {
+    var typeSelect = document.getElementById('type');
+    if (typeSelect) {
+        updateCategories(typeSelect.value);
+    }
+});
+</script>

@@ -581,6 +581,288 @@ class DatabaseUpdater9To10
                 echo "   ⚠ Fichier SQL introuvable: $vueSqlFile\n";
             }
 
+            // ============================================================
+            // PARTIE 6: SYSTÈME DE COMPTE RENDU FINANCIER SIMPLIFIÉ
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 6: SYSTÈME DE COMPTE RENDU FINANCIER SIMPLIFIÉ\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            // 6.1. Créer la table de configuration des libellés du compte rendu
+            echo "6.1. Vérification de la table config_compte_rendu_financier...\n";
+            if (!self::tableExists('config_compte_rendu_financier')) {
+                echo "   → Création de la table config_compte_rendu_financier...\n";
+                try {
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 0');
+                    $bd->exec("
+                        CREATE TABLE `config_compte_rendu_financier` (
+                            `id` INT(2) UNSIGNED NOT NULL AUTO_INCREMENT,
+                            `code_type` VARCHAR(32) NOT NULL UNIQUE COMMENT 'Code du type: recouvrements, branchements, redevances',
+                            `libelle` VARCHAR(128) NOT NULL COMMENT 'Libellé à afficher dans le compte rendu',
+                            `type_flux` VARCHAR(16) NOT NULL COMMENT 'recette ou charge',
+                            `id_aep` INT(4) UNSIGNED NULL DEFAULT NULL COMMENT 'ID de l''AEP (NULL = configuration globale)',
+                            `date_creation` DATETIME NOT NULL,
+                            `date_modification` DATETIME DEFAULT NULL,
+                            PRIMARY KEY (`id`),
+                            KEY `idx_code_type` (`code_type`),
+                            KEY `idx_id_aep` (`id_aep`)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci COMMENT='Configuration des libellés pour le compte rendu financier'
+                    ");
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
+                    echo "   ✓ Table config_compte_rendu_financier créée avec succès\n";
+                    
+                    // Insérer les configurations par défaut
+                    echo "   → Insertion des configurations par défaut...\n";
+                    $configs_defaut = array(
+                        array('code_type' => 'recouvrements', 'libelle' => 'Recouvrements', 'type_flux' => 'recette'),
+                        array('code_type' => 'branchements', 'libelle' => 'Branchements', 'type_flux' => 'recette'),
+                        array('code_type' => 'redevances', 'libelle' => 'Redevances', 'type_flux' => 'charge')
+                    );
+                    
+                    $stmt = $bd->prepare("
+                        INSERT INTO config_compte_rendu_financier (code_type, libelle, type_flux, id_aep, date_creation) 
+                        VALUES (?, ?, ?, NULL, NOW())
+                    ");
+                    foreach ($configs_defaut as $config) {
+                        try {
+                            $stmt->execute(array($config['code_type'], $config['libelle'], $config['type_flux']));
+                        } catch (Exception $e) {
+                            // Ignorer les erreurs de duplication
+                        }
+                    }
+                    echo "   ✓ Configurations par défaut insérées\n";
+                } catch (Exception $e) {
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
+                    echo "   ✗ Erreur lors de la création: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Table config_compte_rendu_financier existe déjà\n";
+            }
+
+            // 6.2. Créer la table categorie_flux_manuel pour catégoriser les flux manuels
+            echo "\n6.2. Vérification de la table categorie_flux_manuel...\n";
+            if (!self::tableExists('categorie_flux_manuel')) {
+                echo "   → Création de la table categorie_flux_manuel...\n";
+                try {
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 0');
+                    $bd->exec("
+                        CREATE TABLE `categorie_flux_manuel` (
+                            `id` INT(4) UNSIGNED NOT NULL AUTO_INCREMENT,
+                            `nom` VARCHAR(128) NOT NULL COMMENT 'Nom de la catégorie',
+                            `type_flux` VARCHAR(16) NOT NULL COMMENT 'recette ou charge',
+                            `description` TEXT DEFAULT NULL COMMENT 'Description de la catégorie',
+                            `id_aep` INT(4) UNSIGNED NULL DEFAULT NULL COMMENT 'ID de l''AEP (NULL = catégorie globale)',
+                            `est_actif` TINYINT(1) NOT NULL DEFAULT 1 COMMENT 'Indique si la catégorie est active',
+                            `date_creation` DATETIME NOT NULL,
+                            PRIMARY KEY (`id`),
+                            KEY `idx_type_flux` (`type_flux`),
+                            KEY `idx_id_aep` (`id_aep`),
+                            KEY `idx_est_actif` (`est_actif`)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci COMMENT='Catégories pour les flux financiers manuels'
+                    ");
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
+                    echo "   ✓ Table categorie_flux_manuel créée avec succès\n";
+                    
+                    // Insérer quelques catégories par défaut
+                    echo "   → Insertion des catégories par défaut...\n";
+                    $categories_defaut = array(
+                        array('nom' => 'Maintenance', 'type_flux' => 'charge', 'description' => 'Dépenses de maintenance du réseau'),
+                        array('nom' => 'Salaires', 'type_flux' => 'charge', 'description' => 'Salaires du personnel'),
+                        array('nom' => 'Matériel', 'type_flux' => 'charge', 'description' => 'Achat de matériel'),
+                        array('nom' => 'Autres charges', 'type_flux' => 'charge', 'description' => 'Autres dépenses diverses'),
+                        array('nom' => 'Subventions', 'type_flux' => 'recette', 'description' => 'Subventions reçues'),
+                        array('nom' => 'Autres recettes', 'type_flux' => 'recette', 'description' => 'Autres revenus divers')
+                    );
+                    
+                    $stmt = $bd->prepare("
+                        INSERT INTO categorie_flux_manuel (nom, type_flux, description, id_aep, est_actif, date_creation) 
+                        VALUES (?, ?, ?, NULL, 1, NOW())
+                    ");
+                    foreach ($categories_defaut as $cat) {
+                        try {
+                            $stmt->execute(array($cat['nom'], $cat['type_flux'], $cat['description']));
+                        } catch (Exception $e) {
+                            // Ignorer les erreurs de duplication
+                        }
+                    }
+                    echo "   ✓ Catégories par défaut insérées\n";
+                } catch (Exception $e) {
+                    $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
+                    echo "   ✗ Erreur lors de la création: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Table categorie_flux_manuel existe déjà\n";
+            }
+
+            // 6.3. Ajouter id_categorie_flux_manuel à la table flux_financier
+            echo "\n6.3. Vérification du champ id_categorie_flux_manuel dans la table flux_financier...\n";
+            if (!self::columnExists('flux_financier', 'id_categorie_flux_manuel')) {
+                echo "   → Ajout du champ id_categorie_flux_manuel...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `flux_financier` 
+                        ADD COLUMN `id_categorie_flux_manuel` INT(4) UNSIGNED NULL DEFAULT NULL
+                        COMMENT 'Catégorie du flux manuel (NULL = non catégorisé)'
+                    ");
+                    // Ajouter la clé étrangère
+                    if (self::tableExists('categorie_flux_manuel')) {
+                        try {
+                            $bd->exec("
+                                ALTER TABLE `flux_financier`
+                                ADD KEY `fk_flux_categorie` (`id_categorie_flux_manuel`),
+                                ADD CONSTRAINT `fk_flux_categorie` 
+                                    FOREIGN KEY (`id_categorie_flux_manuel`) 
+                                    REFERENCES `categorie_flux_manuel` (`id`) 
+                                    ON DELETE SET NULL
+                            ");
+                        } catch (Exception $e) {
+                            if (strpos($e->getMessage(), 'Duplicate key') === false && 
+                                strpos($e->getMessage(), 'already exists') === false) {
+                                echo "   ⚠ Contrainte de clé étrangère non ajoutée (peut être ignorée): " . $e->getMessage() . "\n";
+                            }
+                        }
+                    }
+                    echo "   ✓ Champ id_categorie_flux_manuel ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ id_categorie_flux_manuel existe déjà\n";
+            }
+
+            // ============================================================
+            // PARTIE 7: AJOUT DU CHAMP MOIS DE BASE
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 7: AJOUT DU CHAMP MOIS DE BASE\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            // 7.1. Ajouter le champ est_mois_base à la table mois_facturation
+            echo "7.1. Vérification du champ est_mois_base dans la table mois_facturation...\n";
+            if (!self::columnExists('mois_facturation', 'est_mois_base')) {
+                echo "   → Ajout du champ est_mois_base...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `mois_facturation` 
+                        ADD COLUMN `est_mois_base` TINYINT(1) NOT NULL DEFAULT 0
+                        COMMENT 'Indique si ce mois est le mois de base pour l''AEP (un seul par AEP)'
+                    ");
+                    echo "   ✓ Champ est_mois_base ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ est_mois_base existe déjà\n";
+            }
+
+            // ============================================================
+            // PARTIE 8: AJOUT DES CODES BUDGÉTAIRES ET ACTIVITÉS ASSOCIÉES
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 8: AJOUT DES CODES BUDGÉTAIRES ET ACTIVITÉS ASSOCIÉES\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            // 8.1. Ajouter code_budgetaire et activite_associee à categorie_flux_manuel
+            echo "8.1. Vérification des champs code_budgetaire et activite_associee dans categorie_flux_manuel...\n";
+            if (!self::columnExists('categorie_flux_manuel', 'code_budgetaire')) {
+                echo "   → Ajout du champ code_budgetaire...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `categorie_flux_manuel` 
+                        ADD COLUMN `code_budgetaire` VARCHAR(10) NULL DEFAULT NULL
+                        COMMENT 'Code budgétaire de la catégorie'
+                    ");
+                    echo "   ✓ Champ code_budgetaire ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ code_budgetaire existe déjà\n";
+            }
+
+            if (!self::columnExists('categorie_flux_manuel', 'activite_associee')) {
+                echo "   → Ajout du champ activite_associee...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `categorie_flux_manuel` 
+                        ADD COLUMN `activite_associee` ENUM('branchements', 'vente_eau', 'autre') NOT NULL DEFAULT 'autre'
+                        COMMENT 'Activité associée: branchements, vente_eau, ou autre'
+                    ");
+                    // Ajouter index pour les regroupements
+                    try {
+                        $bd->exec("
+                            ALTER TABLE `categorie_flux_manuel`
+                            ADD KEY `idx_code_budgetaire` (`code_budgetaire`),
+                            ADD KEY `idx_activite_associee` (`activite_associee`)
+                        ");
+                    } catch (Exception $e) {
+                        if (strpos($e->getMessage(), 'Duplicate key') === false && 
+                            strpos($e->getMessage(), 'already exists') === false) {
+                            echo "   ⚠ Index non ajouté (peut être ignoré): " . $e->getMessage() . "\n";
+                        }
+                    }
+                    echo "   ✓ Champ activite_associee ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ activite_associee existe déjà\n";
+            }
+
+            // 8.2. Ajouter code_budgetaire et activite_associee à config_compte_rendu_financier
+            echo "\n8.2. Vérification des champs code_budgetaire et activite_associee dans config_compte_rendu_financier...\n";
+            if (!self::columnExists('config_compte_rendu_financier', 'code_budgetaire')) {
+                echo "   → Ajout du champ code_budgetaire...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `config_compte_rendu_financier` 
+                        ADD COLUMN `code_budgetaire` VARCHAR(10) NULL DEFAULT NULL
+                        COMMENT 'Code budgétaire pour les catégories automatiques'
+                    ");
+                    echo "   ✓ Champ code_budgetaire ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ code_budgetaire existe déjà\n";
+            }
+
+            if (!self::columnExists('config_compte_rendu_financier', 'activite_associee')) {
+                echo "   → Ajout du champ activite_associee...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `config_compte_rendu_financier` 
+                        ADD COLUMN `activite_associee` ENUM('branchements', 'vente_eau', 'autre') NOT NULL DEFAULT 'autre'
+                        COMMENT 'Activité associée: branchements, vente_eau, ou autre'
+                    ");
+                    // Mettre à jour les valeurs par défaut selon le code_type
+                    try {
+                        $bd->exec("
+                            UPDATE config_compte_rendu_financier 
+                            SET activite_associee = 'branchements' 
+                            WHERE code_type = 'branchements'
+                        ");
+                        $bd->exec("
+                            UPDATE config_compte_rendu_financier 
+                            SET activite_associee = 'vente_eau' 
+                            WHERE code_type = 'recouvrements'
+                        ");
+                        $bd->exec("
+                            UPDATE config_compte_rendu_financier 
+                            SET activite_associee = 'autre' 
+                            WHERE code_type = 'redevances'
+                        ");
+                    } catch (Exception $e) {
+                        echo "   ⚠ Mise à jour des valeurs par défaut non effectuée (peut être ignoré): " . $e->getMessage() . "\n";
+                    }
+                    echo "   ✓ Champ activite_associee ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ activite_associee existe déjà\n";
+            }
+
             echo "\n╔═══════════════════════════════════════════════════════════════╗\n";
             echo "║     MIGRATION TERMINÉE AVEC SUCCÈS                            ║\n";
             echo "╚═══════════════════════════════════════════════════════════════╝\n";
@@ -592,6 +874,11 @@ class DatabaseUpdater9To10
             echo "- Champs base_calcul, type_calcul, montant_par_m3, est_sortie ajoutés à redevance\n";
             echo "- Colonne id_mois_facturation de versements peut maintenant être NULL\n";
             echo "- Champ id_tarif_differencie ajouté à indexes\n";
+            echo "- Table config_compte_rendu_financier créée pour configurer les libellés du compte rendu\n";
+            echo "- Table categorie_flux_manuel créée pour catégoriser les flux manuels\n";
+            echo "- Champ id_categorie_flux_manuel ajouté à flux_financier\n";
+            echo "- Champ est_mois_base ajouté à mois_facturation\n";
+            echo "- Champs code_budgetaire et activite_associee ajoutés aux catégories\n";
             echo "- Vues mises à jour\n";
 
         } catch (Exception $e) {

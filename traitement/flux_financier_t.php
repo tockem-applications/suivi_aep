@@ -16,6 +16,17 @@ class Flux_financier_t {
             if (!empty($date) && !empty($mois) && !empty($libele) && !empty($prix) && ($type === 'sortie' || $type === 'entree')) {
                 $fluxFinancier = new FluxFinancier('', $date, $libele, $prix, $type, $description, $mois, $_SESSION['id_aep']);
                 $res = $fluxFinancier->ajouter();
+                // Mettre à jour la catégorie si fournie
+                if ($res && isset($_POST['id_categorie']) && !empty($_POST['id_categorie'])) {
+                    $id_flux = $fluxFinancier->id;
+                    if ($id_flux) {
+                        @include_once("../donnees/connexion.php");
+                        @include_once("donnees/connexion.php");
+                        $bd = Connexion::connect();
+                        $stmt = $bd->prepare("UPDATE flux_financier SET id_categorie_flux_manuel = ? WHERE id = ?");
+                        $stmt->execute(array($_POST['id_categorie'], $id_flux));
+                    }
+                }
                 if ($res) {
                     header("Location: ../index.php?page=transaction&operation=success");
                 } else {
@@ -40,6 +51,15 @@ class Flux_financier_t {
             if (!empty($id) && !empty($date) && !empty($mois) && !empty($libele) && !empty($prix) && ($type === 'sortie' || $type === 'entree')) {
                 $fluxFinancier = new FluxFinancier($id, $date, $libele, $prix, $type, $description, $mois, $_SESSION['id_aep']);
                 $res = $fluxFinancier->update();
+                // Mettre à jour la catégorie si fournie
+                if ($res && isset($_POST['id_categorie'])) {
+                    @include_once("../donnees/connexion.php");
+                    @include_once("donnees/connexion.php");
+                    $bd = Connexion::connect();
+                    $id_categorie = !empty($_POST['id_categorie']) ? $_POST['id_categorie'] : null;
+                    $stmt = $bd->prepare("UPDATE flux_financier SET id_categorie_flux_manuel = ? WHERE id = ?");
+                    $stmt->execute(array($id_categorie, $id));
+                }
                 if ($res) {
                     header("Location: ../index.php?page=transaction&operation=succes");
                 } else {

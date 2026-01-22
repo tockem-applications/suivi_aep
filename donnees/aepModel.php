@@ -140,7 +140,7 @@ class AepModel {
         }
     }
 
-    // Récupérer l'historique des index (simplifié pour le graphique)
+    // Récupérer l'historique des index (simplifié pour le graphique) - exclut le mois de base
     public function getIndexHistory($aepId) {
         try {
             $stmt = $this->conn->prepare("SELECT SUM(i.nouvel_index - i.ancien_index) as value, m.mois as date
@@ -151,6 +151,7 @@ class AepModel {
                 JOIN abone a ON ca.id_abone = a.id
                 JOIN reseau r ON a.id_reseau = r.id
                 WHERE r.id_aep = :aepId
+                AND m.est_mois_base = 0
                 GROUP BY m.id
                 ORDER BY m.mois");
             $stmt->execute(array(':aepId' => $aepId));
@@ -214,7 +215,7 @@ class AepModel {
     }
 
 
-    // Nouvelle méthode : Récupérer les montants facturés et recouvrés par mois
+    // Nouvelle méthode : Récupérer les montants facturés et recouvrés par mois (exclut le mois de base)
     public function getMontantsParMois($aepId) {
         try {
             $stmt = $this->conn->prepare("
@@ -229,6 +230,7 @@ class AepModel {
                 JOIN mois_facturation m ON i.id_mois_facturation = m.id
                 INNER JOIN constante_reseau cr ON m.id_constante = cr.id
                 WHERE r.id_aep = :aepId
+                AND m.est_mois_base = 0
                 GROUP BY m.id
                 ORDER BY m.mois
             ");

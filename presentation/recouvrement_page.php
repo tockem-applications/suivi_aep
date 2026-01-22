@@ -25,6 +25,7 @@ if (!$aepId) {
                 cr.prix_entretient_compteur,
                 cr.prix_tva,
                 mf.id as id_mois,
+                COALESCE(mf.est_mois_base, 0) as est_mois_base,
                 (SELECT COUNT(DISTINCT vaf.id_abone) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as nb_abones,
                 (SELECT SUM(vaf.montant_total) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as montant_total_facture,
                 (SELECT SUM(vaf.montant_verse) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as montant_total_verse,
@@ -108,6 +109,7 @@ if (isset($_GET['success'])) {
                                 <th>Reste à Payer</th>
                                 <th>Abonnés Impayés</th>
                                 <th>Statut</th>
+                                <th>Mois de base</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -161,6 +163,15 @@ if (isset($_GET['success'])) {
                                             <span class="badge bg-success">Actif</span>
                                         <?php else: ?>
                                             <span class="badge bg-secondary">Inactif</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if (isset($mois['est_mois_base']) && $mois['est_mois_base']): ?>
+                                            <span class="badge bg-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Ce mois est le mois de base et n'apparaîtra pas dans les graphiques">
+                                                <i class="bi bi-star-fill"></i> Mois de base
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -398,6 +409,19 @@ if (isset($_GET['success'])) {
                             <strong>Attention :</strong> Activer ce mois désactivera automatiquement le mois actuellement actif.
                         </div>
                     </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_est_mois_base" name="est_mois_base">
+                            <label class="form-check-label" for="edit_est_mois_base">
+                                <i class="bi bi-star-fill text-warning"></i> Définir comme mois de base
+                            </label>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <i class="bi bi-info-circle"></i>
+                            <small><strong>Note :</strong> Le mois de base n'apparaîtra pas dans les graphiques du tableau de bord. Il ne peut y avoir qu'un seul mois de base par AEP. Si vous cochez cette case, les autres mois de base seront automatiquement désactivés.</small>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -589,6 +613,7 @@ if (isset($_GET['success'])) {
                     document.getElementById('edit_id_constante').value = data.mois.id_constante;
                     document.getElementById('edit_description').value = data.mois.description || '';
                     document.getElementById('edit_est_actif').checked = data.mois.est_actif == 1;
+                    document.getElementById('edit_est_mois_base').checked = data.mois.est_mois_base == 1;
                     document.getElementById('edit_mois_id').value = moisId;
                     
                     // Afficher/masquer l'avertissement d'activation
