@@ -12,6 +12,28 @@ function display_printing_button($button_text = "Imprimer", $tooltip_message = "
     <?php
 }
 
+/**
+ * Bouton Print-auto : télécharge le PDF des factures du mois (génération serveur, sans impression navigateur).
+ * À afficher uniquement quand id_mois est connu (liste_facture_month).
+ */
+function display_print_auto_button($id_mois)
+{
+    $id_mois = (int) $id_mois;
+    if ($id_mois <= 0) {
+        return;
+    }
+    $url = 'traitement/export_factures_pdf.php?id_mois=' . $id_mois;
+    ?>
+    <a id="printing_auto_button" href="<?php echo htmlspecialchars($url); ?>" target="_blank" download
+        data-bs-toggle="tooltip" data-bs-placement="left"
+        data-bs-title="Télécharger le PDF des factures (génération automatique)"
+        class="end-0 mt-4 me-3 btn btn-primary rounded-pill px-4 position-fixed z-3"
+        style="top: 120px; border: none; transition: background-color 0.3s ease; display: block; text-decoration: none;">
+        <i class="bi bi-file-earmark-pdf"></i> Print-auto (PDF)
+    </a>
+    <?php
+}
+
 function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form', $action = '', $close_color = 'danger')
 {
 
@@ -134,6 +156,9 @@ if (isset($_GET['list'])) {
         echo "<div class='container-fluid'><div id=''>";
         require_once("traitement/facture_t.php");
         display_printing_button("", 'Cette action enclancher l\'impression des factures');
+        if (isset($_GET['id_mois']) && (int) $_GET['id_mois'] > 0) {
+            display_print_auto_button($_GET['id_mois']);
+        }
         //        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
