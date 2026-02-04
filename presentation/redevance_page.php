@@ -57,6 +57,15 @@ if (isset($_GET['success'])) {
         case 'invalid_pourcentage':
             $message = '<div class="alert alert-danger">Le pourcentage doit être compris entre 0 et 100.</div>';
             break;
+        case 'invalid_base_calcul':
+            $message = '<div class="alert alert-danger">La base de calcul est invalide (doit être vente_eau ou branchements).</div>';
+            break;
+        case 'invalid_type_calcul':
+            $message = '<div class="alert alert-danger">Le type de calcul est invalide (doit être pourcentage ou montant_fixe).</div>';
+            break;
+        case 'invalid_montant_par_m3':
+            $message = '<div class="alert alert-danger">Le montant fixe doit être supérieur à 0.</div>';
+            break;
         case 'add_failed':
         case 'update_failed':
         case 'delete_failed':
@@ -93,9 +102,10 @@ if (isset($_GET['success'])) {
                     <thead class="table-dark">
                         <tr>
                             <th>Libellé</th>
-                            <th>Pourcentage</th>
-                            <th>Type</th>
-                            <th>Mois de debut</th>
+                            <th>Base de calcul</th>
+                            <th>Type de calcul</th>
+                            <th>Valeur</th>
+                            <th>Mois de début</th>
                             <th>Description</th>
                             <th>Actions</th>
                         </tr>
@@ -105,17 +115,46 @@ if (isset($_GET['success'])) {
                             <?php foreach ($redevances as $redevance): ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($redevance['libele']); ?></td>
-                                    <td><?php echo $redevance['pourcentage']; ?>%</td>
                                     <td>
-                                        <span
-                                            class="badge <?php echo $redevance['type'] === 'Entree' ? 'bg-success' : 'bg-danger'; ?>">
-                                            <?php echo $redevance['type']; ?>
+                                        <span class="badge bg-info">
+                                            <?php 
+                                            $base = isset($redevance['base_calcul']) ? $redevance['base_calcul'] : 'vente_eau';
+                                            echo $base == 'vente_eau' ? 'Vente d\'eau' : 'Branchements'; 
+                                            ?>
                                         </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            <?php 
+                                            $type_calc = isset($redevance['type_calcul']) ? $redevance['type_calcul'] : 'pourcentage';
+                                            echo $type_calc == 'pourcentage' ? 'Pourcentage' : 'Montant fixe'; 
+                                            ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php 
+                                        $type_calc = isset($redevance['type_calcul']) ? $redevance['type_calcul'] : 'pourcentage';
+                                        if ($type_calc == 'pourcentage') {
+                                            echo number_format($redevance['pourcentage'], 2) . '%';
+                                        } else {
+                                            $montant = isset($redevance['montant_par_m3']) ? $redevance['montant_par_m3'] : 0;
+                                            echo number_format($montant, 0, ',', ' ') . ' FCFA';
+                                            if ($base == 'vente_eau') {
+                                                echo ' / m³';
+                                            } else {
+                                                echo ' / branchement';
+                                            }
+                                        }
+                                        ?>
                                     </td>
                                     <td><?php echo $redevance['mois_debut']; ?></td>
                                     <td><?php echo htmlspecialchars($redevance['description']); ?></td>
                                     <td>
                                         <div class="btn-group" role="group">
+                                            <a href="?page=redevance_versements&id_redevance=<?php echo $redevance['id']; ?>" 
+                                               class="btn btn-sm btn-outline-success" title="Gérer les versements">
+                                                <i class="bi bi-cash-coin"></i>
+                                            </a>
                                             <button type="button" class="btn btn-sm btn-outline-primary"
                                                 onclick="editRedevance(<?php echo $redevance['id']; ?>)">
                                                 <i class="bi bi-pencil"></i>
@@ -130,7 +169,7 @@ if (isset($_GET['success'])) {
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="6" class="text-center text-muted">Aucune redevance configurée</td>
+                                <td colspan="7" class="text-center text-muted">Aucune redevance configurée</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -142,7 +181,7 @@ if (isset($_GET['success'])) {
 
 <!-- Modal pour ajouter une redevance -->
 <div class="modal fade" id="addRedevanceModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Ajouter une Redevance</h5>
@@ -153,34 +192,60 @@ if (isset($_GET['success'])) {
                     <input type="hidden" name="action" value="add_redevance">
                     <input type="hidden" name="id_aep" value="<?php echo $aepId; ?>">
 
-                    <div class="mb-3">
-                        <label for="libele" class="form-label">Libellé</label>
-                        <input type="text" class="form-control" id="libele" name="libele" required maxlength="64">
+                    <div class="row g-3">
+                        <!-- Libellé - Pleine largeur -->
+                        <div class="col-12">
+                            <label for="libele" class="form-label">Libellé <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="libele" name="libele" required maxlength="64">
+                        </div>
+
+                        <!-- Base de calcul et Type de calcul - Côte à côte -->
+                        <div class="col-md-6">
+                            <label for="base_calcul" class="form-label">Base de calcul <span class="text-danger">*</span></label>
+                            <select class="form-select" id="base_calcul" name="base_calcul" required>
+                                <option value="vente_eau">Vente d'eau consommée</option>
+                                <option value="branchements">Branchements</option>
+                            </select>
+                            <small class="form-text text-muted">Sur quoi se base le calcul</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="type_calcul" class="form-label">Type de calcul <span class="text-danger">*</span></label>
+                            <select class="form-select" id="type_calcul" name="type_calcul" required>
+                                <option value="pourcentage">Pourcentage</option>
+                                <option value="montant_fixe">Montant fixe</option>
+                            </select>
+                            <small class="form-text text-muted">Comment calculer la redevance</small>
+                        </div>
+
+                        <!-- Pourcentage ou Montant fixe - Pleine largeur -->
+                        <div class="col-12" id="div_pourcentage">
+                            <label for="pourcentage" class="form-label">Pourcentage (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="pourcentage" name="pourcentage" min="0" max="100" step="0.01" value="0">
+                            <small class="form-text text-muted">Pourcentage à appliquer sur la base de calcul</small>
+                        </div>
+
+                        <div class="col-12" id="div_montant_fixe" style="display: none;">
+                            <label for="montant_par_m3" class="form-label">Montant fixe (FCFA) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="montant_par_m3" name="montant_par_m3" min="0" step="0.01" value="0">
+                            <small class="form-text text-muted" id="montant_help">Montant fixe par m³ consommé</small>
+                        </div>
+
+                        <!-- Mois de début et Description - Côte à côte -->
+                        <div class="col-md-6">
+                            <label for="mois_debut" class="form-label">Mois de début <span class="text-danger">*</span></label>
+                            <input type="month" class="form-control" id="mois_debut" name="mois_debut" required value="<?php echo date('Y-m'); ?>">
+                            <small class="form-text text-muted">Mois d'application</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3" style="resize: none;"></textarea>
+                        </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="pourcentage" class="form-label">Pourcentage</label>
-                        <input type="number" class="form-control" id="pourcentage" name="pourcentage" required min="0"
-                            max="100" step="0.01">
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="type" class="form-label">Type</label>
-                        <select class="form-select" id="type" name="type" required>
-                            <option value="">Sélectionner un type</option>
-                            <option value="Entree">Entrée</option>
-                            <option value="Sortie">Sortie</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="mois_debut" class="form-label">Mois de début (YYYY-MM)</label>
-                        <input type="month" class="form-control" id="mois_debut" name="mois_debut" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle"></i> <strong>Note :</strong> Toutes les redevances sont des sorties. Le calcul sera estimatif pour connaître le maximum à verser.
                     </div>
                 </form>
             </div>
@@ -192,32 +257,241 @@ if (isset($_GET['success'])) {
     </div>
 </div>
 
+<!-- Modal pour modifier une redevance -->
+<div class="modal fade" id="editRedevanceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modifier une Redevance</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editRedevanceForm" method="post" action="traitement/redevance_t.php">
+                    <input type="hidden" name="action" value="update_redevance">
+                    <input type="hidden" name="id" id="edit_id">
+                    <input type="hidden" name="id_aep" value="<?php echo $aepId; ?>">
+
+                    <div class="row g-3">
+                        <!-- Libellé - Pleine largeur -->
+                        <div class="col-12">
+                            <label for="edit_libele" class="form-label">Libellé <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="edit_libele" name="libele" required maxlength="64">
+                        </div>
+
+                        <!-- Base de calcul et Type de calcul - Côte à côte -->
+                        <div class="col-md-6">
+                            <label for="edit_base_calcul" class="form-label">Base de calcul <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_base_calcul" name="base_calcul" required>
+                                <option value="vente_eau">Vente d'eau consommée</option>
+                                <option value="branchements">Branchements</option>
+                            </select>
+                            <small class="form-text text-muted">Sur quoi se base le calcul</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="edit_type_calcul" class="form-label">Type de calcul <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_type_calcul" name="type_calcul" required>
+                                <option value="pourcentage">Pourcentage</option>
+                                <option value="montant_fixe">Montant fixe</option>
+                            </select>
+                            <small class="form-text text-muted">Comment calculer la redevance</small>
+                        </div>
+
+                        <!-- Pourcentage ou Montant fixe - Pleine largeur -->
+                        <div class="col-12" id="edit_div_pourcentage">
+                            <label for="edit_pourcentage" class="form-label">Pourcentage (%) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="edit_pourcentage" name="pourcentage" min="0" max="100" step="0.01" value="0">
+                            <small class="form-text text-muted">Pourcentage à appliquer sur la base de calcul</small>
+                        </div>
+
+                        <div class="col-12" id="edit_div_montant_fixe" style="display: none;">
+                            <label for="edit_montant_par_m3" class="form-label">Montant fixe (FCFA) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="edit_montant_par_m3" name="montant_par_m3" min="0" step="0.01" value="0">
+                            <small class="form-text text-muted" id="edit_montant_help">Montant fixe par m³ consommé</small>
+                        </div>
+
+                        <!-- Mois de début et Description - Côte à côte -->
+                        <div class="col-md-6">
+                            <label for="edit_mois_debut" class="form-label">Mois de début <span class="text-danger">*</span></label>
+                            <input type="month" class="form-control" id="edit_mois_debut" name="mois_debut" required>
+                            <small class="form-text text-muted">Mois d'application</small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="edit_description" class="form-label">Description</label>
+                            <textarea class="form-control" id="edit_description" name="description" rows="3" style="resize: none;"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle"></i> <strong>Note :</strong> Toutes les redevances sont des sorties. Le calcul sera estimatif pour connaître le maximum à verser.
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" form="editRedevanceForm" class="btn btn-primary">Modifier</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation de suppression -->
+<div class="modal fade" id="deleteRedevanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Confirmation de suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cette redevance ?</p>
+                <p class="text-muted"><strong>Attention :</strong> Cette action est irréversible. Tous les versements associés à cette redevance seront également supprimés.</p>
+                <form id="deleteRedevanceForm" method="post" action="traitement/redevance_t.php">
+                    <input type="hidden" name="action" value="delete_redevance">
+                    <input type="hidden" name="id" id="delete_id">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" form="deleteRedevanceForm" class="btn btn-danger">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Gérer l'affichage conditionnel des champs selon le type de calcul
+    document.getElementById('type_calcul').addEventListener('change', function() {
+        const typeCalcul = this.value;
+        const divPourcentage = document.getElementById('div_pourcentage');
+        const divMontantFixe = document.getElementById('div_montant_fixe');
+        const pourcentageInput = document.getElementById('pourcentage');
+        const montantInput = document.getElementById('montant_par_m3');
+        const baseCalcul = document.getElementById('base_calcul').value;
+        const montantHelp = document.getElementById('montant_help');
+
+        if (typeCalcul === 'pourcentage') {
+            divPourcentage.style.display = 'block';
+            divMontantFixe.style.display = 'none';
+            pourcentageInput.required = true;
+            montantInput.required = false;
+            montantInput.value = '';
+        } else {
+            divPourcentage.style.display = 'none';
+            divMontantFixe.style.display = 'block';
+            pourcentageInput.required = false;
+            pourcentageInput.value = '0';
+            montantInput.required = true;
+            
+            // Mettre à jour le texte d'aide selon la base de calcul
+            if (baseCalcul === 'vente_eau') {
+                montantHelp.textContent = 'Montant fixe par m³ consommé';
+            } else {
+                montantHelp.textContent = 'Montant fixe par branchement';
+            }
+        }
+    });
+
+    // Mettre à jour le texte d'aide du montant fixe selon la base de calcul
+    document.getElementById('base_calcul').addEventListener('change', function() {
+        const baseCalcul = this.value;
+        const typeCalcul = document.getElementById('type_calcul').value;
+        const montantHelp = document.getElementById('montant_help');
+        
+        if (typeCalcul === 'montant_fixe') {
+            if (baseCalcul === 'vente_eau') {
+                montantHelp.textContent = 'Montant fixe par m³ consommé';
+            } else {
+                montantHelp.textContent = 'Montant fixe par branchement';
+            }
+        }
+    });
+
+    // Données des redevances pour l'édition
+    const redevancesData = <?php echo json_encode($redevances, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
     function editRedevance(id) {
-        // Implémenter l'édition des redevances
-        alert('Fonctionnalité d\'édition à implémenter');
+        // Trouver la redevance à modifier
+        const redevance = redevancesData.find(r => parseInt(r.id) === parseInt(id));
+        if (!redevance) {
+            alert('Redevance introuvable');
+            return;
+        }
+
+        // Remplir le formulaire d'édition
+        document.getElementById('edit_id').value = redevance.id;
+        document.getElementById('edit_libele').value = redevance.libele || '';
+        document.getElementById('edit_base_calcul').value = redevance.base_calcul || 'vente_eau';
+        document.getElementById('edit_type_calcul').value = redevance.type_calcul || 'pourcentage';
+        document.getElementById('edit_pourcentage').value = redevance.pourcentage || 0;
+        document.getElementById('edit_montant_par_m3').value = redevance.montant_par_m3 || '';
+        document.getElementById('edit_mois_debut').value = redevance.mois_debut || '';
+        document.getElementById('edit_description').value = redevance.description || '';
+
+        // Gérer l'affichage conditionnel des champs
+        updateEditFieldsVisibility();
+
+        // Ouvrir le modal
+        const modal = new bootstrap.Modal(document.getElementById('editRedevanceModal'));
+        modal.show();
     }
 
     function deleteRedevance(id) {
-        if (confirm('Êtes-vous sûr de vouloir supprimer cette redevance ?')) {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = 'traitement/redevance_t.php';
+        // Remplir le formulaire de suppression
+        document.getElementById('delete_id').value = id;
 
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'delete_redevance';
+        // Ouvrir le modal de confirmation
+        const modal = new bootstrap.Modal(document.getElementById('deleteRedevanceModal'));
+        modal.show();
+    }
 
-            const idInput = document.createElement('input');
-            idInput.type = 'hidden';
-            idInput.name = 'id';
-            idInput.value = id;
+    // Fonction pour mettre à jour la visibilité des champs dans le modal d'édition
+    function updateEditFieldsVisibility() {
+        const typeCalcul = document.getElementById('edit_type_calcul').value;
+        const divPourcentage = document.getElementById('edit_div_pourcentage');
+        const divMontantFixe = document.getElementById('edit_div_montant_fixe');
+        const pourcentageInput = document.getElementById('edit_pourcentage');
+        const montantInput = document.getElementById('edit_montant_par_m3');
+        const baseCalcul = document.getElementById('edit_base_calcul').value;
+        const montantHelp = document.getElementById('edit_montant_help');
 
-            form.appendChild(actionInput);
-            form.appendChild(idInput);
-            document.body.appendChild(form);
-            form.submit();
+        if (typeCalcul === 'pourcentage') {
+            divPourcentage.style.display = 'block';
+            divMontantFixe.style.display = 'none';
+            pourcentageInput.required = true;
+            montantInput.required = false;
+        } else {
+            divPourcentage.style.display = 'none';
+            divMontantFixe.style.display = 'block';
+            pourcentageInput.required = false;
+            montantInput.required = true;
+            
+            // Mettre à jour le texte d'aide selon la base de calcul
+            if (baseCalcul === 'vente_eau') {
+                montantHelp.textContent = 'Montant fixe par m³ consommé';
+            } else {
+                montantHelp.textContent = 'Montant fixe par branchement';
+            }
         }
     }
+
+    // Gérer l'affichage conditionnel des champs dans le modal d'édition
+    document.getElementById('edit_type_calcul').addEventListener('change', function() {
+        updateEditFieldsVisibility();
+    });
+
+    document.getElementById('edit_base_calcul').addEventListener('change', function() {
+        const baseCalcul = this.value;
+        const typeCalcul = document.getElementById('edit_type_calcul').value;
+        const montantHelp = document.getElementById('edit_montant_help');
+        
+        if (typeCalcul === 'montant_fixe') {
+            if (baseCalcul === 'vente_eau') {
+                montantHelp.textContent = 'Montant fixe par m³ consommé';
+            } else {
+                montantHelp.textContent = 'Montant fixe par branchement';
+            }
+        }
+    });
 </script>

@@ -25,6 +25,7 @@ if (!$aepId) {
                 cr.prix_entretient_compteur,
                 cr.prix_tva,
                 mf.id as id_mois,
+                COALESCE(mf.est_mois_base, 0) as est_mois_base,
                 (SELECT COUNT(DISTINCT vaf.id_abone) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as nb_abones,
                 (SELECT SUM(vaf.montant_total) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as montant_total_facture,
                 (SELECT SUM(vaf.montant_verse) FROM vue_abones_facturation vaf WHERE vaf.id_mois = mf.id) as montant_total_verse,
@@ -87,10 +88,10 @@ if (isset($_GET['success'])) {
     <div class="card">
         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
             <h4 class="mb-0"><i class="bi bi-calendar-check"></i> Mois de Recouvrement</h4>
-<!--            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addMoisModal"-->
-<!--                --><?php //echo $aepId ? '' : 'disabled'; ?><!-- -->
-<!--                <i class="bi bi-plus-circle"></i> Nouveau Mois-->
-<!--            </button>-->
+            <button type="button" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addMoisModal"
+                <?php echo $aepId ? '' : 'disabled'; ?>>
+                <i class="bi bi-plus-circle"></i> Nouveau Mois
+            </button>
         </div>
         <div class="card-body">
             <?php if (count($moisRecouvrement) > 0): ?>
@@ -108,6 +109,7 @@ if (isset($_GET['success'])) {
                                 <th>Reste à Payer</th>
                                 <th>Abonnés Impayés</th>
                                 <th>Statut</th>
+                                <th>Mois de base</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -164,6 +166,15 @@ if (isset($_GET['success'])) {
                                         <?php endif; ?>
                                     </td>
                                     <td>
+                                        <?php if (isset($mois['est_mois_base']) && $mois['est_mois_base']): ?>
+                                            <span class="badge bg-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Ce mois est le mois de base et n'apparaîtra pas dans les graphiques">
+                                                <i class="bi bi-star-fill"></i> Mois de base
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge bg-light text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-sm btn-outline-info" 
                                                     onclick="voirDetailsMois(<?php echo $mois['id']; ?>)">
@@ -210,97 +221,111 @@ if (isset($_GET['success'])) {
 </div>
 
 <!-- Modal pour ajouter un nouveau mois-->
-<!--<div class="modal fade" id="addMoisModal" tabindex="-1">-->
-<!--    <div class="modal-dialog modal-lg">-->
-<!--        <div class="modal-content">-->
-<!--            <div class="modal-header">-->
-<!--                <h5 class="modal-title">Nouveau Mois de Facturation</h5>-->
-<!--                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>-->
-<!--            </div>-->
-<!--            <div class="modal-body">-->
-<!--                <form id="addMoisForm" method="post" action="traitement/recouvrement_t.php">-->
-<!--                    <input type="hidden" name="action" value="add_mois">-->
-<!--                    <input type="hidden" name="id_aep" value="--><?php //echo $aepId; ?><!--">-->
-<!--                    -->
-<!--                    <div class="row">-->
-<!--                        <div class="col-md-6">-->
-<!--                            <div class="mb-3">-->
-<!--                                <label for="mois" class="form-label">Mois (YYYY-MM)</label>-->
-<!--                                <input type="month" class="form-control" id="mois" name="mois" -->
-<!--                                       value="--><?php //echo date('Y-m'); ?><!--" required>-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                        <div class="col-md-6">-->
-<!--                            <div class="mb-3">-->
-<!--                                <label for="date_facturation" class="form-label">Date de facturation</label>-->
-<!--                                <input type="date" class="form-control" id="date_facturation" name="date_facturation" -->
-<!--                                       value="--><?php //echo date('Y-m-d'); ?><!--" required>-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div class="row">-->
-<!--                        <div class="col-md-6">-->
-<!--                            <div class="mb-3">-->
-<!--                                <label for="date_depot" class="form-label">Date de dépôt</label>-->
-<!--                                <input type="date" class="form-control" id="date_depot" name="date_depot" -->
-<!--                                       value="--><?php //echo date('Y-m-d'); ?><!--" required>-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                        <div class="col-md-6">-->
-<!--                            <div class="mb-3">-->
-<!--                                <label for="id_constante" class="form-label">Tarif à utiliser</label>-->
-<!--                                <select class="form-control" id="id_constante" name="id_constante" required>-->
-<!--                                    <option value="">Sélectionner un tarif...</option>-->
-<!--                                    --><?php
-//                                    if ($aepId) {
-//                                        $tarifs = Manager::prepare_query(
-//                                            "SELECT * FROM constante_reseau WHERE id_aep = ? ORDER BY date_creation DESC",
-//                                            array($aepId)
-//                                        )->fetchAll();
-//
-//                                        foreach ($tarifs as $tarif) {
-//                                            $selected = $tarif['est_actif'] ? 'selected' : '';
-//                                            echo '<option value="' . $tarif['id'] . '" ' . $selected . '>';
-//                                            echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' ') . ' FCFA/m³';
-//                                            echo ' + ' . number_format($tarif['prix_entretient_compteur'], 0, ',', ' ') . ' FCFA entretien';
-//                                            echo ' + ' . number_format($tarif['prix_tva'], 2, ',', ' ') . '% TVA';
-//                                            echo '</option>';
-//                                        }
-//                                    }
-//                                    ?>
-<!--                                </select>-->
-<!--                            </div>-->
-<!--                        </div>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div class="mb-3">-->
-<!--                        <label for="description" class="form-label">Description</label>-->
-<!--                        <textarea class="form-control" id="description" name="description" rows="3" -->
-<!--                                  placeholder="Description du mois de facturation..."></textarea>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div class="form-check mb-3">-->
-<!--                        <input class="form-check-input" type="checkbox" id="est_actif" name="est_actif" checked>-->
-<!--                        <label class="form-check-label" for="est_actif">-->
-<!--                            Activer ce mois immédiatement (désactivera l'ancien)-->
-<!--                        </label>-->
-<!--                    </div>-->
-<!--                    -->
-<!--                    <div class="alert alert-warning" id="warningActivation" style="display: none;">-->
-<!--                        <i class="bi bi-exclamation-triangle"></i>-->
-<!--                        <strong>Attention :</strong> L'activation immédiate va désactiver le mois actuellement actif. -->
-<!--                        Assurez-vous que ce nouveau mois est correct avant de continuer.-->
-<!--                    </div>-->
-<!--                </form>-->
-<!--            </div>-->
-<!--            <div class="modal-footer">-->
-<!--                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>-->
-<!--                <button type="submit" form="addMoisForm" class="btn btn-primary">Créer le mois</button>-->
-<!--            </div>-->
-<!--        </div>-->
-<!--    </div>-->
-<!--</div>-->
+<div class="modal fade" id="addMoisModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Nouveau Mois de Facturation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addMoisForm" method="post" action="traitement/recouvrement_t.php">
+                    <input type="hidden" name="action" value="add_mois">
+                    <input type="hidden" name="id_aep" value="<?php echo $aepId; ?>">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="mois" class="form-label">Mois (YYYY-MM) <span class="text-danger">*</span></label>
+                                <input type="month" class="form-control" id="mois" name="mois" 
+                                       value="<?php echo date('Y-m'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date_facturation" class="form-label">Date de facturation <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="date_facturation" name="date_facturation" 
+                                       value="<?php echo date('Y-m-d'); ?>" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="date_depot" class="form-label">Date de dépôt <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" id="date_depot" name="date_depot" 
+                                       value="<?php echo date('Y-m-d'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="id_constante" class="form-label">Tarif à utiliser <span class="text-danger">*</span></label>
+                                <select class="form-select" id="id_constante" name="id_constante" required>
+                                    <option value="">Sélectionner un tarif...</option>
+                                    <?php
+                                    if ($aepId) {
+                                        $tarifs = Manager::prepare_query(
+                                            "SELECT * FROM constante_reseau WHERE id_aep = ? ORDER BY date_creation DESC",
+                                            array($aepId)
+                                        )->fetchAll();
+
+                                        foreach ($tarifs as $tarif) {
+                                            $selected = $tarif['est_actif'] ? 'selected' : '';
+                                            echo '<option value="' . $tarif['id'] . '" ' . $selected . '>';
+                                            echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' ') . ' FCFA/m³';
+                                            echo ' + ' . number_format($tarif['prix_entretient_compteur'], 0, ',', ' ') . ' FCFA entretien';
+                                            echo ' + ' . number_format($tarif['prix_tva'], 2, ',', ' ') . '% TVA';
+                                            echo '</option>';
+                                        }
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Description du mois de facturation..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="est_actif" name="est_actif">
+                            <label class="form-check-label" for="est_actif">
+                                Activer ce mois immédiatement (désactivera l'ancien)
+                            </label>
+                        </div>
+                        <div class="alert alert-warning mt-2" id="warningActivation" style="display: none;">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>Attention :</strong> L'activation immédiate va désactiver le mois actuellement actif. 
+                            Assurez-vous que ce nouveau mois est correct avant de continuer.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="est_mois_base" name="est_mois_base">
+                            <label class="form-check-label" for="est_mois_base">
+                                <i class="bi bi-star-fill text-warning"></i> Définir comme mois de base
+                            </label>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <i class="bi bi-info-circle"></i>
+                            <small><strong>Note :</strong> Le mois de base n'apparaîtra pas dans les graphiques du tableau de bord. Il ne peut y avoir qu'un seul mois de base par AEP. Si vous cochez cette case, les autres mois de base seront automatiquement désactivés.</small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" form="addMoisForm" class="btn btn-primary">Créer le mois</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Modal pour voir les détails d'un mois -->
 <div class="modal fade" id="detailsMoisModal" tabindex="-1">
@@ -396,6 +421,19 @@ if (isset($_GET['success'])) {
                         <div id="editWarningActivation" class="alert alert-warning mt-2" style="display: none;">
                             <i class="bi bi-exclamation-triangle"></i>
                             <strong>Attention :</strong> Activer ce mois désactivera automatiquement le mois actuellement actif.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_est_mois_base" name="est_mois_base">
+                            <label class="form-check-label" for="edit_est_mois_base">
+                                <i class="bi bi-star-fill text-warning"></i> Définir comme mois de base
+                            </label>
+                        </div>
+                        <div class="alert alert-info mt-2">
+                            <i class="bi bi-info-circle"></i>
+                            <small><strong>Note :</strong> Le mois de base n'apparaîtra pas dans les graphiques du tableau de bord. Il ne peut y avoir qu'un seul mois de base par AEP. Si vous cochez cette case, les autres mois de base seront automatiquement désactivés.</small>
                         </div>
                     </div>
                 </form>
@@ -589,6 +627,7 @@ if (isset($_GET['success'])) {
                     document.getElementById('edit_id_constante').value = data.mois.id_constante;
                     document.getElementById('edit_description').value = data.mois.description || '';
                     document.getElementById('edit_est_actif').checked = data.mois.est_actif == 1;
+                    document.getElementById('edit_est_mois_base').checked = data.mois.est_mois_base == 1;
                     document.getElementById('edit_mois_id').value = moisId;
                     
                     // Afficher/masquer l'avertissement d'activation

@@ -35,7 +35,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
                             <li><a class="dropdown-item" href="?page=reseaux">Réseaux</a></li>
-                            <li><a class="dropdown-item" href="?page=abonne">Abonnés</a></li>
+                            <li><a class="dropdown-item" href="?page=abonne">Abonnés (BP)</a></li>
+                            <li><a class="dropdown-item" href="?page=borne_fontaine"><i class="bi bi-droplet me-1"></i> Bornes Fontaines</a></li>
 <!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
                             <li><a class="dropdown-item" href="?page=aep">AEPs</a></li>
                             <!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->
@@ -61,6 +62,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFacturation">
                             <li><a class="dropdown-item" href="index.php?list=recouvrement">Recouvrement</a></li>
+                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i class="bi bi-star-fill text-warning me-1"></i> Recouvrement V2</a></li>
                             <!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
                             <li><a class="dropdown-item" href="index.php?page=releves">Relèves</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation">Mois Facturés</a></li>
@@ -80,6 +82,11 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFinances">
                             <li><a class="dropdown-item" href="?page=transaction">Entrée/Sortie</a></li>
+                            <li><a class="dropdown-item" href="?page=compte_rendu_financier">Compte Rendu Financier</a></li>
+                            <li><a class="dropdown-item" href="?page=compte_rendu_tableau">Compte d'Exploitation (Tableau)</a></li>
+                            <li><a class="dropdown-item" href="?page=analyse_financiere">Analyse Financière</a></li>
+                            <li><a class="dropdown-item" href="?page=config_compte_rendu">Config. Compte Rendu</a></li>
+                            <li><a class="dropdown-item" href="?page=categories_flux_manuel">Catégories Flux Manuels</a></li>
                             <!--                            <li><a class="dropdown-item" href="?list=transaction">Liste des dépenses</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Liste des entrées</a></li>-->
                             <li>

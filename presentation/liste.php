@@ -240,6 +240,12 @@ if (isset($_GET['list'])) {
         include_once("facture_component.php");
         display_tab_facture_by_month();
 
+    } else if ($_GET['list'] == 'recouvrement_v2') {
+        // var_dump("recouvrement_v2");
+        include_once("recouvrement_page_v2.php");
+        // var_dump("recouvrement_v2");
+        display_recouvrement_v2();
+
     } else if ($_GET['list'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
         Proprietaire_t::getAll('Liste Des Prooprietaires');
@@ -313,8 +319,10 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
         $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
+        $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : null;
+        $mois_fin = isset($_GET['mois_fin']) ? $_GET['mois_fin'] : null;
         ob_start();
-        $statistiqueReseau = afficherStatistiqueReseau($id_reseau);
+        $statistiqueReseau = afficherStatistiqueReseau($id_reseau, $mois_debut, $mois_fin);
         $code_html = ob_get_clean();
         afficherPageReseau($id_reseau, $statistiqueReseau, $code_html);
 
@@ -363,12 +371,22 @@ if (isset($_GET['list'])) {
         require_once 'presentation/redevance_deatails_page.php';
     } else if ($_GET['page'] == 'redevance') {
         require_once 'presentation/redevance_page.php';
+    } else if ($_GET['page'] == 'redevance_versements') {
+        require_once 'presentation/redevance_versements_page.php';
+    } else if ($_GET['page'] == 'redevance_versements_detail') {
+        require_once 'presentation/redevance_versements_detail_page.php';
     } else if ($_GET['page'] == 'tarif_aep') {
         require_once 'presentation/tarif_page.php';
+    } else if ($_GET['page'] == 'detail_tarif') {
+        require_once 'presentation/detail_tarif_page.php';
     } else if ($_GET['page'] == 'recouvrement') {
         require_once 'presentation/recouvrement_page.php';
     } else if ($_GET['page'] == 'abonne') {
         require_once 'presentation/abonne_page.php';
+    } else if ($_GET['page'] == 'borne_fontaine') {
+        require_once 'presentation/borne_fontaine_page.php';
+    } else if ($_GET['page'] == 'info_bf') {
+        require_once 'presentation/info_bf_page.php';
     } else if ($_GET['page'] == 'reseaux') {
 
         require_once 'presentation/reseaux_page.php';
@@ -384,6 +402,16 @@ if (isset($_GET['list'])) {
         require_once 'presentation/user_detail_component.php';
     } elseif ($_GET['page'] == 'transaction') {
         require_once "presentation/transactions_component.php";
+    } else if ($_GET['page'] == 'compte_rendu_financier') {
+        require_once 'presentation/compte_rendu_financier_page.php';
+    } else if ($_GET['page'] == 'compte_rendu_tableau') {
+        require_once 'presentation/compte_rendu_financier_tableau_page.php';
+    } else if ($_GET['page'] == 'analyse_financiere') {
+        require_once 'presentation/analyse_financiere_page.php';
+    } else if ($_GET['page'] == 'config_compte_rendu') {
+        require_once 'presentation/config_compte_rendu_page.php';
+    } else if ($_GET['page'] == 'categories_flux_manuel') {
+        require_once 'presentation/categories_flux_manuel_page.php';
     } else if ($_GET['page'] == 'branchements') {
         require_once 'presentation/branchements_page.php';
     } else if ($_GET['page'] == 'edit_aep') {

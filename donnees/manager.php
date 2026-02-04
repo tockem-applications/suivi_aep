@@ -422,7 +422,6 @@ abstract class Manager{
         $this->connecter();
         $nomTable =$this->getNomTable();
         $donnees =$this->getDonnee();
-        var_dump($donnees);
         $colones = "";
         $valeurs = "";
         $i = 0;
@@ -440,23 +439,14 @@ abstract class Manager{
             $i++;
         }
         try {
-            echo "insert into $nomTable ($colones) values ($valeurs);";
-            var_dump($data);
             $req = self::$bd->prepare("insert into $nomTable ($colones) values ($valeurs);");
-//            $this->ajouterXml();
-//            require ('fkgkfkgfk');
             $res = $req->execute($data);
-            $this->id = self::$bd->lastInsertId($nomTable);
-            $this->id = self::$bd->lastInsertId($nomTable);
-            echo 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
-            echo $res;
-            echo 'yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy';
+            $this->id = self::$bd->lastInsertId();
             return $res;
 
         }catch (Exception $e){
             echo "echec dajout du(de la) $nomTable <br>";
             throw $e;
-            echo $e;
             return false;
         }
     }

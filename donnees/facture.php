@@ -493,7 +493,15 @@ class Facture extends Manager
         if (!$estFacturable)
             return 1;
         //        $this-> = $this->indexes->id;
-        return $this->ajouter();
+        $res = $this->ajouter();
+        
+        // Après la création de la facture, calculer et stocker id_tarif_differencie
+        // pour figer le tarif utilisé au moment de la création
+        if ($res && $this->indexes->id && $this->id_abone) {
+            Indexes::mettreAJourIdTarifDifferencie($this->indexes->id, $this->id_abone);
+        }
+        
+        return $res;
     }
 
 

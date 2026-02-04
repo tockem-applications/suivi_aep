@@ -73,6 +73,7 @@ function ajouterMois()
         $idConstante = (int) (isset($_POST['id_constante']) ? $_POST['id_constante'] : 0);
         $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
         $estActif = isset($_POST['est_actif']);
+        $estMoisBase = isset($_POST['est_mois_base']);
 
         // Validation
         if (empty($mois) || !preg_match('/^\d{4}-\d{2}$/', $mois)) {
@@ -121,6 +122,17 @@ function ajouterMois()
             );
         }
 
+        // Si on veut définir comme mois de base, désactiver tous les autres mois de base
+        if ($estMoisBase) {
+            Manager::prepare_query(
+                'UPDATE mois_facturation mf 
+                 INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+                 SET mf.est_mois_base = 0 
+                 WHERE cr.id_aep = ?',
+                array($aepId)
+            );
+        }
+
         // Créer le nouveau mois
         $nouveauMois = new MoisFacturation(
             0, // ID sera généré automatiquement
@@ -131,6 +143,7 @@ function ajouterMois()
             $description,
             $estActif
         );
+        $nouveauMois->est_mois_base = $estMoisBase ? 1 : 0;
 
         $resultat = $nouveauMois->ajouter();
 
@@ -469,6 +482,7 @@ function modifierMois()
         $idConstante = (int) (isset($_POST['id_constante']) ? $_POST['id_constante'] : 0);
         $description = trim(isset($_POST['description']) ? $_POST['description'] : '');
         $estActif = isset($_POST['est_actif']);
+        $estMoisBase = isset($_POST['est_mois_base']);
 
         // Validation
         if ($moisId <= 0) {
@@ -520,6 +534,17 @@ function modifierMois()
             );
         }
 
+        // Si on veut définir comme mois de base, désactiver tous les autres mois de base
+        if ($estMoisBase) {
+            Manager::prepare_query(
+                'UPDATE mois_facturation mf 
+                 INNER JOIN constante_reseau cr ON mf.id_constante = cr.id 
+                 SET mf.est_mois_base = 0 
+                 WHERE cr.id_aep = ? AND mf.id != ?',
+                array($aepId, $moisId)
+            );
+        }
+
         // Mettre à jour le mois
         $resultat = Manager::prepare_query(
             'UPDATE mois_facturation SET 
@@ -528,9 +553,10 @@ function modifierMois()
                 date_depot = ?, 
                 id_constante = ?, 
                 description = ?, 
-                est_actif = ? 
+                est_actif = ?,
+                est_mois_base = ?
              WHERE id = ?',
-            array($mois, $dateFacturation, $dateDepot, $idConstante, $description, $estActif ? 1 : 0, $moisId)
+            array($mois, $dateFacturation, $dateDepot, $idConstante, $description, $estActif ? 1 : 0, $estMoisBase ? 1 : 0, $moisId)
         );
 
         if ($resultat) {

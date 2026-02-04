@@ -73,11 +73,14 @@ function genererGraphiques($dataArray)
     // Traiter le tableau d'entrée
     foreach ($reverse_data_array as $entry) {
         $mois[] = $entry['month'];
-        $consommation[] = array('label' => $entry['month'], "y" => $entry['data']['consommation']);
-        $nombreFactures[] = array('label' => $entry['month'], "y" => $entry['data']['nombre de factures']);
-        $montantFacture[] = array('label' => $entry['month'], "y" => $entry['data']['montant facturé']);
-        $montantRecouvert[] = array('label' => $entry['month'], "y" => $entry['data']['montant recouvert']);
-        $tauxRecouvrement[] = array('label' => $entry['month'], "y" => $entry['data']['Taux de recouvrement']);
+        // Les données sont déjà numériques (voir afficherStatistiqueReseau ligne 96)
+        $consommation[] = floatval($entry['data']['consommation']);
+        $nombreFactures[] = intval($entry['data']['nombre de factures']);
+        $montantFacture[] = floatval($entry['data']['montant facturé']);
+        $montantRecouvert[] = floatval($entry['data']['montant recouvert']);
+        // Pour le taux de recouvrement, gérer le cas "-" (pas de données)
+        $tauxRecouv = $entry['data']['Taux de recouvrement'];
+        $tauxRecouvrement[] = ($tauxRecouv === '-' || $tauxRecouv === null) ? 0 : floatval($tauxRecouv);
     }
 
     // Convertir les données en JSON pour les utiliser dans JavaScript
@@ -87,29 +90,217 @@ function genererGraphiques($dataArray)
     $montantFactureJSON = json_encode($montantFacture);
     $montantRecouvertJSON = json_encode($montantRecouvert);
     $tauxRecouvrementJSON = json_encode($tauxRecouvrement);
-    $type_chart = 'line';
-    //    var_dump($nombreFacturesJSON);
+    
     echo "
-        <div class='card ' >
-            <h2 class='h2 d-flex justify-content55.json-center'>Tableau de bord</h2>
+        <!-- Chart.js -->
+        <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>
+        
+        <div class='card'>
+            <h2 class='h2 d-flex justify-content-center mb-4'>Tableau de bord</h2>
             <div class='card-body row'>
-                <div id='reseau_chart1' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>
-                <div id='reseau_chart2' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>
-                <div id='reseau_chart3' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>
-                <div id='reseau_chart4' class=' mt-3 col-12 col-md-6' style='height: 250px'></div>
+                <div class='mt-3 col-12 col-md-6'>
+                    <canvas id='reseau_chart1' style='max-height: 300px;'></canvas>
+                </div>
+                <div class='mt-3 col-12 col-md-6'>
+                    <canvas id='reseau_chart2' style='max-height: 300px;'></canvas>
+                </div>
+                <div class='mt-3 col-12 col-md-6'>
+                    <canvas id='reseau_chart3' style='max-height: 300px;'></canvas>
+                </div>
+                <div class='mt-3 col-12 col-md-6'>
+                    <canvas id='reseau_chart4' style='max-height: 300px;'></canvas>
+                </div>
             </div>
         </div>
         <script type='text/javascript'>
-
-    
-        
-        displayDoubleLineChart('reseau_chart1', 'facturation / recouvrement', '$montantFactureJSON' , '$montantRecouvertJSON' , '$type_chart', '$type_chart', 'montant facturé', 'montant recouvert')
-        displayDoubleLineChart('reseau_chart2', 'Taux de reouvrement', '$tauxRecouvrementJSON' , '$tauxRecouvrementJSON' , '$type_chart', '$type_chart', 'montant facturé', 'montant recouvert')
-        displayDoubleLineChart('reseau_chart3', 'Nombre de factures', '$nombreFacturesJSON' , '$nombreFacturesJSON' , '$type_chart', '$type_chart', 'montant facturé', 'montant recouvert')
-        displayDoubleLineChart('reseau_chart4', 'Consommation', '$consommationJSON' , '$consommationJSON' , '$type_chart', '$type_chart', 'montant facturé', 'montant recouvert')
-        
-
-
+        (function() {
+            var labels = $moisJSON;
+            
+            // Graphique 1: Facturation / Recouvrement (DEUX courbes)
+            var ctx1 = document.getElementById('reseau_chart1');
+            if (ctx1) {
+                new Chart(ctx1.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Montant facturé',
+                                data: $montantFactureJSON,
+                                borderColor: 'rgba(54, 162, 235, 1)', // Bleu
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Montant recouvert',
+                                data: $montantRecouvertJSON,
+                                borderColor: 'rgba(255, 99, 132, 1)', // Rouge/Rose
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Facturation / Recouvrement'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Graphique 2: Taux de recouvrement (UNE courbe)
+            var ctx2 = document.getElementById('reseau_chart2');
+            if (ctx2) {
+                new Chart(ctx2.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Taux de recouvrement (%)',
+                                data: $tauxRecouvrementJSON,
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Taux de recouvrement'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Graphique 3: Nombre de factures (UNE courbe)
+            var ctx3 = document.getElementById('reseau_chart3');
+            if (ctx3) {
+                new Chart(ctx3.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Nombre de factures',
+                                data: $nombreFacturesJSON,
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                backgroundColor: 'rgba(153, 102, 255, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Nombre de factures'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Graphique 4: Consommation (UNE courbe)
+            var ctx4 = document.getElementById('reseau_chart4');
+            if (ctx4) {
+                new Chart(ctx4.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Consommation (m³)',
+                                data: $consommationJSON,
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                                tension: 0.4,
+                                borderWidth: 2,
+                                fill: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'Consommation'
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + ' m³';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        })();
         </script>";
 
 

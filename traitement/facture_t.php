@@ -1,15 +1,14 @@
 <?php
-@include("../donnees/facture.php");
-@include("donnees/impaye.php");
-@include("../donnees/impaye.php");
-@include("donnees/facture.php");
+@include_once("../donnees/facture.php");
+@include_once("donnees/impaye.php");
+@include_once("../donnees/impaye.php");
+@include_once("donnees/facture.php");
 @include_once("../donnees/mois_facturation.php");
 @include_once("donnees/mois_facturation.php");
 @include_once("../traitement/abone_t.php");
 @include_once("traitement/abone_t.php");
 @include_once("../traitement/aep_t.php.php");
 @include_once("traitement/aep_t.php.php");
-
 
 class Facture_t
 {
@@ -351,156 +350,246 @@ class Facture_t
         //        var_dump($bon_payeurs, $avanceur, $insolvable);
         ob_start();
         ?>
-        <div class="card">
+        <div class="card shadow-sm">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-people"></i> Recouvrent
-                    <span class="badge bg-secondary ms-2"><?php echo count($factures); ?></span>
+                    <span class="badge bg-light text-dark ms-2"><?php echo count($factures); ?></span>
                 </h4>
-
             </div>
-            <table class="table_searching table table-striped table-bordered table-hover ">
-                <thead class="table-dark">
-                    <!--                <a href="?list=recouvrement#abone_compteur_id_1263">bonjour les fous</a>-->
-                    <tr>
-                        <!--                    <th>Id</th>-->
-                        <th>Nom et Prénom</th>
-                        <th>Reseau</th>
-                        <th>Index</th>
-                        <th>Conso</th>
-                        <th>Pénalité</th>
-                        <th>Impayé</th>
-                        <th>Facture</th>
-                        <th>Total</th>
-                        <th>Versement</th>
-                        <th>Reste</th>
-                        <!--                    <th>Avance</th>-->
-                        <!--                    <th>Date</th>-->
-                        <!--                    <th>Action</th>-->
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($factures as $data) {
-                        $insolvable = $selected_option == 'insolvable';
-                        $partiel = $selected_option == 'paiement_partiel';
-                        $solvable = $selected_option == 'solvable';
-                        $anticipation = $selected_option == 'anticipation';
-                        $en_regle = $selected_option == 'en_regle';
-                        $pas_en_regle = $selected_option == 'pas_en_regle';
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table_searching table table-striped table-bordered table-hover table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-nowrap">Nom et Prénom</th>
+                                <th class="text-center text-nowrap">Réseau</th>
+                                <th class="text-center text-nowrap">Index</th>
+                                <th class="text-center text-nowrap">Conso<br><small class="text-muted">(m³)</small></th>
+                                <th class="text-center text-nowrap">Prix m³<br><small class="text-muted">(FCFA)</small></th>
+                                <th class="text-end text-nowrap">Pénalité</th>
+                                <th class="text-end text-nowrap">Impayé</th>
+                                <th class="text-end text-nowrap">Facture</th>
+                                <th class="text-end text-nowrap">Total</th>
+                                <th class="text-end text-nowrap">Versement</th>
+                                <th class="text-end text-nowrap">Reste</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($factures as $data) {
+                                $insolvable = $selected_option == 'insolvable';
+                                $partiel = $selected_option == 'paiement_partiel';
+                                $solvable = $selected_option == 'solvable';
+                                $anticipation = $selected_option == 'anticipation';
+                                $en_regle = $selected_option == 'en_regle';
+                                $pas_en_regle = $selected_option == 'pas_en_regle';
 
-                        //                            if ($idReseau !== 0 && $data['id_reseau'] !== $idReseau) {
+                                //                            if ($idReseau !== 0 && $data['id_reseau'] !== $idReseau) {
 ////                                var_dump("cherie");
 //                                continue;
 //                            }
-            
-                        $consoMois = Facture::calculeConso((float) $data['nouvel_index'], (float) $data['ancien_index']);
-                        $montantConso = $data['consommation'];
-                        $montantVerse = (int) ($data['montant_verse'] + 0.000000001);
-                        $avance = (int) ($data['impaye'] - 0.00001);
-                        $montantTotal = $data['total_cumule'];
-                        $montantTva = $data['montant_conso_tva'];
-                        $montantFacture = (int) ($montantTva + 0.000000001);
-                        $montantRestant = $data['restant_cumule'];
+                    
+                                $consoMois = Facture::calculeConso((float) $data['nouvel_index'], (float) $data['ancien_index']);
+                                $montantConso = $data['consommation'];
+                                $montantVerse = (int) ($data['montant_verse'] + 0.000000001);
+                                $avance = (int) ($data['impaye'] - 0.00001);
+                                $montantTotal = $data['total_cumule'];
+                                $montantTva = $data['montant_conso_tva'];
+                                $montantFacture = (int) ($montantTva + 0.000000001);
+                                $montantRestant = $data['restant_cumule'];
 
 
-                        $categorie_payeur = '';
-                        if ($montantRestant < 0)
-                            $categorie_payeur = 'anticipation';
-                        elseif ($montantRestant > 0 && $montantRestant < $montantTotal)
-                            $categorie_payeur = 'paiement-partiel';
-                        elseif ($montantRestant == $montantTotal && $montantRestant != 0)
-                            $categorie_payeur = 'insolvables';
-                        elseif ($montantRestant == 0)
-                            $categorie_payeur = 'solvables';
-                        //                    if($montantRestant == 0)
+                                $categorie_payeur = '';
+                                if ($montantRestant < 0)
+                                    $categorie_payeur = 'anticipation';
+                                elseif ($montantRestant > 0 && $montantRestant < $montantTotal)
+                                    $categorie_payeur = 'paiement-partiel';
+                                elseif ($montantRestant == $montantTotal && $montantRestant != 0)
+                                    $categorie_payeur = 'insolvables';
+                                elseif ($montantRestant == 0)
+                                    $categorie_payeur = 'solvables';
+                                //                    if($montantRestant == 0)
 //                        $categorie_payeur = '';
-            
+                    
 
-                        //                             var_dump(1);
+                                //                             var_dump(1);
 //                             echo "<tr> bobobo</tr>";
-                        if ($insolvable && $montantRestant != $montantTotal) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        if ($en_regle && $montantRestant > 0) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        if ($pas_en_regle && $montantRestant <= 0) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        if ($solvable && $montantRestant != 0) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        if ($anticipation && $montantRestant >= 0) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        if ($partiel && !($montantRestant > 0 && $montantRestant < $montantTotal)) {
-                            continue;
-                        }
-                        //                             var_dump(1);
-                        //                    $disabled = ($montantFacture === $montantVerse || (int)$data['impaye'] > 0) ? 'disabled' : '';
-                        $disabled = '';
-                        //                    $placeholder = (int)$data['impaye'] > 0 || false ? 'Veuillez verser les impayés' : '';
-                        $placeholder = '';
-                        ?>
-                        <tr id="abone_compteur_id_<?php echo $data['id_compteur'] ?>">
-                            <!--                        <td>--><?php //echo htmlspecialchars($data['id_compteur']); ?><!--</td>-->
-                            <td>
-                                <?php
-                                $modalId = 'recouvrement_Form_' . $data['id_compteur'];
-                                echo make_Modal(
-                                    $data['nom_abone'],
-                                    Abone_t::afficheInputRecouvrementAbone($data['id_compteur']),
-                                    -1,
-                                    $modalId,
-                                    ''
-                                );
+                                if ($insolvable && $montantRestant != $montantTotal) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                if ($en_regle && $montantRestant > 0) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                if ($pas_en_regle && $montantRestant <= 0) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                if ($solvable && $montantRestant != 0) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                if ($anticipation && $montantRestant >= 0) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                if ($partiel && !($montantRestant > 0 && $montantRestant < $montantTotal)) {
+                                    continue;
+                                }
+                                //                             var_dump(1);
+                                //                    $disabled = ($montantFacture === $montantVerse || (int)$data['impaye'] > 0) ? 'disabled' : '';
+                                $disabled = '';
+                                //                    $placeholder = (int)$data['impaye'] > 0 || false ? 'Veuillez verser les impayés' : '';
+                                $placeholder = '';
                                 ?>
-                                <a data-bs-toggle="modal" data-bs-target="#<?php echo $modalId; ?>">
-                                    <?php echo htmlspecialchars(strlen($data['nom_abone']) > 28 ? substr($data['nom_abone'], 0, 24) . '...' : $data['nom_abone']); ?>
-                                </a>
-                            </td>
-                            <td class="text-center"><?php echo htmlspecialchars($data['reseau']) ?></td>
-                            <td><?php echo htmlspecialchars($data['ancien_index'] . ' -> ' . $data['nouvel_index']); ?></td>
-                            <td class="text-center"><?php echo Facture::formatFinancier($consoMois) ?></td>
-                            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $data['penalite'])); ?>
-                            </td>
-                            <td class="text-end">
-                                <?php echo htmlspecialchars(Facture::formatFinancier((int) $data['impayer_cumule'])); ?>
-                            </td>
-                            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier($montantTva)); ?></td>
-                            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier($montantTotal)); ?></td>
+                                <tr id="abone_compteur_id_<?php echo $data['id_compteur'] ?>">
+                                    <!--                        <td>--><?php //echo htmlspecialchars($data['id_compteur']); ?><!--</td>-->
+                                    <td>
+                                        <?php
+                                        $modalId = 'recouvrement_Form_' . $data['id_compteur'];
+                                        echo make_Modal(
+                                            $data['nom_abone'],
+                                            Abone_t::afficheInputRecouvrementAbone($data['id_compteur']),
+                                            -1,
+                                            $modalId,
+                                            ''
+                                        );
+                                        ?>
+                                        <a data-bs-toggle="modal" data-bs-target="#<?php echo $modalId; ?>"
+                                            style="color: #212529; font-weight: 600;">
+                                            <?php echo htmlspecialchars(strlen($data['nom_abone']) > 28 ? substr($data['nom_abone'], 0, 24) . '...' : $data['nom_abone']); ?>
+                                        </a>
+                                    </td>
+                                    <td class="text-center">
+                                        <span
+                                            class="badge bg-secondary text-white"><?php echo htmlspecialchars($data['reseau']); ?></span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex flex-column align-items-center gap-1">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span
+                                                    class="badge bg-secondary text-white"><?php echo number_format((float) $data['ancien_index'], 2, ',', ' '); ?></span>
+                                                <span class="text-muted" style="color: #6c757d;">→</span>
+                                                <span
+                                                    class="badge bg-primary text-white"><?php echo number_format((float) $data['nouvel_index'], 2, ',', ' '); ?></span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong
+                                            style="color: #212529;"><?php echo number_format($consoMois, 2, ',', ' '); ?></strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <strong
+                                            style="color: #212529;"><?php echo number_format(isset($data['prix_metre_cube_eau']) ? $data['prix_metre_cube_eau'] : 0, 0, ',', ' '); ?></strong>
+                                    </td>
+                                    <td class="text-end" style="color: #212529;">
+                                        <?php echo htmlspecialchars(Facture::formatFinancier((int) $data['penalite'])); ?>
+                                    </td>
+                                    <td class="text-end" style="color: #212529;">
+                                        <?php echo htmlspecialchars(Facture::formatFinancier((int) $data['impayer_cumule'])); ?>
+                                    </td>
+                                    <td class="text-end" style="color: #212529;">
+                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTva)); ?></td>
+                                    <td class="text-end" style="color: #212529;">
+                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTotal)); ?></td>
 
-                            <td class="pt-0 pb-0 text-end">
-                                <?php if ($editable): ?>
-                                    <input type="text" class="form-control p-1 <?php echo $disabled; ?> feedback-validation" <?php echo $disabled; ?>
-                                        onchange="handleRecouvrement(this.value, <?php echo $placeholder === '' ? $data['id'] : 0; ?>, this.id)"
-                                        value="<?php echo $placeholder === '' ? ($montantVerse === 0 ? '' : $montantVerse) : $placeholder; ?>"
-                                        id="montant_verse<?php echo $data['id']; ?>">
-                                <?php else: ?>
-                                    <?php echo htmlspecialchars(Facture::formatFinancier($montantVerse)); ?>
-                                    <!-- Code à exécuter si toutes les conditions précédentes sont fausses -->
-                                <?php endif; ?>
-                                <!--                            <div class="circle bg-danger "></div>-->
-                            </td>
-                            <td class=" text-end <?php echo $categorie_payeur; ?> ">
-                                <?php echo htmlspecialchars(Facture::formatFinancier($montantRestant)); ?>
-                            </td>
-                            <!--                        <td>--><?php //echo htmlspecialchars(min($avance, 0)); ?><!--</td>-->
-                            <!--                        <td>--><?php //echo  ?><!--</td>-->
-                            <td class="d-none">
-                                <input type="text" class="form-control " id="date_releve_facture_<?php echo $data['id']; ?>"
-                                    value="<?php echo date('d/m/Y'); ?>">
-                            </td>
-                            <!--                        <td><a href="#" class="btn btn-info mb-0">Valider</a></td>-->
-                        </tr>
-                    <?php } ?>
-                </tbody>
-            </table>
+                                    <td class="pt-0 pb-0 text-end">
+                                        <?php if ($editable): ?>
+                                            <input type="text" class="form-control p-1 <?php echo $disabled; ?> feedback-validation"
+                                                <?php echo $disabled; ?>
+                                                onchange="handleRecouvrement(this.value, <?php echo $placeholder === '' ? $data['id'] : 0; ?>, this.id)"
+                                                value="<?php echo $placeholder === '' ? ($montantVerse === 0 ? '' : $montantVerse) : $placeholder; ?>"
+                                                id="montant_verse<?php echo $data['id']; ?>">
+                                        <?php else: ?>
+                                            <span
+                                                style="color: #212529;"><?php echo htmlspecialchars(Facture::formatFinancier($montantVerse)); ?></span>
+                                            <!-- Code à exécuter si toutes les conditions précédentes sont fausses -->
+                                        <?php endif; ?>
+                                        <!--                            <div class="circle bg-danger "></div>-->
+                                    </td>
+                                    <td class=" text-end <?php echo $categorie_payeur; ?> ">
+                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantRestant)); ?>
+                                    </td>
+                                    <!--                        <td>--><?php //echo htmlspecialchars(min($avance, 0)); ?><!--</td>-->
+                                    <!--                        <td>--><?php //echo  ?><!--</td>-->
+                                    <td class="d-none">
+                                        <input type="text" class="form-control " id="date_releve_facture_<?php echo $data['id']; ?>"
+                                            value="<?php echo date('d/m/Y'); ?>">
+                                    </td>
+                                    <!--                        <td><a href="#" class="btn btn-info mb-0">Valider</a></td>-->
+                                </tr>
+                            <?php } ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
+
+        <style>
+            .table_searching {
+                font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            }
+
+            .table_searching thead th {
+                font-size: 0.875rem;
+                font-weight: 600;
+                white-space: nowrap;
+                vertical-align: middle;
+                padding: 0.75rem;
+                color: #ffffff !important;
+                background-color: #212529;
+                border-color: #32383e;
+            }
+
+            .table_searching tbody td {
+                font-size: 0.9rem;
+                padding: 0.75rem;
+                vertical-align: middle;
+                color: #212529;
+                border-color: #dee2e6;
+                font-weight: 500;
+            }
+
+            .table_searching tbody td strong {
+                font-weight: 700;
+                color: #212529;
+            }
+
+            .table_searching tbody tr:hover {
+                background-color: #f8f9fa;
+            }
+
+            .table_searching tbody tr:hover td {
+                color: #212529;
+            }
+
+            .table_searching .text-end {
+                font-family: 'Inter', 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+                font-weight: 600;
+                color: #212529;
+            }
+
+            .table_searching tbody td a {
+                color: #212529;
+                text-decoration: none;
+                font-weight: 600;
+            }
+
+            .table_searching tbody td a:hover {
+                color: #0d6efd;
+                text-decoration: underline;
+            }
+
+            .table_searching .badge {
+                font-weight: 600;
+                font-size: 0.8rem;
+            }
+
+            .table_searching .text-muted {
+                color: #6c757d !important;
+            }
+        </style>
 
         <?php
         return ob_get_clean();
@@ -825,132 +914,132 @@ class Facture_t
             </div>
 
             <script>
-                            const disabledNames = []                       ;
-                
-                            function toggleAbone(aboneId) {
-                                const checkbox = document.getElementById('checkbox-' + aboneId);
-                                const aboneItem = document.getElementById('abone-' + aboneId);
-                                const factureItems = document.querySelectorAll('.facture-item[data-abone-id="' + aboneId + '"]');
-                    
-                                if (checkbox.checked) {
-                                    aboneItem.classList.add('checked');
-                                    aboneItem.classList.remove('unchecked');
-                        
-                                    // Retirer de la liste des désactivés
-                                    const index = disabledNames.indexOf(aboneId);
-                                    if (index > -1) {
-                                        disabledNames.splice(index, 1);
-                                    }
-                        
-                                    factureItems.forEach(item => {
-                                        item.style.display = 'block';
-                                    });
-                                } else {
-                                    aboneItem.classList.remove('checked');
-                                    aboneItem.classList.add('unchecked');
-                        
-                                    // Ajouter à la liste des désactivés
-                                    if (disabledNames.indexOf(aboneId) === -1) {
-                                        disabledNames.push(aboneId);
-                                    }
-                        
-                                    factureItems.forEach(item => {
-                                        item.style.display = 'none';
-                                    });
-                                }
-                    
-                                updateDisabledList();
-                            }
-                
-                            function scrollToAbone(aboneId) {
-                                const factureItems = document.querySelectorAll('.facture-item[data-abone-id="' + aboneId + '"]');
-                                if (factureItems.length > 0) {
-                                    // Scroll uniquement dans le conteneur des factures
-                                    const facturesContent = document.querySelector('.factures-content');
-                                    const targetPosition = factureItems[0].offsetTop - 20;
-                        
-                                    facturesContent.scrollTo({
-                                        top: targetPosition,
-                                        behavior: 'smooth'
-                                    });
-                        
-                                    // Highlight temporairement
-                                    factureItems.forEach(item => {
-                                        item.style.transition = 'box-shadow 0.3s';
-                                        item.style.boxShadow = '0 0 20px rgba(0,123,255,0.5)';
-                                        setTimeout(() => {
-                                            item.style.boxShadow = '';
-                                        }, 2000);
-                                    });
-                                }
-                            }
-                
-                            function updateDisabledList() {
-                                const disabledListDiv = document.getElementById('disabled-list');
-                                const disabledNamesDiv = document.getElementById('disabled-names');
-                    
-                                if (disabledNames.length === 0) {
-                                    disabledListDiv.style.display = 'none';
-                                    disabledNamesDiv.innerHTML = '';
-                                    return;
-                                }
-                    
-                                disabledListDiv.style.display = 'block';
-                    
-                                let html = '';
-                                disabledNames.forEach(aboneId => {
-                                    const aboneItem = document.getElementById('abone-' + aboneId);
-                                    if (aboneItem) {
-                                        const name = aboneItem.querySelector('.abone-name').textContent.trim();
-                                        html += '<div class="name-item">• ' + name + '</div>';
-                                    }
-                                });
-                    
-                                disabledNamesDiv.innerHTML = html;
-                            }
-                
-                            function checkAll(byReseau) {
-                                const checkboxes = document.querySelectorAll('#active-abones .abone-item input[type="checkbox"]');
-                                checkboxes.forEach(checkbox => {
-                                    if (!checkbox.checked) {
-                                        checkbox.click();
-                                    }
-                                });
-                            }
-                
-                            function uncheckAll(byReseau) {
-                                const checkboxes = document.querySelectorAll('#active-abones .abone-item input[type="checkbox"]');
-                                checkboxes.forEach(checkbox => {
-                                    if (checkbox.checked) {
-                                        checkbox.click();
-                                    }
-                                });
-                            }
-                
-                            function filterAbones(searchTerm) {
-                                const aboneItems = document.querySelectorAll('#active-abones .abone-item');
-                                const searchLower = searchTerm.toLowerCase().trim();
-                    
-                                aboneItems.forEach(item => {
-                                    const aboneName = item.querySelector('.abone-name').textContent.toLowerCase();
-                                    if (searchLower === '' || aboneName.includes(searchLower)) {
-                                        item.style.display = '';
-                                    } else {
-                                        item.style.display = 'none';
-                                    }
-                                });
-                            }
-                
-                            // Initialiser tous les éléments comme activés
-                            document.addEventListener('DOMContentLoaded', function () {
-                                const checkboxes = document.querySelectorAll('.abone-item input[type="checkbox"]');
-                                checkboxes.forEach(checkbox => {
-                                    const aboneId = checkbox.id.replace('checkbox-', '');
-                                    toggleAbone(parseInt(aboneId));
-                                });
-                            });
-                        </script>
-                        <?php
+                const disabledNames = [];
+
+                function toggleAbone(aboneId) {
+                    const checkbox = document.getElementById('checkbox-' + aboneId);
+                    const aboneItem = document.getElementById('abone-' + aboneId);
+                    const factureItems = document.querySelectorAll('.facture-item[data-abone-id="' + aboneId + '"]');
+
+                    if (checkbox.checked) {
+                        aboneItem.classList.add('checked');
+                        aboneItem.classList.remove('unchecked');
+
+                        // Retirer de la liste des désactivés
+                        const index = disabledNames.indexOf(aboneId);
+                        if (index > -1) {
+                            disabledNames.splice(index, 1);
+                        }
+
+                        factureItems.forEach(item => {
+                            item.style.display = 'block';
+                        });
+                    } else {
+                        aboneItem.classList.remove('checked');
+                        aboneItem.classList.add('unchecked');
+
+                        // Ajouter à la liste des désactivés
+                        if (disabledNames.indexOf(aboneId) === -1) {
+                            disabledNames.push(aboneId);
+                        }
+
+                        factureItems.forEach(item => {
+                            item.style.display = 'none';
+                        });
+                    }
+
+                    updateDisabledList();
+                }
+
+                function scrollToAbone(aboneId) {
+                    const factureItems = document.querySelectorAll('.facture-item[data-abone-id="' + aboneId + '"]');
+                    if (factureItems.length > 0) {
+                        // Scroll uniquement dans le conteneur des factures
+                        const facturesContent = document.querySelector('.factures-content');
+                        const targetPosition = factureItems[0].offsetTop - 20;
+
+                        facturesContent.scrollTo({
+                            top: targetPosition,
+                            behavior: 'smooth'
+                        });
+
+                        // Highlight temporairement
+                        factureItems.forEach(item => {
+                            item.style.transition = 'box-shadow 0.3s';
+                            item.style.boxShadow = '0 0 20px rgba(0,123,255,0.5)';
+                            setTimeout(() => {
+                                item.style.boxShadow = '';
+                            }, 2000);
+                        });
+                    }
+                }
+
+                function updateDisabledList() {
+                    const disabledListDiv = document.getElementById('disabled-list');
+                    const disabledNamesDiv = document.getElementById('disabled-names');
+
+                    if (disabledNames.length === 0) {
+                        disabledListDiv.style.display = 'none';
+                        disabledNamesDiv.innerHTML = '';
+                        return;
+                    }
+
+                    disabledListDiv.style.display = 'block';
+
+                    let html = '';
+                    disabledNames.forEach(aboneId => {
+                        const aboneItem = document.getElementById('abone-' + aboneId);
+                        if (aboneItem) {
+                            const name = aboneItem.querySelector('.abone-name').textContent.trim();
+                            html += '<div class="name-item">• ' + name + '</div>';
+                        }
+                    });
+
+                    disabledNamesDiv.innerHTML = html;
+                }
+
+                function checkAll(byReseau) {
+                    const checkboxes = document.querySelectorAll('#active-abones .abone-item input[type="checkbox"]');
+                    checkboxes.forEach(checkbox => {
+                        if (!checkbox.checked) {
+                            checkbox.click();
+                        }
+                    });
+                }
+
+                function uncheckAll(byReseau) {
+                    const checkboxes = document.querySelectorAll('#active-abones .abone-item input[type="checkbox"]');
+                    checkboxes.forEach(checkbox => {
+                        if (checkbox.checked) {
+                            checkbox.click();
+                        }
+                    });
+                }
+
+                function filterAbones(searchTerm) {
+                    const aboneItems = document.querySelectorAll('#active-abones .abone-item');
+                    const searchLower = searchTerm.toLowerCase().trim();
+
+                    aboneItems.forEach(item => {
+                        const aboneName = item.querySelector('.abone-name').textContent.toLowerCase();
+                        if (searchLower === '' || aboneName.includes(searchLower)) {
+                            item.style.display = '';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                }
+
+                // Initialiser tous les éléments comme activés
+                document.addEventListener('DOMContentLoaded', function () {
+                    const checkboxes = document.querySelectorAll('.abone-item input[type="checkbox"]');
+                    checkboxes.forEach(checkbox => {
+                        const aboneId = checkbox.id.replace('checkbox-', '');
+                        toggleAbone(parseInt(aboneId));
+                    });
+                });
+            </script>
+            <?php
         }
 
     }
@@ -1003,38 +1092,38 @@ class Facture_t
         }
         //        var_dump($tab);
         ?>
-                <script>
-                    // Exemple de tableau JavaScript
-                    const exporting_data = <?php echo json_encode($tab) ?>;
+        <script>
+            // Exemple de tableau JavaScript
+            const exporting_data = <?php echo json_encode($tab) ?>;
 
-                    // Fonction pour convertir le tableau en CSV
-                    function convertToCSV(array) {
-                        return array.map(row => {
-                            return row.join(';');
-                        }).join('\n');
-                    }
+            // Fonction pour convertir le tableau en CSV
+            function convertToCSV(array) {
+                return array.map(row => {
+                    return row.join(';');
+                }).join('\n');
+            }
 
-                    // Fonction pour télécharger le CSV
-                    function downloadCSV() {
-                        const csvContent = convertToCSV(exporting_data);
-                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                        const url = URL.createObjectURL(blob);
+            // Fonction pour télécharger le CSV
+            function downloadCSV() {
+                const csvContent = convertToCSV(exporting_data);
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
 
-                        const link = document.createElement('a');
-                        link.setAttribute('href', url);
-                        link.setAttribute('download', 'data.csv'); // Nom du fichier
-                        document.body.appendChild(link); // Nécessaire pour Firefox
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'data.csv'); // Nom du fichier
+                document.body.appendChild(link); // Nécessaire pour Firefox
 
-                        link.click(); // Simule un clic pour télécharger le fichier
-                        document.body.removeChild(link); // Supprime le lien après le téléchargement
-                    }
-                    // alert('erick');
-                    downloadCSV();
-                    window.close();
-                    // Événement de clic sur le bouton
+                link.click(); // Simule un clic pour télécharger le fichier
+                document.body.removeChild(link); // Supprime le lien après le téléchargement
+            }
+            // alert('erick');
+            downloadCSV();
+            window.close();
+            // Événement de clic sur le bouton
 
-                </script>
-                <?php
+        </script>
+        <?php
         //        header("location: ../presentation/index.php");
 //        if (!$res)
 //            header("location: ../presentation/index.php?list=tarif&operation=error");
@@ -1184,128 +1273,128 @@ class Facture_t
     ) {
         ob_start();
         ?>
-                <div class="facture_abone m-2">
-                    <div class="row ">
-                        <div class="logo_commune col">
-                            <img src="presentation/assets/images/logo_commune_fokoue.png" class="col-12"
-                                alt="IMAGE DU LOGO DE LA COMMUNE DE FOKOUE">
-                        </div>
-                        <div class="logo_commune text-center align-self-center col-9 ">
-                            <span class="h4">Agence Municipale de la Gestion de l'Energie,<br> de l'Eau et de l'Assainissement de la
-                                <br>commune de Fokoué (AMGEEA)</span>
-                        </div>
-                        <div class="logo_amgeea col">
-                            <img src="presentation/assets/images/logo_amgeea.png" class="col-12" alt="IMAGE DU LOGO DE L'AMGEEA">
-                        </div>
-                    </div>
+        <div class="facture_abone m-2">
+            <div class="row ">
+                <div class="logo_commune col">
+                    <img src="presentation/assets/images/logo_commune_fokoue.png" class="col-12"
+                        alt="IMAGE DU LOGO DE LA COMMUNE DE FOKOUE">
+                </div>
+                <div class="logo_commune text-center align-self-center col-9 ">
+                    <span class="h4">Agence Municipale de la Gestion de l'Energie,<br> de l'Eau et de l'Assainissement de la
+                        <br>commune de Fokoué (AMGEEA)</span>
+                </div>
+                <div class="logo_amgeea col">
+                    <img src="presentation/assets/images/logo_amgeea.png" class="col-12" alt="IMAGE DU LOGO DE L'AMGEEA">
+                </div>
+            </div>
 
-                    <div class=" d-flex justify-content-center fs-5">
-                        <div class="email">Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></div>
-                        <div class="col-2"> </div>
-                        <div class="code_postal">B.P 02 Fokoue</div>
-                    </div>
+            <div class=" d-flex justify-content-center fs-5">
+                <div class="email">Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></div>
+                <div class="col-2"> </div>
+                <div class="code_postal">B.P 02 Fokoue</div>
+            </div>
 
-                    <div class="row text-center fs-5 border-bottom border-secondary border-3 pb-3 mb-2">
-                        <div class="numero_telephone">
-                            <!-- https://getbootstrap.com/docs/5.3/layout/columns/ -->
-                            Tél: 656 16 16 82 / 699 35 25 11 / 699 82 01 49 / 677 03 58 09
-                        </div>
-                    </div>
-                    <!-- <hr class="border"> -->
-                    <div class="text-center">
-                        <h2>FACTURE D'EAU / WATER BILL Nº <?php echo "$id_facture" ?></h2>
-                    </div>
-                    <div class="motivation fst-italic text-center fs-6">
-                        «Tous ensemble pour un accès durable a l'eau, à l'énergie et à l'assainissement dans la commune de Fokoué»
-                    </div>
-                    <div class=" d-flex justify-content-center h5">
-                        <div class="email ">Date de dépot: <span class="text-success"><?php echo $date_depot ?></span></div>
-                        <div class="col-2"></div>
-                        <div class="code_posta l">Date limite de paiement: <span
-                                class="text-danger"><?php echo $date_max_paiement ?></span></div>
-                    </div>
-                    <div class="d-flex justify-content-center fs-4 ">
-                        <div class="">Période de facturation: <span class="text-uppercase"> <?php echo getLetterMonth($mois) ?></span>
-                        </div>
-                        <div class="col-2"></div>
-                        <div>Impayés: <?php echo self::moneyFormatter((int) $impaye) ?></div>
-                        <div class="col-2"></div>
-                        <div class="">Penalite: <?php echo (int) $penalite ?></div>
-                    </div>
+            <div class="row text-center fs-5 border-bottom border-secondary border-3 pb-3 mb-2">
+                <div class="numero_telephone">
+                    <!-- https://getbootstrap.com/docs/5.3/layout/columns/ -->
+                    Tél: 656 16 16 82 / 699 35 25 11 / 699 82 01 49 / 677 03 58 09
+                </div>
+            </div>
+            <!-- <hr class="border"> -->
+            <div class="text-center">
+                <h2>FACTURE D'EAU / WATER BILL Nº <?php echo "$id_facture" ?></h2>
+            </div>
+            <div class="motivation fst-italic text-center fs-6">
+                «Tous ensemble pour un accès durable a l'eau, à l'énergie et à l'assainissement dans la commune de Fokoué»
+            </div>
+            <div class=" d-flex justify-content-center h5">
+                <div class="email ">Date de dépot: <span class="text-success"><?php echo $date_depot ?></span></div>
+                <div class="col-2"></div>
+                <div class="code_posta l">Date limite de paiement: <span
+                        class="text-danger"><?php echo $date_max_paiement ?></span></div>
+            </div>
+            <div class="d-flex justify-content-center fs-4 ">
+                <div class="">Période de facturation: <span class="text-uppercase"> <?php echo getLetterMonth($mois) ?></span>
+                </div>
+                <div class="col-2"></div>
+                <div>Impayés: <?php echo self::moneyFormatter((int) $impaye) ?></div>
+                <div class="col-2"></div>
+                <div class="">Penalite: <?php echo (int) $penalite ?></div>
+            </div>
 
-                    <div class="row">
-                        <div class="col-6"></div>
-                        <div class="col fs-5 ">Compte anticipation: <?php echo $numero_compte_anticipation ?></div>
-                    </div>
+            <div class="row">
+                <div class="col-6"></div>
+                <div class="col fs-5 ">Compte anticipation: <?php echo $numero_compte_anticipation ?></div>
+            </div>
 
-                    <div class="d-flex justify-content-around fs-5">
-                        <div class="text-truncation">Nom du client: <span class="text-uppercase fw-bold"> <?php echo $nom ?></span>
-                        </div>
-                        <div>Nº compteur: <?php echo $numero_compteur ?></div>
-                        <div>Reseau: <?php echo $reseau ?></div>
-                    </div>
-                    <div>
+            <div class="d-flex justify-content-around fs-5">
+                <div class="text-truncation">Nom du client: <span class="text-uppercase fw-bold"> <?php echo $nom ?></span>
+                </div>
+                <div>Nº compteur: <?php echo $numero_compteur ?></div>
+                <div>Reseau: <?php echo $reseau ?></div>
+            </div>
+            <div>
 
-                        <table class="table_searching table table-striped table-bordered">
-                            <tr>
-                                <th>Rubrique Facture</th>
-                                <th class="text-center">Ancien index</th>
-                                <th class="text-center">Nouvel index</th>
-                                <th class="text-center">Consommation</th>
-                                <th class="text-center">Tarif</th>
-                                <th class="text-center">Montant HT</th>
-                                <th class="text-center">TVA</th>
-                            </tr>
-                            <tr class="text-center">
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <span class="text-center">
-                                    <td>m <sup class="">3</sup></td>
-                                    <td>Fcfa</td>
-                                    <td>Fcfa</td>
-                                    <td>Fcfa</td>
-                                </span>
-                            </tr>
-                            <tr>
-                                <th>Consommation facturée</th>
-                                <td class="text-center"><?php echo $ancien_index ?></td>
-                                <td class="text-center"><?php echo $nouvel_index ?></td>
-                                <td class="text-center"><?php echo $conso_mois ?></td>
-                                <td class="text-center"><?php echo $prix_eau ?></td>
-                                <td class="text-center"><?php echo $facture_mois ?></td>
-                                <td class="text-center"><?php echo $tva ?></td>
-                            </tr>
-                            <tr>
-                                <th>Entretient compteur</th>
-                                <td></td>
-                                <td></td>
-                                <td></td>
-                                <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
-                                <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
-                                <td></td>
-                            </tr>
-                            <tr>
-                                <th colspan="4">Montant total facture</th>
-                                <td colspan="2" class=" text-center fs-4 border border-2 border-secondary ">
-                                    <?php echo self::moneyFormatter($totalFacture) ?>
-                                </td>
+                <table class="table_searching table table-striped table-bordered">
+                    <tr>
+                        <th>Rubrique Facture</th>
+                        <th class="text-center">Ancien index</th>
+                        <th class="text-center">Nouvel index</th>
+                        <th class="text-center">Consommation</th>
+                        <th class="text-center">Tarif</th>
+                        <th class="text-center">Montant HT</th>
+                        <th class="text-center">TVA</th>
+                    </tr>
+                    <tr class="text-center">
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <span class="text-center">
+                            <td>m <sup class="">3</sup></td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                        </span>
+                    </tr>
+                    <tr>
+                        <th>Consommation facturée</th>
+                        <td class="text-center"><?php echo $ancien_index ?></td>
+                        <td class="text-center"><?php echo $nouvel_index ?></td>
+                        <td class="text-center"><?php echo $conso_mois ?></td>
+                        <td class="text-center"><?php echo $prix_eau ?></td>
+                        <td class="text-center"><?php echo $facture_mois ?></td>
+                        <td class="text-center"><?php echo $tva ?></td>
+                    </tr>
+                    <tr>
+                        <th>Entretient compteur</th>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                        <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <th colspan="4">Montant total facture</th>
+                        <td colspan="2" class=" text-center fs-4 border border-2 border-secondary ">
+                            <?php echo self::moneyFormatter($totalFacture) ?>
+                        </td>
 
-                                <td></td>
+                        <td></td>
 
-                            </tr>
-                        </table>
+                    </tr>
+                </table>
 
-                        <div class="text-center fw-bold fs-5">
-                            ATTENTION: Tout paiment apreès la date limite est augmentée des frais de pénalité (2500 Fcfa). <br>
-                            Any payment after the date above will be increased with penality (2500 Fcaa).
+                <div class="text-center fw-bold fs-5">
+                    ATTENTION: Tout paiment apreès la date limite est augmentée des frais de pénalité (2500 Fcfa). <br>
+                    Any payment after the date above will be increased with penality (2500 Fcaa).
 
-                        </div>
+                </div>
 
-                    </div>
-                    <?php
+            </div>
+            <?php
 
-                    return ob_get_clean();
+            return ob_get_clean();
     }
     public static function creerFactureFokoue2(
         $nom,
@@ -1336,202 +1425,202 @@ class Facture_t
         ?>
 
 
-                    <div class="container my-0 py-0 border border-5 border-black">
-                        <style>
-                            @media print {
-                                @page {
-                                    size: A4 landscape;
-                                    margin: 1cm;
-                                }
+            <div class="container my-0 py-0 border border-5 border-black">
+                <style>
+                    @media print {
+                        @page {
+                            size: A4 landscape;
+                            margin: 1cm;
+                        }
 
-                                body {
-                                    font-size: 12pt;
-                                }
+                        body {
+                            font-size: 12pt;
+                        }
 
-                                .container {
-                                    width: 100%;
-                                    max-width: 100%;
-                                }
+                        .container {
+                            width: 100%;
+                            max-width: 100%;
+                        }
 
-                                .additional-space {
-                                    min-height: 150px;
-                                }
-                            }
+                        .additional-space {
+                            min-height: 150px;
+                        }
+                    }
 
-                            body {
-                                font-family: Arial, sans-serif;
-                            }
+                    body {
+                        font-family: Arial, sans-serif;
+                    }
 
-                            .logo_commune img,
-                            .logo_amgeea img {
-                                max-height: 80px;
-                                width: auto;
-                            }
+                    .logo_commune img,
+                    .logo_amgeea img {
+                        max-height: 80px;
+                        width: auto;
+                    }
 
-                            .table th,
-                            .table td {
-                                vertical-align: middle;
-                            }
+                    .table th,
+                    .table td {
+                        vertical-align: middle;
+                    }
 
-                            .border-heavy {
-                                border: 2px solid #6c757d;
-                            }
+                    .border-heavy {
+                        border: 2px solid #6c757d;
+                    }
 
-                            .additional-space {
-                                min-height: 150px;
-                            }
-                        </style>
-                        <div class="row align-items-center mb-3">
-                            <div class="col-2 logo_commune">
-                                <img src="presentation/assets/images/logo_commune_fokoue.png" class="img-fluid"
-                                    alt="Logo Commune de Fokoué">
-                            </div>
-                            <div class="col-8 text-center">
-                                <h4 class="mb-0">Agence Municipale de la Gestion de l'Energie, de l'Eau et de
-                                    l'Assainissement<br>Commune de Fokoué (AMGEEA)</h4>
-                            </div>
-                            <div class="col-2 logo_amgeea">
-                                <img src="presentation/assets/images/logo_amgeea.png" class="img-fluid" alt="Logo AMGEEA">
-                            </div>
-                        </div>
-
-                        <div class="row text-center mb-2">
-                            <div class="col">
-                                <span>Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></span>
-                            </div>
-                            <div class="col">
-                                <span>B.P 02 Fokoué</span>
-                            </div>
-                        </div>
-
-                        <div class="row text-center mb-3">
-                            <div class="col">
-                                <span>Tél: 656 16 16 82 / 699 35 25 11 / 699 82 01 49 / 677 03 58 09</span>
-                            </div>
-                        </div>
-
-                        <div class="text-center mb-3">
-                            <h2>FACTURE D'EAU / WATER BILL Nº <?php echo $id_facture ?></h2>
-                        </div>
-
-                        <div class="text-center fst-italic mb-3">
-                            «Tous ensemble pour un accès durable à l'eau, à l'énergie et à l'assainissement dans la commune de Fokoué»
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col text-center">
-                                Date de dépôt: <span class="text-success"><?php echo $date_depot ?></span>
-                            </div>
-                            <div class="col text-center">
-                                Date limite de paiement: <span class="text-danger"><?php echo $date_max_paiement ?></span>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col text-center">
-                                Période de facturation: <span class="text-uppercase"><?php echo getLetterMonth($mois) ?></span>
-                            </div>
-                            <div class="col text-center">
-                                <?php
-                                $impaye = (int) $impaye;
-                                // ontransforme la valeur absolu de l'impaye/avance en nombre au format financier
-                                $impaye_string_value = self::moneyFormatter(abs($impaye));
-                                if ($impaye < 0)
-                                    //                            echo "Avance: $impaye";
-                                    echo "Compte anticipation: <span class='text-success'>$impaye_string_value</span>";
-                                elseif ($impaye == 0)
-                                    echo "Impayés: <span>$impaye_string_value</span>";
-                                else
-                                    echo "Impayés: <span class='text-danger'>$impaye_string_value</span>";
-
-                                ?>
-                            </div>
-                            <div class="col text-center">
-                                Pénalité: <?php echo self::moneyFormatter((int) $penalite) ?>
-                            </div>
-                        </div>
-
-                        <!--                <div class="row mb-3">-->
-                        <!--                    <div class="col-6"></div>-->
-                        <!--                    <div class="col-6">-->
-                        <!--                        Compte anticipation: --><?php //echo $numero_compte_anticipation ?>
-                        <!--                    </div>-->
-                        <!--                </div>-->
-
-                        <div class="d-flex justify-content-around">
-                            <div class="">
-                                Nom du client: <span class="text-uppercase fw-bold"><?php echo trim($nom) ?></span>
-                            </div>
-                            <div class="">
-                                Nº compteur: <?php echo $numero_compteur ?>
-                            </div>
-                            <div class="">
-                                Réseau: <?php echo $reseau ?>
-                            </div>
-                        </div>
-                        <br>
-
-                        <table class="table table-striped table-bordered border-heavy mb-3">
-                            <thead>
-                                <tr>
-                                    <th>Rubrique Facture</th>
-                                    <th class="text-center">Ancien index</th>
-                                    <th class="text-center">Nouvel index</th>
-                                    <th class="text-center">Consommation</th>
-                                    <th class="text-center">Tarif</th>
-                                    <th class="text-center">Montant HT</th>
-                                    <th class="text-center">TVA</th>
-                                </tr>
-                                <tr class="text-center">
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td>m<sup>3</sup></td>
-                                    <td>Fcfa</td>
-                                    <td>Fcfa</td>
-                                    <td>Fcfa</td>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <th>Consommation facturée</th>
-                                    <td class="text-center"><?php echo $ancien_index ?></td>
-                                    <td class="text-center"><?php echo $nouvel_index ?></td>
-                                    <td class="text-center"><?php echo $conso_mois ?></td>
-                                    <td class="text-center"><?php echo $prix_eau ?></td>
-                                    <td class="text-center"><?php echo self::moneyFormatter($facture_mois) ?></td>
-                                    <td class="text-center"><?php echo $tva ?></td>
-                                </tr>
-                                <tr>
-                                    <th>Entretien compteur</th>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
-                                    <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <th colspan="4">Montant total facture</th>
-                                    <td colspan="2" class="text-center fs-4 border-heavy">
-                                        <?php echo self::moneyFormatter($totalFacture) ?>
-                                    </td>
-                                    <td></td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div class="text-center fw-bold mb-3">
-                            ATTENTION: Tout paiement après la date limite est augmenté des frais de pénalité (2500 Fcfa).<br>
-                            Any payment after the date above will be increased with penalty (2500 Fcfa).
-                        </div>
-
-                        <!--                <div class="additional-space">-->
-                        <!-- Additional space for other content -->
-                        <!--                </div>-->
+                    .additional-space {
+                        min-height: 150px;
+                    }
+                </style>
+                <div class="row align-items-center mb-3">
+                    <div class="col-2 logo_commune">
+                        <img src="presentation/assets/images/logo_commune_fokoue.png" class="img-fluid"
+                            alt="Logo Commune de Fokoué">
                     </div>
-                    <?php
-                    return ob_get_clean();
+                    <div class="col-8 text-center">
+                        <h4 class="mb-0">Agence Municipale de la Gestion de l'Energie, de l'Eau et de
+                            l'Assainissement<br>Commune de Fokoué (AMGEEA)</h4>
+                    </div>
+                    <div class="col-2 logo_amgeea">
+                        <img src="presentation/assets/images/logo_amgeea.png" class="img-fluid" alt="Logo AMGEEA">
+                    </div>
+                </div>
+
+                <div class="row text-center mb-2">
+                    <div class="col">
+                        <span>Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></span>
+                    </div>
+                    <div class="col">
+                        <span>B.P 02 Fokoué</span>
+                    </div>
+                </div>
+
+                <div class="row text-center mb-3">
+                    <div class="col">
+                        <span>Tél: 656 16 16 82 / 699 35 25 11 / 699 82 01 49 / 677 03 58 09</span>
+                    </div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <h2>FACTURE D'EAU / WATER BILL Nº <?php echo $id_facture ?></h2>
+                </div>
+
+                <div class="text-center fst-italic mb-3">
+                    «Tous ensemble pour un accès durable à l'eau, à l'énergie et à l'assainissement dans la commune de Fokoué»
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col text-center">
+                        Date de dépôt: <span class="text-success"><?php echo $date_depot ?></span>
+                    </div>
+                    <div class="col text-center">
+                        Date limite de paiement: <span class="text-danger"><?php echo $date_max_paiement ?></span>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col text-center">
+                        Période de facturation: <span class="text-uppercase"><?php echo getLetterMonth($mois) ?></span>
+                    </div>
+                    <div class="col text-center">
+                        <?php
+                        $impaye = (int) $impaye;
+                        // ontransforme la valeur absolu de l'impaye/avance en nombre au format financier
+                        $impaye_string_value = self::moneyFormatter(abs($impaye));
+                        if ($impaye < 0)
+                            //                            echo "Avance: $impaye";
+                            echo "Compte anticipation: <span class='text-success'>$impaye_string_value</span>";
+                        elseif ($impaye == 0)
+                            echo "Impayés: <span>$impaye_string_value</span>";
+                        else
+                            echo "Impayés: <span class='text-danger'>$impaye_string_value</span>";
+
+                        ?>
+                    </div>
+                    <div class="col text-center">
+                        Pénalité: <?php echo self::moneyFormatter((int) $penalite) ?>
+                    </div>
+                </div>
+
+                <!--                <div class="row mb-3">-->
+                <!--                    <div class="col-6"></div>-->
+                <!--                    <div class="col-6">-->
+                <!--                        Compte anticipation: --><?php //echo $numero_compte_anticipation ?>
+                <!--                    </div>-->
+                <!--                </div>-->
+
+                <div class="d-flex justify-content-around">
+                    <div class="">
+                        Nom du client: <span class="text-uppercase fw-bold"><?php echo trim($nom) ?></span>
+                    </div>
+                    <div class="">
+                        Nº compteur: <?php echo $numero_compteur ?>
+                    </div>
+                    <div class="">
+                        Réseau: <?php echo $reseau ?>
+                    </div>
+                </div>
+                <br>
+
+                <table class="table table-striped table-bordered border-heavy mb-3">
+                    <thead>
+                        <tr>
+                            <th>Rubrique Facture</th>
+                            <th class="text-center">Ancien index</th>
+                            <th class="text-center">Nouvel index</th>
+                            <th class="text-center">Consommation</th>
+                            <th class="text-center">Tarif</th>
+                            <th class="text-center">Montant HT</th>
+                            <th class="text-center">TVA</th>
+                        </tr>
+                        <tr class="text-center">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td>m<sup>3</sup></td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                            <td>Fcfa</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th>Consommation facturée</th>
+                            <td class="text-center"><?php echo $ancien_index ?></td>
+                            <td class="text-center"><?php echo $nouvel_index ?></td>
+                            <td class="text-center"><?php echo $conso_mois ?></td>
+                            <td class="text-center"><?php echo $prix_eau ?></td>
+                            <td class="text-center"><?php echo self::moneyFormatter($facture_mois) ?></td>
+                            <td class="text-center"><?php echo $tva ?></td>
+                        </tr>
+                        <tr>
+                            <th>Entretien compteur</th>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                            <td class="text-center"><?php echo $prix_entretient_compteur ?></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <th colspan="4">Montant total facture</th>
+                            <td colspan="2" class="text-center fs-4 border-heavy">
+                                <?php echo self::moneyFormatter($totalFacture) ?>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="text-center fw-bold mb-3">
+                    ATTENTION: Tout paiement après la date limite est augmenté des frais de pénalité (2500 Fcfa).<br>
+                    Any payment after the date above will be increased with penalty (2500 Fcfa).
+                </div>
+
+                <!--                <div class="additional-space">-->
+                <!-- Additional space for other content -->
+                <!--                </div>-->
+            </div>
+            <?php
+            return ob_get_clean();
     }
     public static function creerFactureNkongzem(
         $nom,
@@ -1560,97 +1649,100 @@ class Facture_t
     ) {
         ob_start();
         ?>
-                    <div class="facture_abone mt-0">
-                        <div class="row">
-                            <div class="logo_commune col d-flex align-items-center text-center justify-content-between text-success">
-                                <img src="presentation/assets/images/logo_tockem.png" height="" style="height: 25vh" class="col-12"
-                                    alt="IMAGE DU LOGO DE L'ASSOCIATION TOCKEM">
-                                <!--                        alt="IMAGE DU LOGO DE LA COMMUNE DE FOKOUE">-->
-                                <h3 class="ps-2 fw-bold float-none" style="font-family: Calibri,serif">
-                                    <?php echo getLetterMonth($mois) ?></h3>
-                            </div>
-                            <div class="logo_commune text-center align-self-center col-9 ">
-                                <div class="h3 fs-2 fw-bold m-0">FACTURE D’EAU POTABLE. <span class="fst-italic">N° <?php echo $id_facture?></span></div>
-                                <div class="fs-4 m-0 fst-italic fw-bold">N° de Compte <?php echo htmlspecialchars($nom_banque) ?> :
-                                    <?php echo htmlspecialchars($numero_compte_banque) ?></div>
-                                <div class="fs-4 m-0 fw-bold " style="color: #5B9BD5">Merci de payer dans les délais</div>
-                                <div class="fs-6 m-0 fw-bold">ATTENTION !!!: VOUS RISQUEZ UNE COUPURE POUR FACTURES IMPAYEES</div>
-                                <div class="fs-4 m-0" style="color: #2F5496;">Votre abonnement sera résilié au-delà de <span
-                                        class="text-black fw-bold">3</span> factures impayées</div>
-                            </div>
-                            <div class="logo_amgeea col">
-                                <img src="presentation/assets/images/logo_nkongzem.png" style="height: 25vh" class="col-12"
-                                    alt="IMAGE DU LOGO DE LA COMMUNE DE NKONGZEM">
-                            </div>
+            <div class="facture_abone mt-0">
+                <div class="row">
+                    <div class="logo_commune col d-flex align-items-center text-center justify-content-between text-success">
+                        <img src="presentation/assets/images/logo_tockem.png" height="" style="height: 25vh" class="col-12"
+                            alt="IMAGE DU LOGO DE L'ASSOCIATION TOCKEM">
+                        <!--                        alt="IMAGE DU LOGO DE LA COMMUNE DE FOKOUE">-->
+                        <h3 class="ps-2 fw-bold float-none" style="font-family: Calibri,serif">
+                            <?php echo getLetterMonth($mois) ?>
+                        </h3>
+                    </div>
+                    <div class="logo_commune text-center align-self-center col-9 ">
+                        <div class="h3 fs-2 fw-bold m-0">FACTURE D’EAU POTABLE. <span class="fst-italic">N°
+                                <?php echo $id_facture ?></span></div>
+                        <div class="fs-4 m-0 fst-italic fw-bold">N° de Compte <?php echo htmlspecialchars($nom_banque) ?> :
+                            <?php echo htmlspecialchars($numero_compte_banque) ?>
                         </div>
+                        <div class="fs-4 m-0 fw-bold " style="color: #5B9BD5">Merci de payer dans les délais</div>
+                        <div class="fs-6 m-0 fw-bold">ATTENTION !!!: VOUS RISQUEZ UNE COUPURE POUR FACTURES IMPAYEES</div>
+                        <div class="fs-4 m-0" style="color: #2F5496;">Votre abonnement sera résilié au-delà de <span
+                                class="text-black fw-bold">3</span> factures impayées</div>
+                    </div>
+                    <div class="logo_amgeea col">
+                        <img src="presentation/assets/images/logo_nkongzem.png" style="height: 25vh" class="col-12"
+                            alt="IMAGE DU LOGO DE LA COMMUNE DE NKONGZEM">
+                    </div>
+                </div>
 
-                        <div class="d-flex justify-content-evenly">
-                            <div class="" style="width: 25%; font-size: 12px">
-                                <span class="fw-bold">Association TOCKEM</span><br>
-                                Siège Bureau d’exploitation : Nkong
-                                Zem 1er étage immeuble derrière la
-                                place des fêtes.
-                                BP 62 DSCHANG (Cameroun)
-                            </div>
-                            <div class="fs-6 fw-bold text-center me-1 text-white d-flex justify-content-center align-items-center"
-                                style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597; width: 50%">
-                                Pour régler votre facture rendez vous aux Bureau de la régie communale de
-                                l’eau de Nkong-Zem entre 9h30 et 15h
-                            </div>
-                            <div class="fs-6 fw-bold text-center text-white  d-flex justify-content-center align-items-center"
-                                style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597 ; width: 25%">
-                                Date limite de paiement <br>
-                                10 Jours dès réception
-                            </div>
-                        </div>
+                <div class="d-flex justify-content-evenly">
+                    <div class="" style="width: 25%; font-size: 12px">
+                        <span class="fw-bold">Association TOCKEM</span><br>
+                        Siège Bureau d’exploitation : Nkong
+                        Zem 1er étage immeuble derrière la
+                        place des fêtes.
+                        BP 62 DSCHANG (Cameroun)
+                    </div>
+                    <div class="fs-6 fw-bold text-center me-1 text-white d-flex justify-content-center align-items-center"
+                        style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597; width: 50%">
+                        Pour régler votre facture rendez vous aux Bureau de la régie communale de
+                        l’eau de Nkong-Zem entre 9h30 et 15h
+                    </div>
+                    <div class="fs-6 fw-bold text-center text-white  d-flex justify-content-center align-items-center"
+                        style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597 ; width: 25%">
+                        Date limite de paiement <br>
+                        10 Jours dès réception
+                    </div>
+                </div>
 
-                        <div class="d-flex justify-content-evenly mt-2">
-                            <div class="fs-6 text-start me-1"
-                                style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #8FAADC ; width: 65%">
-                                <table class="table w-100">
-                                    <tbody>
-                                        <tr>
-                                            <th>Adresse</th>
-                                            <td><?php echo $reseau ?></td>
-                                            <th>N° Compteur</th>
-                                            <td><?php echo $numero_compteur ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Nom/Prénom</th>
-                                            <td><?php echo strlen($nom) <= 40 ? $nom : substr($nom, 0, 40) . '..' ?></td>
-                                            <th>Date de relevé</th>
-                                            <td><?php echo $date_releve ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Réseau AEP</th>
-                                            <td><?php echo $_SESSION['libele_aep']; ?></td>
-                                            <th>Date de facturation</th>
-                                            <td><?php echo $date_depot ?></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597 ; width: 35%">
-                                <table class="table">
-                                    <tbody>
-                                        <tr>
-                                            <th>Impayés</th>
-                                            <td><?php echo self::moneyFormatter($impaye) ?> FCFA</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Facture du mois</th>
-                                            <td><?php echo self::moneyFormatter($facture_mois + $prix_entretient_compteur) ?> FCFA</td>
-                                        </tr>
-                                        <tr>
-                                            <th>Dette totale</th>
-                                            <td><?php echo self::moneyFormatter($totalFacture) ?> FCFA</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        <!-- <hr class="border"> -->
-                        <!--<div class="text-center">
+                <div class="d-flex justify-content-evenly mt-2">
+                    <div class="fs-6 text-start me-1"
+                        style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #8FAADC ; width: 65%">
+                        <table class="table w-100">
+                            <tbody>
+                                <tr>
+                                    <th>Adresse</th>
+                                    <td><?php echo $reseau ?></td>
+                                    <th>N° Compteur</th>
+                                    <td><?php echo $numero_compteur ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Nom/Prénom</th>
+                                    <td><?php echo strlen($nom) <= 40 ? $nom : substr($nom, 0, 40) . '..' ?></td>
+                                    <th>Date de relevé</th>
+                                    <td><?php echo $date_releve ?></td>
+                                </tr>
+                                <tr>
+                                    <th>Réseau AEP</th>
+                                    <td><?php echo $_SESSION['libele_aep']; ?></td>
+                                    <th>Date de facturation</th>
+                                    <td><?php echo $date_depot ?></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597 ; width: 35%">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <th>Impayés</th>
+                                    <td><?php echo self::moneyFormatter($impaye) ?> FCFA</td>
+                                </tr>
+                                <tr>
+                                    <th>Facture du mois</th>
+                                    <td><?php echo self::moneyFormatter($facture_mois + $prix_entretient_compteur) ?> FCFA</td>
+                                </tr>
+                                <tr>
+                                    <th>Dette totale</th>
+                                    <td><?php echo self::moneyFormatter($totalFacture) ?> FCFA</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- <hr class="border"> -->
+                <!--<div class="text-center">
                 <h2>FACTURE D'EAU / WATER BILL Nº <?php /*echo "$id_facture" */ ?></h2>
             </div>
             <div class="motivation fst-italic text-center fs-6">
@@ -1682,76 +1774,76 @@ class Facture_t
                 <div>Nº compteur: <?php /*echo $numero_compteur */ ?></div>
                 <div>Reseau: <?php /*echo $reseau */ ?></div>
             </div>-->
-                        <div class="mt-3">
+                <div class="mt-3">
 
-                            <table class="table">
-                                <tr style="background-color: #5b9bd5">
-                                    <th></th>
-                                    <th class="">Ancien index</th>
-                                    <th class="">Nouvel index</th>
-                                    <th class="">Quantité</th>
-                                    <th class="">Tarif unitaire/m3</th>
-                                    <th class="">Unité</th>
-                                    <th class="">Montant (FCFA)</th>
-                                </tr>
-                                <tr class="text-start" style="background-color: #d2deef">
-                                    <th>Conso. Compteur actuel </th>
-                                    <td class=""><?php echo $ancien_index ?></td>
-                                    <td class=""><?php echo $nouvel_index ?></td>
-                                    <td class=""><?php echo $conso_mois ?></td>
-                                    <td class=""><?php echo $prix_eau ?></td>
-                                    <td class="">m <sup>3</sup></td>
-                                    <td class=""><?php echo self::moneyFormatter($facture_mois) ?></td>
-                                </tr>
-                                <tr class="text-start" style="background-color: #eaeff7">
-                                    <th>Entretient compteur</th>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class=""></td>
-                                    <td class="">1 Mois</td>
-                                    <td><?php echo $prix_entretient_compteur ?></td>
-                                </tr>
-                                <!--                    <tr class="m-0 p-5" style="background-color: #d2deef">-->
-                                <!--                        <th>Pénalité</th>-->
-                                <!--                        <td></td>-->
-                                <!--                        <td></td>-->
-                                <!--                        <td></td>-->
-                                <!--                        <td></td>-->
-                                <!--                        <td></td>-->
-                                <!--                        <td class="">--><?php //echo self::moneyFormatter($penalite) ?><!--</td>-->
-                                <!--                    </tr>-->
-                                <tr style="background-color: #5b9bd5">
-                                    <th colspan="5">Total TTC (en FCFA) </th>
-                                    <td colspan="2" style="background-color: #d2deef" class=" text-center fs-5 fw-bold">
-                                        <?php echo self::moneyFormatter($totalFacture) ?>
-                                    </td>
-                                </tr>
-                            </table>
+                    <table class="table">
+                        <tr style="background-color: #5b9bd5">
+                            <th></th>
+                            <th class="">Ancien index</th>
+                            <th class="">Nouvel index</th>
+                            <th class="">Quantité</th>
+                            <th class="">Tarif unitaire/m3</th>
+                            <th class="">Unité</th>
+                            <th class="">Montant (FCFA)</th>
+                        </tr>
+                        <tr class="text-start" style="background-color: #d2deef">
+                            <th>Conso. Compteur actuel </th>
+                            <td class=""><?php echo $ancien_index ?></td>
+                            <td class=""><?php echo $nouvel_index ?></td>
+                            <td class=""><?php echo $conso_mois ?></td>
+                            <td class=""><?php echo $prix_eau ?></td>
+                            <td class="">m <sup>3</sup></td>
+                            <td class=""><?php echo self::moneyFormatter($facture_mois) ?></td>
+                        </tr>
+                        <tr class="text-start" style="background-color: #eaeff7">
+                            <th>Entretient compteur</th>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td class=""></td>
+                            <td class="">1 Mois</td>
+                            <td><?php echo $prix_entretient_compteur ?></td>
+                        </tr>
+                        <!--                    <tr class="m-0 p-5" style="background-color: #d2deef">-->
+                        <!--                        <th>Pénalité</th>-->
+                        <!--                        <td></td>-->
+                        <!--                        <td></td>-->
+                        <!--                        <td></td>-->
+                        <!--                        <td></td>-->
+                        <!--                        <td></td>-->
+                        <!--                        <td class="">--><?php //echo self::moneyFormatter($penalite) ?><!--</td>-->
+                        <!--                    </tr>-->
+                        <tr style="background-color: #5b9bd5">
+                            <th colspan="5">Total TTC (en FCFA) </th>
+                            <td colspan="2" style="background-color: #d2deef" class=" text-center fs-5 fw-bold">
+                                <?php echo self::moneyFormatter($totalFacture) ?>
+                            </td>
+                        </tr>
+                    </table>
 
-                            <div class="text-center fs-">
-                                <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 690409882 ou le
-                                    695794780</span><br>
-                                <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 656256504 ou le
-                                    670905523</span><br>
-                                <span class="fw-bold">NB : Les mauvais usages concernent la revente de l’eau au voisinage et les
-                                    branchements frauduleux.</span>
+                    <div class="text-center fs-">
+                        <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 690409882 ou le
+                            695794780</span><br>
+                        <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 656256504 ou le
+                            670905523</span><br>
+                        <span class="fw-bold">NB : Les mauvais usages concernent la revente de l’eau au voisinage et les
+                            branchements frauduleux.</span>
 
-                            </div>
-                            <div class="d-flex justify-content-center">
-                                <div class="col-11 fs-5 fw-bold text-center me-1 text-white d-flex justify-content-center align-items-center"
-                                    style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597;">
-                                    Le payement de votre facture dans les délais est le garant d’un service d’eau potable durable
-                                </div>
-                            </div>
-
-
+                    </div>
+                    <div class="d-flex justify-content-center">
+                        <div class="col-11 fs-5 fw-bold text-center me-1 text-white d-flex justify-content-center align-items-center"
+                            style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597;">
+                            Le payement de votre facture dans les délais est le garant d’un service d’eau potable durable
                         </div>
-                        </div>
+                    </div>
 
-                        <?php
 
-                        return ob_get_clean();
+                </div>
+            </div>
+
+            <?php
+
+            return ob_get_clean();
     }
 
     public static function moneyFormatter($montant)
@@ -1876,18 +1968,18 @@ class Facture_t
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
     {
         ?>
-                        <table class="table table-striped table-bordered table-hover">
-                            <thead>
-                                <h3 class="py-3 " style="text-align: center; margin-top: 20px;">
-                                    <?php echo $titre ?>
-                                </h3>
-                                <?php echo $autre_entete ?>
-                            </thead>
-                            <tbody>
-                                <?php echo $htmlTableCode; ?>
-                            </tbody>
-                        </table>
-                        <?php
+            <table class="table table-striped table-bordered table-hover">
+                <thead>
+                    <h3 class="py-3 " style="text-align: center; margin-top: 20px;">
+                        <?php echo $titre ?>
+                    </h3>
+                    <?php echo $autre_entete ?>
+                </thead>
+                <tbody>
+                    <?php echo $htmlTableCode; ?>
+                </tbody>
+            </table>
+            <?php
     }
 
 }

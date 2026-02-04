@@ -10,25 +10,30 @@ class FluxFinancier extends Manager
     public $mois;            // Mois du flux financier
     public $libele;          // Libellé du flux
     public $prix;            // Montant du flux
-    public $id_aep;            // Type de flux (sortie ou entrée)
+    public $id_aep;            // ID de l'AEP
     public $type;            // Type de flux (sortie ou entrée)
     public $description;     // Description du flux
+    public $id_categorie_flux_manuel; // ID de la catégorie du flux manuel
 
     public static function getFinanceData($mois = '', $type = '', $prix_min = 0, $id_aep = '')
     {
         return self::prepare_query("
-                            SELECT * 
-                            from flux_financier 
-                            where mois like concat('%', ?) and 
-                                  type like concat('%', ?) and 
-                                  prix>=? and
-                                  id_aep=?
-                            order by mois desc;", array($mois, $type, $prix_min, $id_aep));
+                            SELECT ff.*, cfm.nom as categorie_nom
+                            from flux_financier ff
+                            LEFT JOIN categorie_flux_manuel cfm ON ff.id_categorie_flux_manuel = cfm.id
+                            where ff.mois like concat('%', ?) and 
+                                  ff.type like concat('%', ?) and 
+                                  ff.prix>=? and
+                                  ff.id_aep=?
+                            order by ff.mois desc;", array($mois, $type, $prix_min, $id_aep));
     }
 
     public static function getFluxById($id)
     {
-        return self::prepare_query("SELECT * from flux_financier where id = ?;", array($id));
+        return self::prepare_query("SELECT ff.*, cfm.nom as categorie_nom, cfm.id as id_categorie_flux_manuel 
+                                    from flux_financier ff
+                                    LEFT JOIN categorie_flux_manuel cfm ON ff.id_categorie_flux_manuel = cfm.id
+                                    where ff.id = ?;", array($id));
     }
 
     public static function getAllVersements($id_aep)
@@ -79,7 +84,7 @@ class FluxFinancier extends Manager
 
     function getDonnee()
     {
-        return array(
+        $donnees = array(
             'date' => $this->date,
             'mois' => $this->mois,
             'libele' => $this->libele,
@@ -88,6 +93,13 @@ class FluxFinancier extends Manager
             'id_aep' => $this->id_aep,
             'description' => $this->description
         );
+        
+        // Ajouter id_categorie_flux_manuel si défini
+        if (isset($this->id_categorie_flux_manuel)) {
+            $donnees['id_categorie_flux_manuel'] = $this->id_categorie_flux_manuel;
+        }
+        
+        return $donnees;
     }
 
     function getNomTable()

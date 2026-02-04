@@ -21,11 +21,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'add_redevance') {
             $libele = trim($_POST['libele']);
-            $pourcentage = floatval($_POST['pourcentage']);
+            $pourcentage = isset($_POST['pourcentage']) ? floatval($_POST['pourcentage']) : 0;
             $mois_debut = trim($_POST['mois_debut']);
-            $type_redevance= trim($_POST['type']);
+            $type_redevance = 'sortie'; // Toutes les redevances sont des sorties
             $description = trim($_POST['description']);
             $id_aep = (int)$_SESSION['id_aep'];
+            $base_calcul = isset($_POST['base_calcul']) ? trim($_POST['base_calcul']) : 'vente_eau';
+            $type_calcul = isset($_POST['type_calcul']) ? trim($_POST['type_calcul']) : 'pourcentage';
+            $montant_par_m3 = isset($_POST['montant_par_m3']) && $_POST['montant_par_m3'] != '' ? floatval($_POST['montant_par_m3']) : null;
 
             // Validation
             if (empty($libele) || strlen($libele) > 64) {
@@ -36,19 +39,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header('Location: ..?page=redevance&error=invalid_mois_debut');
                 exit;
             }
-            if (empty($type_redevance) || !(strcmp($type_redevance, 'sortie') != 0 || strcmp($type_redevance, 'entree') != 0)) {
-                header('Location: ..?page=redevance&error=invalid_type');
+            if ($base_calcul != 'vente_eau' && $base_calcul != 'branchements') {
+                header('Location: ..?page=redevance&error=invalid_base_calcul');
                 exit;
             }
-            if ($pourcentage <= 0 || $pourcentage > 100) {
+            if ($type_calcul != 'pourcentage' && $type_calcul != 'montant_fixe') {
+                header('Location: ..?page=redevance&error=invalid_type_calcul');
+                exit;
+            }
+            if ($type_calcul == 'pourcentage' && ($pourcentage <= 0 || $pourcentage > 100)) {
                 header('Location: ..?page=redevance&error=invalid_pourcentage');
+                exit;
+            }
+            if ($type_calcul == 'montant_fixe' && ($montant_par_m3 === null || $montant_par_m3 <= 0)) {
+                header('Location: ..?page=redevance&error=invalid_montant_par_m3');
                 exit;
             }
 
             try {
                 $query = Manager::prepare_query(
-                    "INSERT INTO redevance (libele, pourcentage, description, id_aep, type, mois_debut) VALUES (?, ?, ?, ?, ?, ?)",
-                    array($libele, $pourcentage, $description, $id_aep, $type_redevance, $mois_debut)
+                    "INSERT INTO redevance (libele, pourcentage, description, id_aep, type, mois_debut, base_calcul, type_calcul, montant_par_m3, est_sortie) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+                    array($libele, $pourcentage, $description, $id_aep, $type_redevance, $mois_debut, $base_calcul, $type_calcul, $montant_par_m3)
                 );
                 header('Location: ..?page=redevance&success=redevance_added');
                 exit;
@@ -59,35 +70,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($_POST['action'] === 'update_redevance') {
             $id = (int)$_POST['id'];
             $libele = trim($_POST['libele']);
-            $pourcentage = floatval($_POST['pourcentage']);
+            $pourcentage = isset($_POST['pourcentage']) ? floatval($_POST['pourcentage']) : 0;
             $description = trim($_POST['description']);
             $mois_debut = trim($_POST['mois_debut']);
-            $type_redevance= trim($_POST['type']);
+            $type_redevance = 'sortie'; // Toutes les redevances sont des sorties
             $id_aep = (int)$_SESSION['id_aep'];
+            $base_calcul = isset($_POST['base_calcul']) ? trim($_POST['base_calcul']) : 'vente_eau';
+            $type_calcul = isset($_POST['type_calcul']) ? trim($_POST['type_calcul']) : 'pourcentage';
+            $montant_par_m3 = isset($_POST['montant_par_m3']) && $_POST['montant_par_m3'] != '' ? floatval($_POST['montant_par_m3']) : null;
 
             // Validation
             if (empty($libele) || strlen($libele) > 64) {
                 header('Location: ..?page=redevance&error=invalid_libele');
                 exit;
             }
-            if ($pourcentage <= 0 || $pourcentage > 100) {
+            if ($base_calcul != 'vente_eau' && $base_calcul != 'branchements') {
+                header('Location: ..?page=redevance&error=invalid_base_calcul');
+                exit;
+            }
+            if ($type_calcul != 'pourcentage' && $type_calcul != 'montant_fixe') {
+                header('Location: ..?page=redevance&error=invalid_type_calcul');
+                exit;
+            }
+            if ($type_calcul == 'pourcentage' && ($pourcentage <= 0 || $pourcentage > 100)) {
                 header('Location: ..?page=redevance&error=invalid_pourcentage');
                 exit;
             }
-
-            if (empty($mois_debut) || strlen($mois_debut) > 8) {
-                header('Location: ..?page=redevance&error=invalid_mois_debut');
+            if ($type_calcul == 'montant_fixe' && ($montant_par_m3 === null || $montant_par_m3 <= 0)) {
+                header('Location: ..?page=redevance&error=invalid_montant_par_m3');
                 exit;
             }
-            if (empty($type_redevance) || !(strcmp($type_redevance, 'sortie') != 0 || strcmp($type_redevance, 'entree') != 0)) {
-                header('Location: ..?page=redevance&error=invalid_type');
+            if (empty($mois_debut) || strlen($mois_debut) > 8) {
+                header('Location: ..?page=redevance&error=invalid_mois_debut');
                 exit;
             }
 
             try {
                 $query = Manager::prepare_query(
-                    "UPDATE redevance SET libele = ?, pourcentage = ?, description = ?, id_aep = ?, type = ?, mois_debut = ? WHERE id = ?",
-                    array($libele, $pourcentage, $description, $id_aep, $type_redevance, $mois_debut, $id)
+                    "UPDATE redevance SET libele = ?, pourcentage = ?, description = ?, id_aep = ?, type = ?, mois_debut = ?, base_calcul = ?, type_calcul = ?, montant_par_m3 = ?, est_sortie = 1 WHERE id = ?",
+                    array($libele, $pourcentage, $description, $id_aep, $type_redevance, $mois_debut, $base_calcul, $type_calcul, $montant_par_m3, $id)
                 );
                 header('Location: ..?page=redevance&success=redevance_updated');
                 exit;

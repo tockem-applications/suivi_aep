@@ -708,12 +708,12 @@ class MoisFacturation_t
                         </table>
                         <div class="btn-group">
 
-<!--                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete_--><?php //echo $id ?><!--">-->
-<!--                                Suprimer-->
-<!--                            </button>-->
-<!--                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#update_--><?php //echo $id ?><!--">-->
-<!--                                Modifier-->
-<!--                            </button>-->
+                            <!--                            <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#delete_--><?php //echo $id ?><!--">-->
+                            <!--                                Suprimer-->
+                            <!--                            </button>-->
+                            <!--                            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#update_--><?php //echo $id ?><!--">-->
+                            <!--                                Modifier-->
+                            <!--                            </button>-->
                             <a href="?list=mois_facturation&id_mois=<?php echo $id ?>" class="btn btn-primary">Afficher</a>
                         </div>
 
@@ -792,7 +792,7 @@ class MoisFacturation_t
         $mois = $mois[0]['mois'];
         $mois = getLetterMonth($mois);
         $aep_name = $_SESSION['libele_aep'];
-//        Backup_t::phpSqlDump(Connexion::connect(), Connexion::$db_name, __DIR__ . "/../backups/Backup_Avant_Aupression_mois_$aep_name-$mois.sql");
+        //        Backup_t::phpSqlDump(Connexion::connect(), Connexion::$db_name, __DIR__ . "/../backups/Backup_Avant_Aupression_mois_$aep_name-$mois.sql");
         var_dump($_GET);
         $id = htmlspecialchars($_GET['id_delete']);
 
