@@ -11,7 +11,8 @@ function affichergraphiquesReseau($data)
     //    var_dump($data);
 }
 
-function afficherCompteursReseau($id_reseau){
+function afficherCompteursReseau($id_reseau)
+{
     display_compteur_list($id_reseau);
     // makeFullCompteurFomrForReseau($id_reseau);
 }
@@ -19,18 +20,19 @@ function afficherCompteursReseau($id_reseau){
 function afficherPageReseau($id_reseau, $data, $code_html)
 {
     ob_start();
-        $selected_reseau = display_reseau_list($id_reseau);
+    $selected_reseau = display_reseau_list($id_reseau);
     $display_reseau_list = ob_get_clean();
-    
+
     // Récupérer les paramètres de période
     $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : '';
     $mois_fin = isset($_GET['mois_fin']) ? $_GET['mois_fin'] : '';
-    
+
     ?>
-        <div class="w-100 bg-secondary d-flex justify-content-between" >
-            <button class="btn btn-primary d-flex justify-content-between" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasTop" aria-controls="offcanvasTop">Liste des reseaux</button>
-            <?php $selected_reseau == null? :displayReseauDetails($selected_reseau);   ?>
-            <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasTop" aria-labelledby="offcanvasTopLabel">
+    <div class="w-100 bg-secondary d-flex justify-content-between">
+        <button class="btn btn-primary d-flex justify-content-between" type="button" data-bs-toggle="offcanvas"
+            data-bs-target="#offcanvasTop" aria-controls="offcanvasTop">Liste des reseaux</button>
+        <?php $selected_reseau == null ?: displayReseauDetails($selected_reseau); ?>
+        <div class="offcanvas offcanvas-start" tabindex="-1" id="offcanvasTop" aria-labelledby="offcanvasTopLabel">
             <div class="offcanvas-header">
                 <!-- <h5 class="offcanvas-title" id="offcanvasTopLabel">Offcanvas top</h5> -->
                 <h3 class='text-center'>Liste des sous reseaux</h3>
@@ -38,61 +40,61 @@ function afficherPageReseau($id_reseau, $data, $code_html)
             </div>
             <div class="offcanvas-body">
                 <?php echo $display_reseau_list ?>
-            </div>  
             </div>
         </div>
-        
-        <!-- Formulaire de sélection de période -->
-        <div class="container-fluid mt-3 mb-3">
-            <div class="card">
-                <div class="card-body">
-                    <form method="GET" action="" class="row g-3 align-items-end">
-                        <input type="hidden" name="page" value="reseau">
-                        <input type="hidden" name="id_reseau" value="<?php echo htmlspecialchars($id_reseau); ?>">
-                        <div class="col-md-4">
-                            <label for="mois_debut" class="form-label fw-bold">Mois de début</label>
-                            <input type="month" class="form-control" id="mois_debut" name="mois_debut" 
-                                   value="<?php echo htmlspecialchars($mois_debut); ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <label for="mois_fin" class="form-label fw-bold">Mois de fin</label>
-                            <input type="month" class="form-control" id="mois_fin" name="mois_fin" 
-                                   value="<?php echo htmlspecialchars($mois_fin); ?>">
-                        </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="bi bi-funnel"></i> Filtrer
-                            </button>
-                            <a href="?page=reseau&id_reseau=<?php echo htmlspecialchars($id_reseau); ?>" 
-                               class="btn btn-secondary">
-                                <i class="bi bi-x-circle"></i> Réinitialiser
-                            </a>
-                        </div>
-                    </form>
-                </div>
+    </div>
+
+    <!-- Formulaire de sélection de période -->
+    <div class="container-fluid mt-3 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <form method="GET" action="" class="row g-3 align-items-end">
+                    <input type="hidden" name="page" value="reseau">
+                    <input type="hidden" name="id_reseau" value="<?php echo htmlspecialchars($id_reseau); ?>">
+                    <div class="col-md-4">
+                        <label for="mois_debut" class="form-label fw-bold">Mois de début</label>
+                        <input type="month" class="form-control" id="mois_debut" name="mois_debut"
+                            value="<?php echo htmlspecialchars($mois_debut); ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="mois_fin" class="form-label fw-bold">Mois de fin</label>
+                        <input type="month" class="form-control" id="mois_fin" name="mois_fin"
+                            value="<?php echo htmlspecialchars($mois_fin); ?>">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="bi bi-funnel"></i> Filtrer
+                        </button>
+                        <a href="?page=reseau&id_reseau=<?php echo htmlspecialchars($id_reseau); ?>"
+                            class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Réinitialiser
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
+    </div>
     <?php
     // echo "<div class='row m-0 '>";
     // echo "<div class=' col-12 col-sm-4 col-md-3 bg-white p-2 me-0'>
     //             <h3 class='text-center'>Liste des sous reseaux</h3>
     //             ";
-    
+
     // echo "</div>";
     // echo "<div class='col-12 col-sm-8 col-md-9 '>";
     // $selected_reseau == null ?: displayReseauDetails($selected_reseau);
     echo "<div class='row d-flex px-1'> ";
     echo "<div class='col-12 col-md-7 mx-auto position-relative'>";
-    if($id_reseau != 0 && isset($_GET['compteur'])){
+    if ($id_reseau != 0 && isset($_GET['compteur'])) {
         afficherCompteursReseau($id_reseau);
-    }else{
+    } else {
         affichergraphiquesReseau($data);
     }
     echo "</div>";
-    echo "<div class='col-12 col-md-5 overflow-y-scroll bg-dark-subtle' style='height: 650px'>".$code_html. "</div>";
+    echo "<div class='col-12 col-md-5 overflow-y-scroll bg-dark-subtle' style='height: 650px'>" . $code_html . "</div>";
     echo "</div>";
 
-    
+
     echo "</div>";
     echo "</div>";
 }
@@ -112,7 +114,7 @@ function afficherStatistiqueReseau($id_reseau, $mois_debut = null, $mois_fin = n
         $nombre = (int) $ligne['nombre'];
         $montant_versee = (int) $ligne['montant_versee'];
         //indifférencié (recherche et professionnel) Sciences, technologies et santé mention Informatique parcours Data Engineer
-        $montant_facture = (1 + $tva / 100) * $conso * $prix_metre_cube_eau + $prix_entretient_compteur*$nombre;
+        $montant_facture = (1 + $tva / 100) * $conso * $prix_metre_cube_eau + $prix_entretient_compteur * $nombre;
         $taux_recouvrement = $montant_facture == 0 ? "-" : substr(100 * $montant_versee / $montant_facture, 0, 5) . ' %';
         $consommation_moyenne = $conso / $nombre;
         $mois = $ligne['mois'];
@@ -130,7 +132,7 @@ function afficherStatistiqueReseau($id_reseau, $mois_debut = null, $mois_fin = n
             //            var_dump($valeur);
             $tranform_tmp[$key] = (float) $valeur[0];
         }
-        $output[] = array('data' => $tranform_tmp, 'month' => $mois);
+        $output[] = array('data' => $tranform_tmp, 'month' => getLetterMonth($mois));
         displayComponent(
             $tmp,
             getLetterMonth($mois)
@@ -143,26 +145,26 @@ function make_formulaire_reseau_colapse($reseau = null, $id_collapse = 'create_r
 {
     ?>
     <p class="d-inline-flex gap-1">
-<!--        <a class="" data-bs-toggle="collapse" href="#--><?php //echo $id_collapse ?><!--" role="button" aria-expanded="false"-->
-<!--            aria-controls="collapseExample">-->
-<!--            ajouter un reseau-->
-<!--        </a>-->
+        <!--        <a class="" data-bs-toggle="collapse" href="#--><?php //echo $id_collapse ?><!--" role="button" aria-expanded="false"-->
+        <!--            aria-controls="collapseExample">-->
+        <!--            ajouter un reseau-->
+        <!--        </a>-->
         <!--        <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample">-->
         <!--            Button with data-bs-target-->
         <!--        </button>-->
     </p>
-<!--    <div class="collapse" id="--><?php //echo $id_collapse ?><!--">-->
-<!--        <div class="text-start">-->
-<!--            <form action="traitement/reseau_t.php?ajout=true" method="post">-->
-<!--                --><?php //make_formulaire_reseau($reseau) ?>
-<!--                <div class='d-flex justify-content-end p-2 btn-group'>-->
-<!--                    <button class='btn btn-danger col-6 ' type='reset'>Vider</button>-->
-<!--                    <button class='btn btn-success col-6' type='submit'>Enregistrer</button>-->
-<!--                </div>-->
-<!--            </form>-->
-<!--        </div>-->
-<!---->
-<!--    </div>-->
+    <!--    <div class="collapse" id="--><?php //echo $id_collapse ?><!--">-->
+    <!--        <div class="text-start">-->
+    <!--            <form action="traitement/reseau_t.php?ajout=true" method="post">-->
+    <!--                --><?php //make_formulaire_reseau($reseau) ?>
+    <!--                <div class='d-flex justify-content-end p-2 btn-group'>-->
+    <!--                    <button class='btn btn-danger col-6 ' type='reset'>Vider</button>-->
+    <!--                    <button class='btn btn-success col-6' type='submit'>Enregistrer</button>-->
+    <!--                </div>-->
+    <!--            </form>-->
+    <!--        </div>-->
+    <!---->
+    <!--    </div>-->
     <?php
 
 
@@ -239,7 +241,7 @@ function elementInfoResesauComponent($key, $value)
 
 function displayReseauDetails(Reseau $reseau)
 {
-    if($reseau == null){
+    if ($reseau == null) {
         return;
     }
     echo " <h1 class='h3'>$reseau->nom ($reseau->abreviation)</h1>

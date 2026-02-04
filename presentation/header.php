@@ -34,11 +34,14 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             Structure
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
-                            <li><a class="dropdown-item" href="?page=reseaux">Réseaux</a></li>
-                            <li><a class="dropdown-item" href="?page=abonne">Abonnés (BP)</a></li>
-                            <li><a class="dropdown-item" href="?page=borne_fontaine"><i class="bi bi-droplet me-1"></i> Bornes Fontaines</a></li>
-<!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
-                            <li><a class="dropdown-item" href="?page=aep">AEPs</a></li>
+                            <li><a class="dropdown-item" href="?page=reseaux"><i
+                                        class="bi bi-diagram-3 me-2"></i>Réseaux</a></li>
+                            <li><a class="dropdown-item" href="?page=abonne"><i class="bi bi-people me-2"></i>Abonnés
+                                    (BP)</a></li>
+                            <li><a class="dropdown-item" href="?page=borne_fontaine"><i
+                                        class="bi bi-droplet me-2"></i>Bornes Fontaines</a></li>
+                            <!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
+                            <li><a class="dropdown-item" href="?page=aep"><i class="bi bi-building me-2"></i>AEPs</a></li>
                             <!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->
                             <!-- <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>
                             <li><a class="dropdown-item" href="?list=compteur_reseau">Liste des compteurs réseau</a></li>
@@ -46,7 +49,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=fokoue_data">Fokoue data</a></li>
+                            <li><a class="dropdown-item" href="?page=fokoue_data"><i class="bi bi-database me-2"></i>Fokoue
+                                    data</a></li>
                             <!--                            <li><a class="dropdown-item" href="?list=production_simple">Liste des compteurs de production</a></li>-->
                             <li>
                                 <hr class="dropdown-divider">
@@ -61,15 +65,24 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             Facturation
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFacturation">
-                            <li><a class="dropdown-item" href="index.php?list=recouvrement">Recouvrement</a></li>
-                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i class="bi bi-star-fill text-warning me-1"></i> Recouvrement V2</a></li>
+                            <li><a class="dropdown-item" href="index.php?list=recouvrement"><i
+                                        class="bi bi-cash-stack me-2"></i>Recouvrement</a></li>
+                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i
+                                        class="bi bi-star-fill text-warning me-2"></i>Recouvrement V2</a></li>
                             <!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
-                            <li><a class="dropdown-item" href="index.php?page=releves">Relèves</a></li>
-                            <li><a class="dropdown-item" href="index.php?list=mois_facturation">Mois Facturés</a></li>
-                            <li><a class="dropdown-item" href="index.php?form=constante_reseau">Tarifs AEP</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=reseau">Statistiques</a></li>
+                            <li><a class="dropdown-item" href="index.php?page=releves"><i
+                                        class="bi bi-journal-text me-2"></i>Relèves</a></li>
+                            <li><a class="dropdown-item" href="index.php?page=penalites"><i
+                                        class="bi bi-exclamation-triangle text-warning me-2"></i>Pénalités</a></li>
+                            <li><a class="dropdown-item" href="index.php?list=mois_facturation"><i
+                                        class="bi bi-calendar-month me-2"></i>Mois Facturés</a></li>
+                            <li><a class="dropdown-item" href="index.php?form=constante_reseau"><i
+                                        class="bi bi-tag me-2"></i>Tarifs AEP</a></li>
+                            <li><a class="dropdown-item" href="index.php?page=reseau"><i
+                                        class="bi bi-bar-chart me-2"></i>Statistiques</a></li>
                             <?php if (isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) && $_SESSION['id'] == '1'): ?>
-                                <li><a class="dropdown-item" href="index.php?list=cle">Clé</a></li>
+                                <li><a class="dropdown-item" href="index.php?list=cle"><i class="bi bi-key me-2"></i>Clé</a>
+                                </li>
                             <?php endif; ?>
                         </ul>
                     </li>
@@ -81,26 +94,37 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             Finances
                         </a>
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFinances">
-                            <li><a class="dropdown-item" href="?page=transaction">Entrée/Sortie</a></li>
-                            <li><a class="dropdown-item" href="?page=compte_rendu_financier">Compte Rendu Financier</a></li>
-                            <li><a class="dropdown-item" href="?page=compte_rendu_tableau">Compte d'Exploitation (Tableau)</a></li>
-                            <li><a class="dropdown-item" href="?page=analyse_financiere">Analyse Financière</a></li>
-                            <li><a class="dropdown-item" href="?page=config_compte_rendu">Config. Compte Rendu</a></li>
-                            <li><a class="dropdown-item" href="?page=categories_flux_manuel">Catégories Flux Manuels</a></li>
+                            <li><a class="dropdown-item" href="?page=transaction"><i
+                                        class="bi bi-arrow-left-right me-2"></i>Entrée/Sortie</a></li>
+                            <li><a class="dropdown-item" href="?page=compte_rendu_financier"><i
+                                        class="bi bi-file-earmark-text me-2"></i>Compte Rendu Financier</a></li>
+                            <li><a class="dropdown-item" href="?page=compte_rendu_tableau"><i
+                                        class="bi bi-table me-2"></i>Compte d'Exploitation (Tableau)</a></li>
+                            <li><a class="dropdown-item" href="?page=analyse_financiere"><i
+                                        class="bi bi-graph-up me-2"></i>Analyse Financière</a></li>
+                            <li><a class="dropdown-item" href="?page=config_compte_rendu"><i
+                                        class="bi bi-gear me-2"></i>Config. Compte Rendu</a></li>
+                            <li><a class="dropdown-item" href="?page=categories_flux_manuel"><i
+                                        class="bi bi-funnel me-2"></i>Catégories Flux Manuels</a></li>
                             <!--                            <li><a class="dropdown-item" href="?list=transaction">Liste des dépenses</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Liste des entrées</a></li>-->
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=tarif_aep">Tarifs</a></li>
-                            <li><a class="dropdown-item" href="?page=branchements">Branchements</a></li>
-                            <li><a class="dropdown-item" href="?page=recouvrement">Mois de Recouvrement</a></li>
+                            <li><a class="dropdown-item" href="?page=tarif_aep"><i class="bi bi-tag me-2"></i>Tarifs</a>
+                            </li>
+                            <li><a class="dropdown-item" href="?page=branchements"><i
+                                        class="bi bi-plug me-2"></i>Branchements</a></li>
+                            <li><a class="dropdown-item" href="?page=recouvrement"><i
+                                        class="bi bi-calendar-check me-2"></i>Mois de Recouvrement</a></li>
 
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=redevance">Redevances</a></li>
-                            <li><a class="dropdown-item" href="?page=versement  ">Versements</a></li>
+                            <li><a class="dropdown-item" href="?page=redevance"><i
+                                        class="bi bi-cash-coin me-2"></i>Redevances</a></li>
+                            <li><a class="dropdown-item" href="?page=versement  "><i
+                                        class="bi bi-wallet2 me-2"></i>Versements</a></li>
                         </ul>
                     </li>
 
@@ -116,14 +140,18 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <!--                            <li><a class="dropdown-item" href="?page=download_index&action=export_index" target="_blank">Exporter vers mobile</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?form=import_index">Relève automatique</a></li>-->
                             <!--                            <li><a class="dropdown-item" href="?list=releve_manuelle">Relève manuelle</a></li>-->
-<!--                            <li><a class="dropdown-item" href="?page=aep">Gestion des aep</a></li>-->
-                            <li><a class="dropdown-item" href="?page=role">Gestion des roles</a></li>
-                            <li><a class="dropdown-item" href="?page=clefs">Gestion des clefs</a></li>
-                            <li><a class="dropdown-item" href="?page=register  ">Enregistrement</a></li>
+                            <!--                            <li><a class="dropdown-item" href="?page=aep">Gestion des aep</a></li>-->
+                            <li><a class="dropdown-item" href="?page=role"><i class="bi bi-person-badge me-2"></i>Gestion
+                                    des roles</a></li>
+                            <li><a class="dropdown-item" href="?page=clefs"><i class="bi bi-key me-2"></i>Gestion des
+                                    clefs</a></li>
+                            <li><a class="dropdown-item" href="?page=register  "><i
+                                        class="bi bi-person-plus me-2"></i>Enregistrement</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=backup">Sauvegarde & Restauration</a></li>
+                            <li><a class="dropdown-item" href="?page=backup"><i
+                                        class="bi bi-cloud-arrow-down me-2"></i>Sauvegarde & Restauration</a></li>
                         </ul>
                     </li>
                 </ul>

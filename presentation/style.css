@@ -2,6 +2,15 @@
 
 
 
+/* En-têtes de table : fond bleu, texte blanc pour une bonne lisibilité */
+.table thead th,
+.table-dark thead th,
+thead.table-dark th {
+    background-color: #0d6efd !important;
+    color: #ffffff !important;
+    border-color: #0b5ed7 !important;
+}
+
 body{
     /*background-color: grey; */
 }

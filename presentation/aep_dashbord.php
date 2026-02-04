@@ -4,7 +4,7 @@ include_once 'traitement/aep_traitement.php';
 //var_dump($_SESSION);
 // Récupérer l'ID de l'AEP depuis l'URL
 //var_dump($_SESSION);
-if(isset($_GET['aep_id']))
+if (isset($_GET['aep_id']))
     header("location:index.php?page=aep_dashboard");
 
 
@@ -186,7 +186,7 @@ if ($aepId) {
     }
 
     .table thead {
-        background-color: #2c3e50;
+        background-color: #0d6efd;
         color: #fff;
         font-weight: 500;
     }
@@ -194,6 +194,7 @@ if ($aepId) {
     .table thead th {
         padding: 12px;
         border-bottom: none;
+        color: #fff !important;
     }
 
     .table tbody tr {
@@ -280,7 +281,7 @@ if ($aepId) {
                             type: 'line',
                             data: {
                                 labels: <?php echo json_encode(array_map(function ($item) {
-                                    return $item['date'];
+                                    return getLetterMonth(isset($item['date']) ? $item['date'] : '');
                                 }, $data['index_history'])); ?>,
                                 datasets: [{
                                     label: 'Consommation',
@@ -327,7 +328,7 @@ if ($aepId) {
                             type: 'bar',
                             data: {
                                 labels: <?php echo json_encode(array_map(function ($item) {
-                                    return $item['date'];
+                                    return getLetterMonth(isset($item['date']) ? $item['date'] : '');
                                 }, $data['montants_par_mois'])); ?>,
                                 datasets: [
                                     {
@@ -512,36 +513,36 @@ if ($aepId) {
         </div>
 
         <!-- Impayés -->
-<!--        <div class="col col-md-12">-->
-<!--            <div class="card shadow-sm p-4">-->
-<!--                <h2 class="h4 fw-semibold text-dark mb-3">Impayés</h2>-->
-<!--                <div class="table-responsive">-->
-<!--                    <table class="table table-bordered">-->
-<!--                        <thead class="table-light">-->
-<!--                            <tr>-->
-<!--                                <th scope="col">Facture ID</th>-->
-<!--                                <th scope="col">Montant</th>-->
-<!--                                <th scope="col">Règlement</th>-->
-<!--                            </tr>-->
-<!--                        </thead>-->
-<!--                        <tbody>-->
-<!--                            --><?php //foreach ($data['impayes'] as $impaye): ?>
-<!--                                <tr>-->
-<!--                                    <td>Facture #--><?php //echo htmlspecialchars($impaye['id_facture']); ?><!--</td>-->
-<!--                                    <td>--><?php //echo htmlspecialchars($impaye['montant']); ?><!-- FCFA</td>-->
-<!--                                    <td>--><?php //echo htmlspecialchars($impaye['date_reglement'] ? $impaye['date_reglement'] : 'Non réglé'); ?>
-<!--                                    </td>-->
-<!--                                </tr>-->
-<!--                            --><?php //endforeach; ?>
-<!--                        </tbody>-->
-<!--                    </table>-->
-<!--                </div>-->
-<!--                <a href="?list=recouvrement&insolvable=1"-->
-<!--                    class="text-primary text-decoration-underline text-sm mt-3 d-inline-block">-->
-<!--                    Voir tous les impayés <i class="fas fa-arrow-right link-icon"></i>-->
-<!--                </a>-->
-<!--            </div>-->
-<!--        </div>-->
+        <!--        <div class="col col-md-12">-->
+        <!--            <div class="card shadow-sm p-4">-->
+        <!--                <h2 class="h4 fw-semibold text-dark mb-3">Impayés</h2>-->
+        <!--                <div class="table-responsive">-->
+        <!--                    <table class="table table-bordered">-->
+        <!--                        <thead class="table-light">-->
+        <!--                            <tr>-->
+        <!--                                <th scope="col">Facture ID</th>-->
+        <!--                                <th scope="col">Montant</th>-->
+        <!--                                <th scope="col">Règlement</th>-->
+        <!--                            </tr>-->
+        <!--                        </thead>-->
+        <!--                        <tbody>-->
+        <!--                            --><?php //foreach ($data['impayes'] as $impaye): ?>
+        <!--                                <tr>-->
+        <!--                                    <td>Facture #--><?php //echo htmlspecialchars($impaye['id_facture']); ?><!--</td>-->
+        <!--                                    <td>--><?php //echo htmlspecialchars($impaye['montant']); ?><!-- FCFA</td>-->
+        <!--                                    <td>--><?php //echo htmlspecialchars($impaye['date_reglement'] ? $impaye['date_reglement'] : 'Non réglé'); ?>
+        <!--                                    </td>-->
+        <!--                                </tr>-->
+        <!--                            --><?php //endforeach; ?>
+        <!--                        </tbody>-->
+        <!--                    </table>-->
+        <!--                </div>-->
+        <!--                <a href="?list=recouvrement&insolvable=1"-->
+        <!--                    class="text-primary text-decoration-underline text-sm mt-3 d-inline-block">-->
+        <!--                    Voir tous les impayés <i class="fas fa-arrow-right link-icon"></i>-->
+        <!--                </a>-->
+        <!--            </div>-->
+        <!--        </div>-->
     </div>
 </div>
 <!-- Bootstrap JS -->

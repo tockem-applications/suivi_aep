@@ -381,6 +381,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/detail_tarif_page.php';
     } else if ($_GET['page'] == 'recouvrement') {
         require_once 'presentation/recouvrement_page.php';
+    } else if ($_GET['page'] == 'penalites') {
+        require_once 'presentation/penalites_page.php';
     } else if ($_GET['page'] == 'abonne') {
         require_once 'presentation/abonne_page.php';
     } else if ($_GET['page'] == 'borne_fontaine') {

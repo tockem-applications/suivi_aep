@@ -53,13 +53,13 @@ class VersementProcessor
                     "SELECT * FROM redevance WHERE id = ?",
                     array($id_redevance)
                 )->fetch();
-                
+
                 if (!$redevance) {
                     return array('success' => false, 'message' => 'Redevance introuvable.');
                 }
 
                 $montantTotalEstimatif = 0;
-                
+
                 // Calculer le montant total estimatif selon le base_calcul
                 if ($redevance['base_calcul'] == 'branchements') {
                     // Pour les branchements, calculer à partir des branchements
@@ -77,15 +77,15 @@ class VersementProcessor
                          ORDER BY b.mois DESC",
                         array($mois_debut, $redevance['id_aep'])
                     )->fetchAll();
-                    
+
                     foreach ($moisBranchements as $moisBranchement) {
-                        $total_facture = (float)$moisBranchement['total_facture'];
-                        $nombre_branchement = (int)$moisBranchement['nombre_branchement'];
-                        
+                        $total_facture = (float) $moisBranchement['total_facture'];
+                        $nombre_branchement = (int) $moisBranchement['nombre_branchement'];
+
                         if ($redevance['type_calcul'] == 'montant_fixe') {
-                            $montantTotalEstimatif += $nombre_branchement * (float)$redevance['montant_par_m3'];
+                            $montantTotalEstimatif += $nombre_branchement * (float) $redevance['montant_par_m3'];
                         } else {
-                            $montantTotalEstimatif += $total_facture * (float)$redevance['pourcentage'] / 100;
+                            $montantTotalEstimatif += $total_facture * (float) $redevance['pourcentage'] / 100;
                         }
                     }
                 } else {
@@ -112,14 +112,14 @@ class VersementProcessor
                      WHERE id_redevance = ?",
                     array($id_redevance)
                 )->fetch();
-                
-                $montantTotalVerse = $result ? (float)$result['total_verse'] : 0;
-                
+
+                $montantTotalVerse = $result ? (float) $result['total_verse'] : 0;
+
                 // Ne valider que si le montant estimatif est > 0
                 if ($montantTotalEstimatif > 0 && $montantTotalVerse + $montant > $montantTotalEstimatif) {
                     return array('success' => false, 'message' => 'Le montant total versé ne peut pas dépasser le montant estimatif total (' . number_format($montantTotalEstimatif, 0, ',', ' ') . ' FCFA). Reste à verser: ' . number_format($montantTotalEstimatif - $montantTotalVerse, 0, ',', ' ') . ' FCFA');
                 }
-                
+
                 $id_mois_facturation = null; // Versement global
             } else {
                 // Versement par mois - validation de l'ID
@@ -156,64 +156,62 @@ class VersementProcessor
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
         if ($_POST['action'] === 'delete_versement') {
-            $id = (int)$_POST['id'];
-            
+            $id = (int) $_POST['id'];
+
             // Récupérer les infos du versement pour la redirection
             $versement = Manager::prepare_query(
                 "SELECT id_redevance, id_mois_facturation FROM versements WHERE id = ?",
                 array($id)
             )->fetch();
-            
+
             $result = VersementProcessor::deleteVersement($id);
             if ($result['success']) {
                 // Rediriger vers la page de détails si id_mois est fourni, sinon vers la liste
                 if ($versement && isset($_GET['id_mois'])) {
-                    header('Location: ?page=redevance_versements_detail&id_redevance=' . $versement['id_redevance'] . '&id_mois=' . $versement['id_mois_facturation'] . '&success=versement_deleted');
+                    header('Location: ../index.php?page=redevance_versements_detail&id_redevance=' . $versement['id_redevance'] . '&id_mois=' . $versement['id_mois_facturation'] . '&success=versement_deleted');
                 } else {
-                    header('Location: ?page=redevance_versements&id_redevance=' . ($versement ? $versement['id_redevance'] : 0) . '&success=versement_deleted');
+                    header('Location: ../index.php?page=redevance_versements&id_redevance=' . ($versement ? $versement['id_redevance'] : 0) . '&success=versement_deleted');
                 }
             } else {
                 if ($versement && isset($_GET['id_mois'])) {
-                    header('Location: ?page=redevance_versements_detail&id_redevance=' . $versement['id_redevance'] . '&id_mois=' . $versement['id_mois_facturation'] . '&error=delete_failed&message=' . urlencode($result['message']));
+                    header('Location: ../index.php?page=redevance_versements_detail&id_redevance=' . $versement['id_redevance'] . '&id_mois=' . $versement['id_mois_facturation'] . '&error=delete_failed&message=' . urlencode($result['message']));
                 } else {
-                    header('Location: ?page=redevance_versements&id_redevance=' . ($versement ? $versement['id_redevance'] : 0) . '&error=delete_failed&message=' . urlencode($result['message']));
+                    header('Location: ../index.php?page=redevance_versements&id_redevance=' . ($versement ? $versement['id_redevance'] : 0) . '&error=delete_failed&message=' . urlencode($result['message']));
                 }
             }
             exit;
-        }
-        elseif ($_POST['action'] === 'add_versement' || (isset($_GET['action']) && $_GET['action'] === 'add_versement')) {
-            $montant = isset($_POST['montant']) ? (float)$_POST['montant'] : 0;
+        } elseif ($_POST['action'] === 'add_versement' || (isset($_GET['action']) && $_GET['action'] === 'add_versement')) {
+            $montant = isset($_POST['montant']) ? (float) $_POST['montant'] : 0;
             $date_versement = isset($_POST['date_versement']) ? $_POST['date_versement'] : date('Y-m-d');
-            $id_mois_facturation = isset($_POST['id_mois_facturation']) && $_POST['id_mois_facturation'] != '' ? (int)$_POST['id_mois_facturation'] : 0;
-            $id_redevance = isset($_POST['id_redevance']) ? (int)$_POST['id_redevance'] : 0;
+            $id_mois_facturation = isset($_POST['id_mois_facturation']) && $_POST['id_mois_facturation'] != '' ? (int) $_POST['id_mois_facturation'] : 0;
+            $id_redevance = isset($_POST['id_redevance']) ? (int) $_POST['id_redevance'] : 0;
 
             // Validation basique avant traitement
             if ($id_redevance <= 0) {
-                header('Location: ?page=redevance_versements&id_redevance=0&error=add_failed&message=' . urlencode('ID de redevance invalide.'));
+                header('Location: ../index.php?page=redevance_versements&id_redevance=0&error=add_failed&message=' . urlencode('ID de redevance invalide.'));
                 exit;
             }
-            
+
             if ($montant <= 0) {
-                header('Location: ?page=redevance_versements&id_redevance=' . $id_redevance . '&error=add_failed&message=' . urlencode('Le montant doit être supérieur à 0.'));
+                header('Location: ../index.php?page=redevance_versements&id_redevance=' . $id_redevance . '&error=add_failed&message=' . urlencode('Le montant doit être supérieur à 0.'));
                 exit;
             }
 
             $result = VersementProcessor::addVersement($montant, $date_versement, $id_mois_facturation, $id_redevance);
             if ($result['success']) {
-                // Rediriger vers la page de gestion des versements de la redevance
-                header('Location: ?page=redevance_versements&id_redevance=' . $id_redevance . '&success=versement_added');
+                // Rediriger vers la page de gestion des versements de la redevance (tous types: vente_eau, branchements)
+                header('Location: ../index.php?page=redevance_versements&id_redevance=' . $id_redevance . '&success=versement_added');
             } else {
-                header('Location: ?page=redevance_versements&id_redevance=' . $id_redevance . '&error=add_failed&message=' . urlencode($result['message']));
+                header('Location: ../index.php?page=redevance_versements&id_redevance=' . $id_redevance . '&error=add_failed&message=' . urlencode($result['message']));
             }
             exit;
-        }
-        elseif ($_POST['action'] === 'validate_versement') {
-            $id = (int)$_POST['id'];
+        } elseif ($_POST['action'] === 'validate_versement') {
+            $id = (int) $_POST['id'];
             $result = VersementProcessor::validateVersement($id);
             if ($result['success']) {
-                header('Location: ..?page=versement&success=versement_validated');
+                header('Location: ../index.php?page=versement&success=versement_validated');
             } else {
-                header('Location: ..?page=versement&error=validate_failed&message=' . urlencode($result['message']));
+                header('Location: ../index.php?page=versement&error=validate_failed&message=' . urlencode($result['message']));
             }
             exit;
         }

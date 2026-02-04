@@ -1,4 +1,5 @@
 <?php
+// getLetterMonth() est défini dans donnees/manager.php (chargé par index.php)
 
 function display_modal($id_modal, $traitement)
 {
@@ -70,9 +71,12 @@ function genererGraphiques($dataArray)
     $montantRecouvert = array();
     $tauxRecouvrement = array();
     $reverse_data_array = array_reverse($dataArray);
-    // Traiter le tableau d'entrée
+    // Traiter le tableau d'entrée — afficher les mois en lettres (ex. Janvier 2025)
     foreach ($reverse_data_array as $entry) {
-        $mois[] = $entry['month'];
+        $monthVal = isset($entry['month']) ? $entry['month'] : '';
+        $mois[] = (function_exists('getLetterMonth') && preg_match('/^\d{4}-\d{2}$/', $monthVal))
+            ? getLetterMonth($monthVal)
+            : $monthVal;
         // Les données sont déjà numériques (voir afficherStatistiqueReseau ligne 96)
         $consommation[] = floatval($entry['data']['consommation']);
         $nombreFactures[] = intval($entry['data']['nombre de factures']);
@@ -90,7 +94,7 @@ function genererGraphiques($dataArray)
     $montantFactureJSON = json_encode($montantFacture);
     $montantRecouvertJSON = json_encode($montantRecouvert);
     $tauxRecouvrementJSON = json_encode($tauxRecouvrement);
-    
+
     echo "
         <!-- Chart.js -->
         <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>

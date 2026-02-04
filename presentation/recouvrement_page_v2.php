@@ -572,8 +572,8 @@ function display_recouvrement_v2()
             vertical-align: middle;
             padding: 0.75rem;
             color: #ffffff !important;
-            background-color: #212529;
-            border-color: #32383e;
+            background-color: #0d6efd !important;
+            border-color: #0b5ed7;
         }
 
         .table tbody td {
@@ -638,7 +638,7 @@ function display_recouvrement_v2()
             if (form) {
                 const selects = form.querySelectorAll('select');
                 selects.forEach(function (select) {
-                    select.add EventListener('change', function () {
+                    select.addEventListener('change', function () {
                         form.submit();
                     });
                 });
