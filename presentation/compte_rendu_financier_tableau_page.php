@@ -20,28 +20,29 @@ if ($type_periode === 'mois') {
     $donnees = generateCompteRenduTableau($id_aep, $annee);
 }
 
-function generateCompteRenduTableau($id_aep, $annee) {
+function generateCompteRenduTableau($id_aep, $annee)
+{
     @include_once("../donnees/connexion.php");
     @include_once("donnees/connexion.php");
     $bd = Connexion::connect();
-    
+
     // Récupérer les libellés, codes budgétaires et activités associées configurés
     $config_recouvrements = ConfigCompteRenduFinancier::getConfig('recouvrements', $id_aep);
     $config_branchements = ConfigCompteRenduFinancier::getConfig('branchements', $id_aep);
     $config_redevances = ConfigCompteRenduFinancier::getConfig('redevances', $id_aep);
-    
+
     $libelle_recouvrements = $config_recouvrements ? $config_recouvrements['libelle'] : 'Recouvrements';
     $libelle_branchements = $config_branchements ? $config_branchements['libelle'] : 'Branchements';
     $libelle_redevances = $config_redevances ? $config_redevances['libelle'] : 'Redevances';
-    
+
     $code_budgetaire_recouvrements = $config_recouvrements && !empty($config_recouvrements['code_budgetaire']) ? $config_recouvrements['code_budgetaire'] : null;
     $code_budgetaire_branchements = $config_branchements && !empty($config_branchements['code_budgetaire']) ? $config_branchements['code_budgetaire'] : null;
     $code_budgetaire_redevances = $config_redevances && !empty($config_redevances['code_budgetaire']) ? $config_redevances['code_budgetaire'] : null;
-    
+
     $activite_recouvrements = $config_recouvrements && !empty($config_recouvrements['activite_associee']) ? $config_recouvrements['activite_associee'] : 'vente_eau';
     $activite_branchements = $config_branchements && !empty($config_branchements['activite_associee']) ? $config_branchements['activite_associee'] : 'branchements';
     $activite_redevances = $config_redevances && !empty($config_redevances['activite_associee']) ? $config_redevances['activite_associee'] : 'autre';
-    
+
     // Initialiser les données par mois
     $mois_data = array();
     for ($m = 1; $m <= 12; $m++) {
@@ -55,7 +56,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             'flux_manuel_recette' => array()
         );
     }
-    
+
     // Récupérer les recouvrements par mois
     $query = "
         SELECT 
@@ -78,7 +79,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             $mois_data[$mois_key]['recouvrements'] = floatval($row['montant']);
         }
     }
-    
+
     // Récupérer les branchements par mois
     $query = "
         SELECT 
@@ -100,7 +101,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             $mois_data[$mois_key]['branchements'] = floatval($row['montant']);
         }
     }
-    
+
     // Récupérer les redevances par mois, séparées par base_calcul
     // Note: Si base_calcul est NULL ou vide, on considère 'vente_eau' par défaut (comme dans la table)
     $query_redevances_branchements = "
@@ -135,7 +136,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         )
         GROUP BY COALESCE(mf.mois, DATE_FORMAT(v.date_versement, '%Y-%m'))
     ";
-    
+
     // Récupérer les redevances sur branchements
     $stmt = $bd->prepare($query_redevances_branchements);
     $stmt->execute(array($id_aep, $annee . '-01', $annee . '-12', $annee . '-01', $annee . '-12'));
@@ -145,7 +146,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             $mois_data[$mois_key]['redevances_branchements'] = floatval($row['montant']);
         }
     }
-    
+
     // Récupérer les redevances sur vente d'eau
     $stmt = $bd->prepare($query_redevances_vente_eau);
     $stmt->execute(array($id_aep, $annee . '-01', $annee . '-12', $annee . '-01', $annee . '-12'));
@@ -155,7 +156,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             $mois_data[$mois_key]['redevances_vente_eau'] = floatval($row['montant']);
         }
     }
-    
+
     // Récupérer les flux manuels par code budgétaire
     $query = "
         SELECT 
@@ -178,8 +179,8 @@ function generateCompteRenduTableau($id_aep, $annee) {
         $mois_key = $row['mois'];
         if (isset($mois_data[$mois_key])) {
             // Utiliser le code budgétaire comme clé si disponible, sinon le nom de la catégorie
-            $cle = !empty($row['code_budgetaire']) ? $row['code_budgetaire'] : 
-                   (!empty($row['categorie']) ? $row['categorie'] : 'Autres ' . ($row['type'] === 'entree' ? 'recettes' : 'charges'));
+            $cle = !empty($row['code_budgetaire']) ? $row['code_budgetaire'] :
+                (!empty($row['categorie']) ? $row['categorie'] : 'Autres ' . ($row['type'] === 'entree' ? 'recettes' : 'charges'));
             // Les types dans la base sont 'entree' et 'sortie'
             if ($row['type'] === 'entree') {
                 if (!isset($mois_data[$mois_key]['flux_manuel_recette'][$cle])) {
@@ -195,14 +196,14 @@ function generateCompteRenduTableau($id_aep, $annee) {
             }
         }
     }
-    
+
     // Debug temporaire - à supprimer après vérification
     // error_log("DEBUG mois_data redevances: " . print_r(array_column($mois_data, 'redevances'), true));
     // error_log("DEBUG mois_data flux_manuel_charge: " . print_r(array_map(function($m) { return $m['flux_manuel_charge']; }, $mois_data), true));
-    
+
     // Construire les lignes du tableau
     $lignes = array();
-    
+
     // RECETTES
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_recouvrements ? $code_budgetaire_recouvrements : '',
@@ -220,7 +221,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'cumule' => 0,
         'activite' => $activite_branchements
     );
-    
+
     // Ajouter les recettes des flux manuels (regroupées par code budgétaire)
     $categories_recettes = array();
     foreach ($mois_data as $mois_key => $data) {
@@ -249,7 +250,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             'activite' => $cat_info['activite']
         );
     }
-    
+
     // Total recettes
     $lignes[] = array(
         'code_budgetaire' => '',
@@ -258,7 +259,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'mois' => array(),
         'cumule' => 0
     );
-    
+
     // DEPENSES - Redevances sur branchements
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_redevances ? $code_budgetaire_redevances : '',
@@ -269,7 +270,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'activite' => 'branchements',
         'base_calcul' => 'branchements'
     );
-    
+
     // DEPENSES - Redevances sur vente d'eau
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_redevances ? $code_budgetaire_redevances : '',
@@ -280,7 +281,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'activite' => 'vente_eau',
         'base_calcul' => 'vente_eau'
     );
-    
+
     // Ajouter les charges des flux manuels (regroupées par code budgétaire)
     $categories_charges = array();
     foreach ($mois_data as $mois_key => $data) {
@@ -309,7 +310,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             'activite' => $cat_info['activite']
         );
     }
-    
+
     // Total dépenses
     $lignes[] = array(
         'code_budgetaire' => '',
@@ -318,7 +319,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'mois' => array(),
         'cumule' => 0
     );
-    
+
     // Résultats
     $lignes[] = array(
         'code_budgetaire' => '',
@@ -327,7 +328,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'mois' => array(),
         'cumule' => 0
     );
-    
+
     // LIGNES DE TRÉSORERIE
     $lignes[] = array(
         'code_budgetaire' => '',
@@ -350,23 +351,23 @@ function generateCompteRenduTableau($id_aep, $annee) {
         'mois' => array(),
         'cumule' => 0
     );
-    
+
     // Remplir les données par mois pour les lignes individuelles
     foreach ($lignes as &$ligne) {
         if (in_array($ligne['type'], array('total_recette', 'total_charge', 'resultat'))) {
             continue; // On calculera ces lignes après
         }
-        
+
         $cumule = 0;
         for ($m = 1; $m <= 12; $m++) {
             $mois_key = sprintf('%04d-%02d', $annee, $m);
             $montant = 0;
-            
+
             // Identifier la ligne par code budgétaire ou nom
             $code_ligne = isset($ligne['code_budgetaire']) ? $ligne['code_budgetaire'] : '';
             $nom_ligne = isset($ligne['nom_categorie']) ? $ligne['nom_categorie'] : '';
             $base_calcul = isset($ligne['base_calcul']) ? $ligne['base_calcul'] : null;
-            
+
             if ($nom_ligne === $libelle_recouvrements || $code_ligne === $code_budgetaire_recouvrements) {
                 $montant = isset($mois_data[$mois_key]['recouvrements']) ? $mois_data[$mois_key]['recouvrements'] : 0;
             } elseif ($nom_ligne === $libelle_branchements || $code_ligne === $code_budgetaire_branchements) {
@@ -394,13 +395,13 @@ function generateCompteRenduTableau($id_aep, $annee) {
                     }
                 }
             }
-            
+
             $ligne['mois'][$mois_key] = $montant;
             $cumule += $montant;
         }
         $ligne['cumule'] = $cumule;
     }
-    
+
     // Calculer les totaux, résultats et trésoreries
     foreach ($lignes as &$ligne) {
         if (in_array($ligne['type'], array('total_recette', 'total_charge', 'resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie'))) {
@@ -408,7 +409,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
             for ($m = 1; $m <= 12; $m++) {
                 $mois_key = sprintf('%04d-%02d', $annee, $m);
                 $montant = 0;
-                
+
                 if ($ligne['type'] === 'total_recette') {
                     // Somme de toutes les recettes du mois
                     foreach ($lignes as $l) {
@@ -448,7 +449,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
                         } elseif (isset($l['activite']) && $l['activite'] === 'branchements') {
                             $is_branchements = true;
                         }
-                        
+
                         if ($is_branchements) {
                             if ($l['type'] === 'recette' && isset($l['mois'][$mois_key])) {
                                 $recettes_branchements += $l['mois'][$mois_key];
@@ -471,7 +472,7 @@ function generateCompteRenduTableau($id_aep, $annee) {
                         } elseif (isset($l['activite']) && $l['activite'] === 'vente_eau') {
                             $is_vente_eau = true;
                         }
-                        
+
                         if ($is_vente_eau) {
                             if ($l['type'] === 'recette' && isset($l['mois'][$mois_key])) {
                                 $recettes_vente_eau += $l['mois'][$mois_key];
@@ -503,89 +504,92 @@ function generateCompteRenduTableau($id_aep, $annee) {
                     }
                     $montant = $tresorerie_branchements + $tresorerie_vente_eau + $autre_recettes - $autre_charges;
                 }
-                
+
                 $ligne['mois'][$mois_key] = $montant;
                 $cumule += $montant;
             }
             $ligne['cumule'] = $cumule;
         }
     }
-    
+
     // Debug temporaire - à supprimer après vérification
     // error_log("DEBUG lignes charges: " . print_r(array_filter($lignes, function($l) { return $l['type'] === 'charge'; }), true));
-    
+
     return array(
         'annee' => $annee,
         'lignes' => $lignes
     );
 }
 
-function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
+function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
+{
     // Utiliser la fonction existante getCompteRenduFinancier qui gère déjà les périodes en mois
     $compte_rendu = ConfigCompteRenduFinancier::getCompteRenduFinancier($id_aep, $mois_debut, $mois_fin);
-    
+
     // Générer la liste des mois dans la période
     $mois_list = array();
     $date_debut = new DateTime($mois_debut . '-01');
     $date_fin = new DateTime($mois_fin . '-01');
     $date_fin->modify('last day of this month');
-    
+
     $current = clone $date_debut;
     while ($current <= $date_fin) {
         $mois_key = $current->format('Y-m');
         $mois_list[] = $mois_key;
         $current->modify('+1 month');
     }
-    
+
     // Récupérer les libellés, codes budgétaires et activités associées configurés
     $config_recouvrements = ConfigCompteRenduFinancier::getConfig('recouvrements', $id_aep);
     $config_branchements = ConfigCompteRenduFinancier::getConfig('branchements', $id_aep);
     $config_redevances = ConfigCompteRenduFinancier::getConfig('redevances', $id_aep);
-    
+
     $libelle_recouvrements = $config_recouvrements ? $config_recouvrements['libelle'] : 'Recouvrements';
     $libelle_branchements = $config_branchements ? $config_branchements['libelle'] : 'Branchements';
     $libelle_redevances = $config_redevances ? $config_redevances['libelle'] : 'Redevances';
-    
+
     $code_budgetaire_recouvrements = $config_recouvrements && !empty($config_recouvrements['code_budgetaire']) ? $config_recouvrements['code_budgetaire'] : null;
     $code_budgetaire_branchements = $config_branchements && !empty($config_branchements['code_budgetaire']) ? $config_branchements['code_budgetaire'] : null;
     $code_budgetaire_redevances = $config_redevances && !empty($config_redevances['code_budgetaire']) ? $config_redevances['code_budgetaire'] : null;
-    
+
     $activite_recouvrements = $config_recouvrements && !empty($config_recouvrements['activite_associee']) ? $config_recouvrements['activite_associee'] : 'vente_eau';
     $activite_branchements = $config_branchements && !empty($config_branchements['activite_associee']) ? $config_branchements['activite_associee'] : 'branchements';
     $activite_redevances = $config_redevances && !empty($config_redevances['activite_associee']) ? $config_redevances['activite_associee'] : 'autre';
-    
+
     // Construire les lignes à partir des données du compte rendu
     @include_once("../donnees/connexion.php");
     @include_once("donnees/connexion.php");
     $bd = Connexion::connect();
-    
+
     $lignes = array();
-    
+
     // RECETTES
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_recouvrements ? $code_budgetaire_recouvrements : '',
-        'nom_categorie' => $libelle_recouvrements, 
-        'type' => 'recette', 
-        'mois' => array(), 
+        'nom_categorie' => $libelle_recouvrements,
+        'type' => 'recette',
+        'mois' => array(),
         'cumule' => 0,
         'activite' => $activite_recouvrements
     );
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_branchements ? $code_budgetaire_branchements : '',
-        'nom_categorie' => $libelle_branchements, 
-        'type' => 'recette', 
-        'mois' => array(), 
+        'nom_categorie' => $libelle_branchements,
+        'type' => 'recette',
+        'mois' => array(),
         'cumule' => 0,
         'activite' => $activite_branchements
     );
-    
+
     // Ajouter les recettes des flux manuels
     $categories_recettes = array();
     foreach ($compte_rendu as $mois_data) {
         foreach ($mois_data['recettes'] as $libelle => $montant) {
-            if (!isset($categories_recettes[$libelle]) && 
-                $libelle !== $libelle_recouvrements && 
-                $libelle !== $libelle_branchements) {
+            if (
+                !isset($categories_recettes[$libelle]) &&
+                $libelle !== $libelle_recouvrements &&
+                $libelle !== $libelle_branchements
+            ) {
                 // Récupérer le nom de la catégorie depuis la base
                 $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE code_budgetaire = ? OR nom = ? LIMIT 1";
                 $stmt_cat = $bd->prepare($query_cat);
@@ -609,10 +613,10 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
             'activite' => $cat_info['activite']
         );
     }
-    
+
     // Total recettes
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Total recettes', 'type' => 'total_recette', 'mois' => array(), 'cumule' => 0);
-    
+
     // DEPENSES - Redevances sur branchements
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_redevances ? $code_budgetaire_redevances : '',
@@ -623,7 +627,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
         'activite' => 'branchements',
         'base_calcul' => 'branchements'
     );
-    
+
     // DEPENSES - Redevances sur vente d'eau
     $lignes[] = array(
         'code_budgetaire' => $code_budgetaire_redevances ? $code_budgetaire_redevances : '',
@@ -634,7 +638,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
         'activite' => 'vente_eau',
         'base_calcul' => 'vente_eau'
     );
-    
+
     // Ajouter les charges des flux manuels
     $categories_charges = array();
     foreach ($compte_rendu as $mois_data) {
@@ -645,7 +649,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
             } else {
                 $nom_charge = $libelle;
             }
-            
+
             // Ignorer les redevances (elles sont déjà ajoutées séparément)
             if (strpos($nom_charge, $libelle_redevances) === false && !isset($categories_charges[$libelle])) {
                 // Récupérer le nom de la catégorie depuis la base
@@ -653,12 +657,12 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
                 $stmt_cat = $bd->prepare($query_cat);
                 $stmt_cat->execute(array($libelle, $libelle));
                 $cat_info = $stmt_cat->fetch(PDO::FETCH_ASSOC);
-                
+
                 // Si c'est une redevance (déjà gérée séparément), on l'ignore
                 if ($cat_info && strpos($cat_info['nom'], $libelle_redevances) !== false) {
                     continue;
                 }
-                
+
                 $categories_charges[$libelle] = array(
                     'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: $libelle) : $libelle,
                     'nom_categorie' => $cat_info ? $cat_info['nom'] : (is_array($data) ? $nom_charge : $libelle),
@@ -677,36 +681,36 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
             'activite' => $cat_info['activite']
         );
     }
-    
+
     // Total dépenses
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Total dépenses', 'type' => 'total_charge', 'mois' => array(), 'cumule' => 0);
-    
+
     // Résultats
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Résultats', 'type' => 'resultat', 'mois' => array(), 'cumule' => 0);
-    
+
     // LIGNES DE TRÉSORERIE
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Trésorerie des branchements', 'type' => 'tresorerie_branchements', 'mois' => array(), 'cumule' => 0);
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Trésorerie de la vente d\'eau', 'type' => 'tresorerie_vente_eau', 'mois' => array(), 'cumule' => 0);
     $lignes[] = array('code_budgetaire' => '', 'nom_categorie' => 'Trésorerie', 'type' => 'tresorerie', 'mois' => array(), 'cumule' => 0);
-    
+
     // Remplir les données par mois
     foreach ($lignes as &$ligne) {
         if (in_array($ligne['type'], array('total_recette', 'total_charge', 'resultat'))) {
             continue;
         }
-        
+
         $cumule = 0;
         foreach ($mois_list as $mois_key) {
             $montant = 0;
-            
+
             if (isset($compte_rendu[$mois_key])) {
                 $mois_data = $compte_rendu[$mois_key];
-                
+
                 // Identifier la ligne par code budgétaire ou nom
                 $code_ligne = isset($ligne['code_budgetaire']) ? $ligne['code_budgetaire'] : '';
                 $nom_ligne = isset($ligne['nom_categorie']) ? $ligne['nom_categorie'] : '';
                 $base_calcul = isset($ligne['base_calcul']) ? $ligne['base_calcul'] : null;
-                
+
                 if ($nom_ligne === $libelle_recouvrements || $code_ligne === $code_budgetaire_recouvrements) {
                     $montant = isset($mois_data['recettes'][$code_ligne ?: $nom_ligne]) ? $mois_data['recettes'][$code_ligne ?: $nom_ligne] : 0;
                 } elseif ($nom_ligne === $libelle_branchements || $code_ligne === $code_budgetaire_branchements) {
@@ -737,20 +741,27 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
                     }
                 }
             }
-            
+
+            // S'assurer que $montant est un nombre
+            if (is_array($montant)) {
+                $montant = isset($montant['montant']) ? floatval($montant['montant']) : 0;
+            } else {
+                $montant = floatval($montant);
+            }
+
             $ligne['mois'][$mois_key] = $montant;
             $cumule += $montant;
         }
         $ligne['cumule'] = $cumule;
     }
-    
+
     // Calculer les totaux, résultats et trésoreries
     foreach ($lignes as &$ligne) {
         if (in_array($ligne['type'], array('total_recette', 'total_charge', 'resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie'))) {
             $cumule = 0;
             foreach ($mois_list as $mois_key) {
                 $montant = 0;
-                
+
                 if ($ligne['type'] === 'total_recette') {
                     foreach ($lignes as $l) {
                         if ($l['type'] === 'recette' && isset($l['mois'][$mois_key])) {
@@ -787,7 +798,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
                         } elseif (isset($l['activite']) && $l['activite'] === 'branchements') {
                             $is_branchements = true;
                         }
-                        
+
                         if ($is_branchements) {
                             if ($l['type'] === 'recette' && isset($l['mois'][$mois_key])) {
                                 $recettes_branchements += $l['mois'][$mois_key];
@@ -810,7 +821,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
                         } elseif (isset($l['activite']) && $l['activite'] === 'vente_eau') {
                             $is_vente_eau = true;
                         }
-                        
+
                         if ($is_vente_eau) {
                             if ($l['type'] === 'recette' && isset($l['mois'][$mois_key])) {
                                 $recettes_vente_eau += $l['mois'][$mois_key];
@@ -842,58 +853,77 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin) {
                     }
                     $montant = $tresorerie_branchements + $tresorerie_vente_eau + $autre_recettes - $autre_charges;
                 }
-                
+
                 $ligne['mois'][$mois_key] = $montant;
                 $cumule += $montant;
             }
             $ligne['cumule'] = $cumule;
         }
     }
-    
+
     return array(
         'mois_list' => $mois_list,
         'lignes' => $lignes
     );
 }
 
-function moneyFormatter($montant) {
+function moneyFormatter($montant)
+{
     return number_format($montant, 0, ',', ' ');
 }
 
-$mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre');
+$mois_noms = array(
+    '',
+    'Janvier',
+    'Février',
+    'Mars',
+    'Avril',
+    'Mai',
+    'Juin',
+    'Juillet',
+    'Août',
+    'Septembre',
+    'Octobre',
+    'Novembre',
+    'Décembre'
+);
 ?>
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary fw-bold">
-            Compte d'Exploitation 
+            Compte d'Exploitation
             <?php if ($type_periode === 'annee'): ?>
                 - Année <?php echo $annee; ?>
             <?php else: ?>
-                - Période <?php echo date('m/Y', strtotime($mois_debut . '-01')); ?> à <?php echo date('m/Y', strtotime($mois_fin . '-01')); ?>
+                - Période <?php echo date('m/Y', strtotime($mois_debut . '-01')); ?> à
+                <?php echo date('m/Y', strtotime($mois_fin . '-01')); ?>
             <?php endif; ?>
         </h2>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <a href="?page=config_compte_rendu" class="btn btn-outline-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Configurer les libellés des catégories">
+            <a href="?page=config_compte_rendu" class="btn btn-outline-primary" data-bs-toggle="tooltip"
+                data-bs-placement="top" title="Configurer les libellés des catégories">
                 <i class="fas fa-cog me-2"></i>Configurer
             </a>
-            
+
             <!-- Sélecteur de type de période -->
             <form method="get" action="" class="d-inline">
                 <input type="hidden" name="page" value="compte_rendu_tableau">
-                <select name="type_periode" class="form-select d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                <select name="type_periode" class="form-select d-inline-block" style="width: auto;"
+                    onchange="this.form.submit()">
                     <option value="annee" <?php echo $type_periode === 'annee' ? 'selected' : ''; ?>>Par Année</option>
-                    <option value="mois" <?php echo $type_periode === 'mois' ? 'selected' : ''; ?>>Par Période (mois)</option>
+                    <option value="mois" <?php echo $type_periode === 'mois' ? 'selected' : ''; ?>>Par Période (mois)
+                    </option>
                 </select>
             </form>
-            
+
             <?php if ($type_periode === 'annee'): ?>
                 <!-- Sélecteur d'année -->
                 <form method="get" action="" class="d-inline">
                     <input type="hidden" name="page" value="compte_rendu_tableau">
                     <input type="hidden" name="type_periode" value="annee">
-                    <select name="annee" class="form-select d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                    <select name="annee" class="form-select d-inline-block" style="width: auto;"
+                        onchange="this.form.submit()">
                         <?php for ($a = date('Y'); $a >= date('Y') - 5; $a--): ?>
                             <option value="<?php echo $a; ?>" <?php echo $a == $annee ? 'selected' : ''; ?>>
                                 <?php echo $a; ?>
@@ -908,18 +938,35 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                     <input type="hidden" name="type_periode" value="mois">
                     <div class="d-inline-flex align-items-center gap-2">
                         <label for="mois_debut_select" class="form-label mb-0">Mois début:</label>
-                        <input type="month" id="mois_debut_select" name="mois_debut" class="form-control d-inline-block" style="width: auto;" value="<?php echo htmlspecialchars($mois_debut); ?>" onchange="this.form.submit()">
+                        <input type="month" id="mois_debut_select" name="mois_debut" class="form-control d-inline-block"
+                            style="width: auto;" value="<?php echo htmlspecialchars($mois_debut); ?>"
+                            onchange="this.form.submit()">
                         <label for="mois_fin_select" class="form-label mb-0">Mois fin:</label>
-                        <input type="month" id="mois_fin_select" name="mois_fin" class="form-control d-inline-block" style="width: auto;" value="<?php echo htmlspecialchars($mois_fin); ?>" onchange="this.form.submit()">
+                        <input type="month" id="mois_fin_select" name="mois_fin" class="form-control d-inline-block"
+                            style="width: auto;" value="<?php echo htmlspecialchars($mois_fin); ?>"
+                            onchange="this.form.submit()">
                     </div>
                 </form>
             <?php endif; ?>
-            
+
             <?php
             // Préparer les données pour l'export
-            $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 
-                               'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre');
-            
+            $mois_noms = array(
+                '',
+                'Janvier',
+                'Février',
+                'Mars',
+                'Avril',
+                'Mai',
+                'Juin',
+                'Juillet',
+                'Août',
+                'Septembre',
+                'Octobre',
+                'Novembre',
+                'Décembre'
+            );
+
             $data_export = array();
             foreach ($donnees['lignes'] as $ligne) {
                 $code_budgetaire = isset($ligne['code_budgetaire']) && !empty($ligne['code_budgetaire']) ? $ligne['code_budgetaire'] : '-';
@@ -940,7 +987,7 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                 $row['Cumulé'] = number_format($ligne['cumule'], 0, ',', ' ');
                 $data_export[] = $row;
             }
-            
+
             @include_once("../donnees/manager.php");
             @include_once("donnees/manager.php");
             $export_filename = ($type_periode === 'annee') ? 'compte_rendu_financier_' . $annee . '.csv' : 'compte_rendu_financier_' . $mois_debut . '_a_' . $mois_fin . '.csv';
@@ -956,29 +1003,37 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                 <table class="table table-bordered table-sm mb-0" style="font-size: 0.85rem;">
                     <thead class="table-dark">
                         <tr>
-                            <th style="min-width: 120px; max-width: 120px; width: 120px; position: sticky; left: 0; background: #212529; z-index: 10; box-shadow: 2px 0 5px rgba(0,0,0,0.2); padding: 0.5rem;">Code budgétaire</th>
-                            <th style="min-width: 180px; max-width: 180px; width: 180px; position: sticky; left: 120px; background: #212529; z-index: 10; box-shadow: 2px 0 5px rgba(0,0,0,0.2); padding: 0.5rem;">Nom de la catégorie</th>
+                            <th
+                                style="min-width: 120px; max-width: 120px; width: 120px; position: sticky; left: 0; background: #212529; z-index: 10; box-shadow: 2px 0 5px rgba(0,0,0,0.2); padding: 0.5rem;">
+                                Code budgétaire</th>
+                            <th
+                                style="min-width: 180px; max-width: 180px; width: 180px; position: sticky; left: 120px; background: #212529; z-index: 10; box-shadow: 2px 0 5px rgba(0,0,0,0.2); padding: 0.5rem;">
+                                Nom de la catégorie</th>
                             <?php if ($type_periode === 'annee'): ?>
                                 <?php for ($m = 1; $m <= 12; $m++): ?>
-                                    <th class="text-center" style="min-width: 80px; padding: 0.5rem;"><?php echo substr($mois_noms[$m], 0, 4); ?></th>
+                                    <th class="text-center" style="min-width: 80px; padding: 0.5rem;">
+                                        <?php echo substr($mois_noms[$m], 0, 4); ?>
+                                    </th>
                                 <?php endfor; ?>
                             <?php else: ?>
                                 <?php foreach ($donnees['mois_list'] as $mois_key): ?>
-                                    <th class="text-center" style="min-width: 80px; padding: 0.5rem;"><?php echo date('M Y', strtotime($mois_key . '-01')); ?></th>
+                                    <th class="text-center" style="min-width: 80px; padding: 0.5rem;">
+                                        <?php echo date('M Y', strtotime($mois_key . '-01')); ?>
+                                    </th>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                             <th class="text-center bg-primary" style="min-width: 100px; padding: 0.5rem;">Cumulé</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php 
+                        <?php
                         $in_recettes = true;
                         $first_row = true;
-                        foreach ($donnees['lignes'] as $ligne): 
+                        foreach ($donnees['lignes'] as $ligne):
                             // Calculer le nombre de colonnes
                             $nb_colonnes = ($type_periode === 'annee') ? 12 : count($donnees['mois_list']);
                             $colspan = $nb_colonnes + 3; // +2 pour code budgétaire et nom catégorie, +1 pour cumulé
-                            
+                        
                             // Afficher l'en-tête RECETTES au début
                             if ($first_row && $ligne['type'] === 'recette') {
                                 echo '<tr><td colspan="' . $colspan . '" class="bg-light fw-bold" style="position: relative; z-index: 9;">RECETTES</td></tr>';
@@ -994,7 +1049,7 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                                 $in_tresorerie = true;
                                 echo '<tr><td colspan="' . $colspan . '" class="bg-light fw-bold" style="position: relative; z-index: 9;">TRÉSORERIE</td></tr>';
                             }
-                            
+
                             // Déterminer la classe et la couleur de fond pour la colonne catégorie
                             $row_class = '';
                             $td_bg_color = 'white'; // Valeur par défaut
@@ -1008,17 +1063,19 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                                 $row_class = 'table-success fw-bold';
                                 $td_bg_color = '#d4edda';
                             }
-                        ?>
+                            ?>
                             <tr class="<?php echo $row_class; ?>">
-                                <td style="position: sticky; left: 0; background-color: <?php echo $td_bg_color; ?> !important; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); min-width: 120px; max-width: 120px; width: 120px; padding: 0.5rem;" class="fw-bold">
+                                <td style="position: sticky; left: 0; background-color: <?php echo $td_bg_color; ?> !important; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); min-width: 120px; max-width: 120px; width: 120px; padding: 0.5rem;"
+                                    class="fw-bold">
                                     <?php echo htmlspecialchars(isset($ligne['code_budgetaire']) && !empty($ligne['code_budgetaire']) ? $ligne['code_budgetaire'] : '-'); ?>
                                 </td>
-                                <td style="position: sticky; left: 120px; background-color: <?php echo $td_bg_color; ?> !important; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); min-width: 180px; max-width: 180px; width: 180px; padding: 0.5rem;" class="fw-bold">
+                                <td style="position: sticky; left: 120px; background-color: <?php echo $td_bg_color; ?> !important; z-index: 5; box-shadow: 2px 0 5px rgba(0,0,0,0.1); min-width: 180px; max-width: 180px; width: 180px; padding: 0.5rem;"
+                                    class="fw-bold">
                                     <?php echo htmlspecialchars(isset($ligne['nom_categorie']) ? $ligne['nom_categorie'] : (isset($ligne['libelle']) ? $ligne['libelle'] : '-')); ?>
                                 </td>
-                                <?php 
+                                <?php
                                 if ($type_periode === 'annee') {
-                                    for ($m = 1; $m <= 12; $m++): 
+                                    for ($m = 1; $m <= 12; $m++):
                                         $mois_key = sprintf('%04d-%02d', $annee, $m);
                                         $montant = isset($ligne['mois'][$mois_key]) ? $ligne['mois'][$mois_key] : 0;
                                         $text_class = '';
@@ -1027,11 +1084,11 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                                         } elseif (in_array($ligne['type'], array('resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie')) && $montant > 0) {
                                             $text_class = 'text-success';
                                         }
-                                ?>
-                                    <td class="text-end <?php echo $text_class; ?>" style="padding: 0.5rem;">
-                                        <?php echo moneyFormatter($montant); ?>
-                                    </td>
-                                <?php 
+                                        ?>
+                                        <td class="text-end <?php echo $text_class; ?>" style="padding: 0.5rem;">
+                                            <?php echo moneyFormatter($montant); ?>
+                                        </td>
+                                        <?php
                                     endfor;
                                 } else {
                                     // Pour les périodes en mois
@@ -1043,15 +1100,16 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                                         } elseif (in_array($ligne['type'], array('resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie')) && $montant > 0) {
                                             $text_class = 'text-success';
                                         }
-                                ?>
-                                    <td class="text-end <?php echo $text_class; ?>" style="padding: 0.5rem;">
-                                        <?php echo moneyFormatter($montant); ?>
-                                    </td>
-                                <?php 
+                                        ?>
+                                        <td class="text-end <?php echo $text_class; ?>" style="padding: 0.5rem;">
+                                            <?php echo moneyFormatter($montant); ?>
+                                        </td>
+                                        <?php
                                     endforeach;
                                 }
                                 ?>
-                                <td class="text-end bg-primary text-white fw-bold <?php echo in_array($ligne['type'], array('resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie')) ? ($ligne['cumule'] < 0 ? 'text-danger' : 'text-success') : ''; ?>" style="padding: 0.5rem;">
+                                <td class="text-end bg-primary text-white fw-bold <?php echo in_array($ligne['type'], array('resultat', 'tresorerie_branchements', 'tresorerie_vente_eau', 'tresorerie')) ? ($ligne['cumule'] < 0 ? 'text-danger' : 'text-success') : ''; ?>"
+                                    style="padding: 0.5rem;">
                                     <?php echo moneyFormatter($ligne['cumule']); ?>
                                 </td>
                             </tr>
@@ -1061,100 +1119,299 @@ $mois_noms = array('', 'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
             </div>
         </div>
     </div>
-    
+
     <div class="alert alert-info mt-3">
         <i class="fas fa-info-circle me-2"></i>
-        <strong>Note :</strong> Les montants sont exprimés en FCFA. Les résultats négatifs indiquent une perte pour le mois concerné.
+        <strong>Note :</strong> Les montants sont exprimés en FCFA. Les résultats négatifs indiquent une perte pour le
+        mois concerné.
+    </div>
+
+    <!-- Graphique en courbes -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Évolution financière</h5>
+        </div>
+        <div class="card-body">
+            <canvas id="compteExploitationChart" style="max-height: 400px;"></canvas>
+        </div>
     </div>
 </div>
 
 <style>
-/* Correction du scroll horizontal - la colonne catégorie reste fixe et masque le contenu */
-#tableau_compte_rendu {
-    position: relative;
-    overflow-x: auto;
-    overflow-y: visible;
-}
-
-#tableau_compte_rendu table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-/* Colonne catégorie fixe avec fond opaque pour masquer le contenu qui passe en dessous */
-#tableau_compte_rendu th:first-child,
-#tableau_compte_rendu td:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 10;
-    background-color: inherit;
-    background-clip: padding-box;
-    min-width: 150px;
-    max-width: 150px;
-    width: 150px;
-}
-
-/* En-tête de la colonne catégorie */
-#tableau_compte_rendu thead th:first-child {
-    z-index: 11;
-    background-color: #212529 !important;
-    color: white;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.2);
-}
-
-/* Corps du tableau - colonne catégorie avec fond opaque */
-#tableau_compte_rendu tbody tr {
-    background-color: white;
-}
-
-#tableau_compte_rendu tbody td:first-child {
-    background-color: white !important;
-    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-}
-
-/* Lignes avec classes spéciales */
-#tableau_compte_rendu tbody tr.table-info td:first-child {
-    background-color: #d1ecf1 !important;
-}
-
-#tableau_compte_rendu tbody tr.table-warning td:first-child {
-    background-color: #fff3cd !important;
-}
-
-#tableau_compte_rendu tbody tr.table-success td:first-child {
-    background-color: #d1e7dd !important;
-}
-
-#tableau_compte_rendu tbody tr.table-danger td:first-child {
-    background-color: #f8d7da !important;
-}
-
-/* Lignes d'en-tête de section */
-#tableau_compte_rendu tbody tr td.bg-light {
-    position: relative;
-    z-index: 9;
-}
-
-/* Assurer que le contenu qui passe en dessous est vraiment masqué */
-#tableau_compte_rendu tbody td:not(:first-child) {
-    position: relative;
-    z-index: 1;
-}
-
-@media print {
-    .btn, form, .alert {
-        display: none !important;
-    }
-    .table {
-        font-size: 0.8rem !important;
-    }
+    /* Correction du scroll horizontal - la colonne catégorie reste fixe et masque le contenu */
     #tableau_compte_rendu {
-        overflow: visible !important;
+        position: relative;
+        overflow-x: auto;
+        overflow-y: visible;
     }
+
+    #tableau_compte_rendu table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    /* Colonne catégorie fixe avec fond opaque pour masquer le contenu qui passe en dessous */
     #tableau_compte_rendu th:first-child,
     #tableau_compte_rendu td:first-child {
-        position: static !important;
+        position: sticky;
+        left: 0;
+        z-index: 10;
+        background-color: inherit;
+        background-clip: padding-box;
+        min-width: 150px;
+        max-width: 150px;
+        width: 150px;
+    }
+
+    /* En-tête de la colonne catégorie */
+    #tableau_compte_rendu thead th:first-child {
+        z-index: 11;
+        background-color: #212529 !important;
+        color: white;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Corps du tableau - colonne catégorie avec fond opaque */
+    #tableau_compte_rendu tbody tr {
+        background-color: white;
+    }
+
+    #tableau_compte_rendu tbody td:first-child {
+        background-color: white !important;
+        box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Lignes avec classes spéciales */
+    #tableau_compte_rendu tbody tr.table-info td:first-child {
+        background-color: #d1ecf1 !important;
+    }
+
+    #tableau_compte_rendu tbody tr.table-warning td:first-child {
+        background-color: #fff3cd !important;
+    }
+
+    #tableau_compte_rendu tbody tr.table-success td:first-child {
+        background-color: #d1e7dd !important;
+    }
+
+    #tableau_compte_rendu tbody tr.table-danger td:first-child {
+        background-color: #f8d7da !important;
+    }
+
+    /* Lignes d'en-tête de section */
+    #tableau_compte_rendu tbody tr td.bg-light {
+        position: relative;
+        z-index: 9;
+    }
+
+    /* Assurer que le contenu qui passe en dessous est vraiment masqué */
+    #tableau_compte_rendu tbody td:not(:first-child) {
+        position: relative;
+        z-index: 1;
+    }
+
+    @media print {
+
+        .btn,
+        form,
+        .alert {
+            display: none !important;
+        }
+
+        .table {
+            font-size: 0.8rem !important;
+        }
+
+        #tableau_compte_rendu {
+            overflow: visible !important;
+        }
+
+        #tableau_compte_rendu th:first-child,
+        #tableau_compte_rendu td:first-child {
+            position: static !important;
+        }
+
+        #compteExploitationChart {
+            display: none !important;
+        }
+    }
+</style>
+
+<?php
+// Préparer les données pour le graphique
+$chart_labels = array();
+$chart_data_recettes = array();
+$chart_data_depenses = array();
+$chart_data_tresorerie_branchements = array();
+$chart_data_tresorerie_vente_eau = array();
+$chart_data_tresorerie = array();
+
+// Extraire les données des lignes importantes
+$total_recettes = null;
+$total_depenses = null;
+$tresorerie_branchements = null;
+$tresorerie_vente_eau = null;
+$tresorerie = null;
+
+foreach ($donnees['lignes'] as $ligne) {
+    if ($ligne['type'] === 'total_recette') {
+        $total_recettes = $ligne;
+    } elseif ($ligne['type'] === 'total_charge') {
+        $total_depenses = $ligne;
+    } elseif ($ligne['type'] === 'tresorerie_branchements') {
+        $tresorerie_branchements = $ligne;
+    } elseif ($ligne['type'] === 'tresorerie_vente_eau') {
+        $tresorerie_vente_eau = $ligne;
+    } elseif ($ligne['type'] === 'tresorerie') {
+        $tresorerie = $ligne;
     }
 }
-</style>
+
+// Construire les labels et les données
+if ($type_periode === 'annee') {
+    for ($m = 1; $m <= 12; $m++) {
+        $mois_key = sprintf('%04d-%02d', $annee, $m);
+        $chart_labels[] = $mois_noms[$m];
+
+        $chart_data_recettes[] = $total_recettes && isset($total_recettes['mois'][$mois_key]) ? floatval($total_recettes['mois'][$mois_key]) : 0;
+        $chart_data_depenses[] = $total_depenses && isset($total_depenses['mois'][$mois_key]) ? floatval($total_depenses['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie_branchements[] = $tresorerie_branchements && isset($tresorerie_branchements['mois'][$mois_key]) ? floatval($tresorerie_branchements['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie_vente_eau[] = $tresorerie_vente_eau && isset($tresorerie_vente_eau['mois'][$mois_key]) ? floatval($tresorerie_vente_eau['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie[] = $tresorerie && isset($tresorerie['mois'][$mois_key]) ? floatval($tresorerie['mois'][$mois_key]) : 0;
+    }
+} else {
+    foreach ($donnees['mois_list'] as $mois_key) {
+        $chart_labels[] = date('M Y', strtotime($mois_key . '-01'));
+
+        $chart_data_recettes[] = $total_recettes && isset($total_recettes['mois'][$mois_key]) ? floatval($total_recettes['mois'][$mois_key]) : 0;
+        $chart_data_depenses[] = $total_depenses && isset($total_depenses['mois'][$mois_key]) ? floatval($total_depenses['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie_branchements[] = $tresorerie_branchements && isset($tresorerie_branchements['mois'][$mois_key]) ? floatval($tresorerie_branchements['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie_vente_eau[] = $tresorerie_vente_eau && isset($tresorerie_vente_eau['mois'][$mois_key]) ? floatval($tresorerie_vente_eau['mois'][$mois_key]) : 0;
+        $chart_data_tresorerie[] = $tresorerie && isset($tresorerie['mois'][$mois_key]) ? floatval($tresorerie['mois'][$mois_key]) : 0;
+    }
+}
+?>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const ctx = document.getElementById('compteExploitationChart');
+        if (!ctx) return;
+
+        const chartData = {
+            labels: <?php echo json_encode($chart_labels); ?>,
+            datasets: [
+                {
+                    label: 'Total Recettes',
+                    data: <?php echo json_encode($chart_data_recettes); ?>,
+                    borderColor: 'rgb(40, 167, 69)',
+                    backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Total Dépenses',
+                    data: <?php echo json_encode($chart_data_depenses); ?>,
+                    borderColor: 'rgb(220, 53, 69)',
+                    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Trésorerie Branchements',
+                    data: <?php echo json_encode($chart_data_tresorerie_branchements); ?>,
+                    borderColor: 'rgb(0, 123, 255)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Trésorerie Vente d\'eau',
+                    data: <?php echo json_encode($chart_data_tresorerie_vente_eau); ?>,
+                    borderColor: 'rgb(255, 193, 7)',
+                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Trésorerie',
+                    data: <?php echo json_encode($chart_data_tresorerie); ?>,
+                    borderColor: 'rgb(108, 117, 125)',
+                    backgroundColor: 'rgba(108, 117, 125, 0.1)',
+                    tension: 0.4,
+                    fill: false,
+                    borderWidth: 2
+                }
+            ]
+        };
+
+        new Chart(ctx, {
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += new Intl.NumberFormat('fr-FR', {
+                                    style: 'decimal',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(context.parsed.y) + ' FCFA';
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return new Intl.NumberFormat('fr-FR', {
+                                    style: 'decimal',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                }).format(value);
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Montant (FCFA)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Période'
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>

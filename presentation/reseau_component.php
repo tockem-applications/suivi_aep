@@ -22,6 +22,10 @@ function afficherPageReseau($id_reseau, $data, $code_html)
         $selected_reseau = display_reseau_list($id_reseau);
     $display_reseau_list = ob_get_clean();
     
+    // Récupérer les paramètres de période
+    $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : '';
+    $mois_fin = isset($_GET['mois_fin']) ? $_GET['mois_fin'] : '';
+    
     ?>
         <div class="w-100 bg-secondary d-flex justify-content-between" >
             <button class="btn btn-primary d-flex justify-content-between" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasTop" aria-controls="offcanvasTop">Liste des reseaux</button>
@@ -35,6 +39,37 @@ function afficherPageReseau($id_reseau, $data, $code_html)
             <div class="offcanvas-body">
                 <?php echo $display_reseau_list ?>
             </div>  
+            </div>
+        </div>
+        
+        <!-- Formulaire de sélection de période -->
+        <div class="container-fluid mt-3 mb-3">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" action="" class="row g-3 align-items-end">
+                        <input type="hidden" name="page" value="reseau">
+                        <input type="hidden" name="id_reseau" value="<?php echo htmlspecialchars($id_reseau); ?>">
+                        <div class="col-md-4">
+                            <label for="mois_debut" class="form-label fw-bold">Mois de début</label>
+                            <input type="month" class="form-control" id="mois_debut" name="mois_debut" 
+                                   value="<?php echo htmlspecialchars($mois_debut); ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="mois_fin" class="form-label fw-bold">Mois de fin</label>
+                            <input type="month" class="form-control" id="mois_fin" name="mois_fin" 
+                                   value="<?php echo htmlspecialchars($mois_fin); ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="bi bi-funnel"></i> Filtrer
+                            </button>
+                            <a href="?page=reseau&id_reseau=<?php echo htmlspecialchars($id_reseau); ?>" 
+                               class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Réinitialiser
+                            </a>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     <?php
@@ -62,9 +97,9 @@ function afficherPageReseau($id_reseau, $data, $code_html)
     echo "</div>";
 }
 
-function afficherStatistiqueReseau($id_reseau)
+function afficherStatistiqueReseau($id_reseau, $mois_debut = null, $mois_fin = null)
 {
-    $res = MoisFacturation::getAllMois(null, null, $_SESSION['id_aep'], $id_reseau);
+    $res = MoisFacturation::getAllMois($mois_debut, $mois_fin, $_SESSION['id_aep'], $id_reseau);
     //    var_dump($reseau->id);
     $output = array();
     $res = $res->fetchAll();

@@ -319,8 +319,10 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
         $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
+        $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : null;
+        $mois_fin = isset($_GET['mois_fin']) ? $_GET['mois_fin'] : null;
         ob_start();
-        $statistiqueReseau = afficherStatistiqueReseau($id_reseau);
+        $statistiqueReseau = afficherStatistiqueReseau($id_reseau, $mois_debut, $mois_fin);
         $code_html = ob_get_clean();
         afficherPageReseau($id_reseau, $statistiqueReseau, $code_html);
 
@@ -404,6 +406,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/compte_rendu_financier_page.php';
     } else if ($_GET['page'] == 'compte_rendu_tableau') {
         require_once 'presentation/compte_rendu_financier_tableau_page.php';
+    } else if ($_GET['page'] == 'analyse_financiere') {
+        require_once 'presentation/analyse_financiere_page.php';
     } else if ($_GET['page'] == 'config_compte_rendu') {
         require_once 'presentation/config_compte_rendu_page.php';
     } else if ($_GET['page'] == 'categories_flux_manuel') {

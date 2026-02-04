@@ -84,6 +84,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li><a class="dropdown-item" href="?page=transaction">Entrée/Sortie</a></li>
                             <li><a class="dropdown-item" href="?page=compte_rendu_financier">Compte Rendu Financier</a></li>
                             <li><a class="dropdown-item" href="?page=compte_rendu_tableau">Compte d'Exploitation (Tableau)</a></li>
+                            <li><a class="dropdown-item" href="?page=analyse_financiere">Analyse Financière</a></li>
                             <li><a class="dropdown-item" href="?page=config_compte_rendu">Config. Compte Rendu</a></li>
                             <li><a class="dropdown-item" href="?page=categories_flux_manuel">Catégories Flux Manuels</a></li>
                             <!--                            <li><a class="dropdown-item" href="?list=transaction">Liste des dépenses</a></li>-->

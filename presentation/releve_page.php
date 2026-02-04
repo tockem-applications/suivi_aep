@@ -108,7 +108,6 @@ function addDaysAndFormat($string_date, $days = 10)
                 <!--                <li><a class="dropdown-item" href="" target="_blank">Exporter vers mobile</a></li>-->
             </div>
 
-
             <?php
             $id_mois = isset($_GET['mois_facturation']) ? $_GET["mois_facturation"] : 0;
             $id_mois = $id;
@@ -136,10 +135,77 @@ function addDaysAndFormat($string_date, $days = 10)
 
             $req2 = Facture::getMonthIndexes((int) $id_mois, $_SESSION['id_aep'])->fetchAll(PDO::FETCH_ASSOC);
 
+            // Récupérer les tarifs différenciés pour ce mois
+            $tarifs_differencies = array();
+            if (count($mois_data) > 0 && isset($mois_data[0]['id_constante'])) {
+                @include_once("../donnees/tarif_differencie.php");
+                @include_once("donnees/tarif_differencie.php");
+                $id_constante = $mois_data[0]['id_constante'];
+                $tarifs_differencies_query = Manager::prepare_query(
+                    "SELECT * FROM tarif_differencie WHERE id_constante_reseau = ? ORDER BY min_consommation ASC",
+                    array($id_constante)
+                );
+                if ($tarifs_differencies_query) {
+                    $tarifs_differencies = $tarifs_differencies_query->fetchAll(PDO::FETCH_ASSOC);
+                }
+            }
 
             $titre_table = " $mois_lettre";
 
             ?>
+
+            <?php if (isset($tarifs_differencies) && count($tarifs_differencies) > 0): ?>
+                <!-- Alerte pour les tarifs différenciés -->
+                <div class="alert alert-info mb-3" role="alert">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-info-circle fs-4 me-3 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading mb-2">
+                                <i class="bi bi-tags me-2"></i>Tarifs différenciés actifs pour ce mois
+                            </h5>
+                            <p class="mb-2">
+                                Ce mois de facturation utilise des tarifs différenciés selon la consommation. 
+                                Les tarifs appliqués sont les suivants :
+                            </p>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Consommation minimale (m³)</th>
+                                            <th>Consommation maximale (m³)</th>
+                                            <th class="text-end">Prix par m³ (FCFA)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($tarifs_differencies as $tarif): ?>
+                                            <tr>
+                                                <td><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
+                                                <td>
+                                                    <?php 
+                                                    if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
+                                                        echo number_format($tarif['max_consommation'], 2, ',', ' ');
+                                                    } else {
+                                                        echo '<span class="text-muted">∞ (illimité)</span>';
+                                                    }
+                                                    ?>
+                                                </td>
+                                                <td class="text-end fw-bold">
+                                                    <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted mt-2 d-block">
+                                <i class="bi bi-lightbulb me-1"></i>
+                                <strong>Note :</strong> Le tarif appliqué à chaque abonné dépend de sa consommation mensuelle. 
+                                Le système sélectionne automatiquement le tarif approprié selon les tranches de consommation.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <style>
                 /* Masquer les flèches d'incrémentation dans les navigateurs modernes */
@@ -279,6 +345,7 @@ function addDaysAndFormat($string_date, $days = 10)
 
             include('traitement/constante_reseau_t.php');
             $constante_reseau = ConstanteReseau_t::getConstanteActive();
+            $tarifs_differencies_modal = array();
             if ($constante_reseau != null) {
                 $constante_reseau_id = $constante_reseau['id'];
                 $prix_metre_cube_eau = $constante_reseau['prix_metre_cube_eau'];
@@ -287,6 +354,17 @@ function addDaysAndFormat($string_date, $days = 10)
                 $date_creation = $constante_reseau['date_creation'];
                 $constante_reseau_idest_actif = $constante_reseau['est_actif'];
                 $constante_reseau_iddescription = $constante_reseau['description'];
+                
+                // Récupérer les tarifs différenciés pour cette constante
+                @include_once("../donnees/tarif_differencie.php");
+                @include_once("donnees/tarif_differencie.php");
+                $tarifs_differencies_query = Manager::prepare_query(
+                    "SELECT * FROM tarif_differencie WHERE id_constante_reseau = ? ORDER BY min_consommation ASC",
+                    array($constante_reseau_id)
+                );
+                if ($tarifs_differencies_query) {
+                    $tarifs_differencies_modal = $tarifs_differencies_query->fetchAll(PDO::FETCH_ASSOC);
+                }
             }
 
             $curentMoisQuery = MoisFacturation::getMoisById($id_current_mois);
@@ -466,24 +544,99 @@ function addDaysAndFormat($string_date, $days = 10)
                                     <label class="form-label fw-bold">Tarif appliqué</label>
                                     <div class="card card-body bg-light">
                                         <?php if (isset($constante_reseau_id) && $constante_reseau_id): ?>
-                                            <ul class="list-group list-group-flush">
-                                                <li class="list-group-item d-flex justify-content-between"><span>Prix de
-                                                        l'eau
-                                                        :</span><span><?php echo isset($prix_metre_cube_eau) ? $prix_metre_cube_eau . ' FCFA/m³' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between"><span>Entretien
-                                                        compteur
-                                                        :</span><span><?php echo isset($prix_entretient_compteur) ? $prix_entretient_compteur . ' FCFA/mois' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>TVA
-                                                        :</span><span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
-                                                </li>
-                                                <li class="list-group-item d-flex justify-content-between">
-                                                    <span>Créé le
-                                                        :</span><span><?php echo isset($date_creation) ? $date_creation : 'N/A'; ?></span>
-                                                </li>
-                                            </ul>
+                                            <?php if (count($tarifs_differencies_modal) > 0): ?>
+                                                <!-- Affichage du tarif standard de la constante_reseau -->
+                                                <ul class="list-group list-group-flush mb-3">
+                                                    <li class="list-group-item d-flex justify-content-between bg-light">
+                                                        <span class="fw-bold">Prix de l'eau (tarif standard) :</span>
+                                                        <span class="fw-bold"><?php echo isset($prix_metre_cube_eau) ? number_format($prix_metre_cube_eau, 0, ',', ' ') . ' FCFA/m³' : 'N/A'; ?></span>
+                                                    </li>
+                                                </ul>
+                                                
+                                                <!-- Affichage des tarifs différenciés -->
+                                                <div class="alert alert-info mb-3" role="alert">
+                                                    <div class="d-flex align-items-start">
+                                                        <i class="bi bi-info-circle fs-5 me-2 mt-1"></i>
+                                                        <div class="flex-grow-1">
+                                                            <h6 class="alert-heading mb-2">
+                                                                <i class="bi bi-tags me-2"></i>Tarifs différenciés actifs
+                                                            </h6>
+                                                            <p class="mb-2 small">
+                                                                Ce mois utilisera des tarifs différenciés selon la consommation :
+                                                            </p>
+                                                            <div class="table-responsive">
+                                                                <table class="table table-sm table-bordered mb-0">
+                                                                    <thead class="table-light">
+                                                                        <tr>
+                                                                            <th class="small">Consommation min (m³)</th>
+                                                                            <th class="small">Consommation max (m³)</th>
+                                                                            <th class="small text-end">Prix par m³ (FCFA)</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        <?php foreach ($tarifs_differencies_modal as $tarif): ?>
+                                                                            <tr>
+                                                                                <td class="small"><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
+                                                                                <td class="small">
+                                                                                    <?php 
+                                                                                    if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
+                                                                                        echo number_format($tarif['max_consommation'], 2, ',', ' ');
+                                                                                    } else {
+                                                                                        echo '<span class="text-muted">∞</span>';
+                                                                                    }
+                                                                                    ?>
+                                                                                </td>
+                                                                                <td class="text-end fw-bold small">
+                                                                                    <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
+                                                                                </td>
+                                                                            </tr>
+                                                                        <?php endforeach; ?>
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php else: ?>
+                                                <!-- Affichage du tarif standard -->
+                                                <ul class="list-group list-group-flush">
+                                                    <li class="list-group-item d-flex justify-content-between"><span>Prix de
+                                                            l'eau
+                                                            :</span><span><?php echo isset($prix_metre_cube_eau) ? number_format($prix_metre_cube_eau, 0, ',', ' ') . ' FCFA/m³' : 'N/A'; ?></span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between"><span>Entretien
+                                                            compteur
+                                                            :</span><span><?php echo isset($prix_entretient_compteur) ? number_format($prix_entretient_compteur, 0, ',', ' ') . ' FCFA/mois' : 'N/A'; ?></span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>TVA
+                                                            :</span><span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>Créé le
+                                                            :</span><span><?php echo isset($date_creation) ? $date_creation : 'N/A'; ?></span>
+                                                    </li>
+                                                </ul>
+                                            <?php endif; ?>
+                                            
+                                            <!-- Informations communes (entretien, TVA, date) -->
+                                            <?php if (count($tarifs_differencies_modal) > 0): ?>
+                                                <hr class="my-2">
+                                                <ul class="list-group list-group-flush">
+                                                    <li class="list-group-item d-flex justify-content-between"><span>Entretien
+                                                            compteur
+                                                            :</span><span><?php echo isset($prix_entretient_compteur) ? number_format($prix_entretient_compteur, 0, ',', ' ') . ' FCFA/mois' : 'N/A'; ?></span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>TVA
+                                                            :</span><span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>Créé le
+                                                            :</span><span><?php echo isset($date_creation) ? $date_creation : 'N/A'; ?></span>
+                                                    </li>
+                                                </ul>
+                                            <?php endif; ?>
                                         <?php else: ?>
                                             <div class="text-danger">Aucun tarif actif pour cet AEP. Veuillez activer un
                                                 tarif.
