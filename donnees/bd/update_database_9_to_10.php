@@ -146,9 +146,10 @@ class DatabaseUpdater9To10
         );
 
         foreach ($statements as $statement) {
-            if (!empty(trim($statement))) {
+            $trimmedStatement = trim($statement);
+            if ($trimmedStatement !== '') {
                 try {
-                    $bd->exec($statement);
+                    $bd->exec($trimmedStatement);
                 } catch (Exception $e) {
                     // Ignorer les erreurs de colonnes/tables existantes
                     if (
@@ -610,7 +611,7 @@ class DatabaseUpdater9To10
                     ");
                     $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
                     echo "   ✓ Table config_compte_rendu_financier créée avec succès\n";
-                    
+
                     // Insérer les configurations par défaut
                     echo "   → Insertion des configurations par défaut...\n";
                     $configs_defaut = array(
@@ -618,7 +619,7 @@ class DatabaseUpdater9To10
                         array('code_type' => 'branchements', 'libelle' => 'Branchements', 'type_flux' => 'recette'),
                         array('code_type' => 'redevances', 'libelle' => 'Redevances', 'type_flux' => 'charge')
                     );
-                    
+
                     $stmt = $bd->prepare("
                         INSERT INTO config_compte_rendu_financier (code_type, libelle, type_flux, id_aep, date_creation) 
                         VALUES (?, ?, ?, NULL, NOW())
@@ -662,7 +663,7 @@ class DatabaseUpdater9To10
                     ");
                     $bd->exec('SET FOREIGN_KEY_CHECKS = 1');
                     echo "   ✓ Table categorie_flux_manuel créée avec succès\n";
-                    
+
                     // Insérer quelques catégories par défaut
                     echo "   → Insertion des catégories par défaut...\n";
                     $categories_defaut = array(
@@ -673,7 +674,7 @@ class DatabaseUpdater9To10
                         array('nom' => 'Subventions', 'type_flux' => 'recette', 'description' => 'Subventions reçues'),
                         array('nom' => 'Autres recettes', 'type_flux' => 'recette', 'description' => 'Autres revenus divers')
                     );
-                    
+
                     $stmt = $bd->prepare("
                         INSERT INTO categorie_flux_manuel (nom, type_flux, description, id_aep, est_actif, date_creation) 
                         VALUES (?, ?, ?, NULL, 1, NOW())
@@ -716,8 +717,10 @@ class DatabaseUpdater9To10
                                     ON DELETE SET NULL
                             ");
                         } catch (Exception $e) {
-                            if (strpos($e->getMessage(), 'Duplicate key') === false && 
-                                strpos($e->getMessage(), 'already exists') === false) {
+                            if (
+                                strpos($e->getMessage(), 'Duplicate key') === false &&
+                                strpos($e->getMessage(), 'already exists') === false
+                            ) {
                                 echo "   ⚠ Contrainte de clé étrangère non ajoutée (peut être ignorée): " . $e->getMessage() . "\n";
                             }
                         }
@@ -796,8 +799,10 @@ class DatabaseUpdater9To10
                             ADD KEY `idx_activite_associee` (`activite_associee`)
                         ");
                     } catch (Exception $e) {
-                        if (strpos($e->getMessage(), 'Duplicate key') === false && 
-                            strpos($e->getMessage(), 'already exists') === false) {
+                        if (
+                            strpos($e->getMessage(), 'Duplicate key') === false &&
+                            strpos($e->getMessage(), 'already exists') === false
+                        ) {
                             echo "   ⚠ Index non ajouté (peut être ignoré): " . $e->getMessage() . "\n";
                         }
                     }

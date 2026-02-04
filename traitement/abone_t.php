@@ -530,7 +530,7 @@ class Abone_t
                             "SELECT tarif_differencie_autorise FROM abone WHERE id = ?",
                             array($id_abone)
                         )->fetch();
-                        $tarifDiffAutorise = $tarifDiffAutorise ? (int)$tarifDiffAutorise['tarif_differencie_autorise'] : 1;
+                        $tarifDiffAutorise = $tarifDiffAutorise ? (int) $tarifDiffAutorise['tarif_differencie_autorise'] : 1;
                         ?>
                         <tr>
                             <th>Tarif différencié</th>
@@ -540,11 +540,13 @@ class Abone_t
                                 </span>
                             </th>
                             <th>
-                                <select class="form-select" onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
+                                <select class="form-select"
+                                    onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
                                     <option value="1" <?php echo $tarifDiffAutorise ? 'selected' : ''; ?>>Autorisé</option>
                                     <option value="0" <?php echo !$tarifDiffAutorise ? 'selected' : ''; ?>>Non autorisé</option>
                                 </select>
-                                <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la consommation</small>
+                                <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la
+                                    consommation</small>
                             </th>
                         </tr>
                         <!--                        <tr>-->
@@ -1407,6 +1409,11 @@ loadPenaltyAnalysis(' . $id_compteur . ');
                             <div class="form-text">Doit être ≥ à l\'ancien index et non négatif.</div>
                         </div>
 
+                        <div class="col-md-3">
+                            <label class="form-label">Montant versé (F CFA)</label>
+                            <input type="number" name="montant_verse" class="form-control" step="1" min="0" value="0" placeholder="0">
+                        </div>
+
                         <div class="col-12">
                             <div class="alert alert-info py-2">
                                 <i class="fas fa-exclamation-triangle me-2"></i>
@@ -1775,9 +1782,9 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             if (ob_get_level()) {
                 ob_clean();
             }
-            
+
             $id_compteur = isset($_GET['id_compteur']) ? (int) $_GET['id_compteur'] : 0;
-            
+
             if ($id_compteur <= 0) {
                 header('Content-Type: application/json');
                 echo json_encode(array('success' => false, 'message' => 'ID compteur invalide'));
@@ -1817,7 +1824,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
                     foreach ($data as $row) {
                         $montant_verse = (float) $row['montant_verse'];
                         $montant_total = (float) $row['montant_total'];
-                        
+
                         if ($montant_verse < $montant_total) {
                             $consecutiveUnpaid++;
                         } else {
@@ -1829,7 +1836,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
 
                 // Calculer le score de pénalité
                 $evaluation = self::calculatePenaltyScore($data, $consecutiveUnpaid);
-                
+
                 header('Content-Type: application/json');
                 echo json_encode(array(
                     'success' => true,
@@ -1889,11 +1896,11 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             // Vérifier si la fonction getLetterMonth existe
             $mois = function_exists('getLetterMonth') ? getLetterMonth($row['mois']) : date('M Y', strtotime($row['mois'] . '-01'));
             $chart_labels[] = $mois;
-            
+
             $montant_total = (float) $row['montant_total'];
             $montant_verse = (float) $row['montant_verse'];
             $montant_restant = (float) $row['montant_restant'];
-            
+
             $chart_factured[] = $montant_total;
             $chart_paid[] = $montant_verse;
             $chart_remaining[] = $montant_restant;
@@ -1904,7 +1911,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             } else {
                 $unpaid_months++;
                 $total_debt += $montant_restant;
-                
+
                 // Vérifier si c'est un paiement en retard (pas le mois actuel)
                 if (!$row['est_actif'] && $montant_verse < $montant_total) {
                     $late_payments++;
@@ -1920,7 +1927,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
         }
 
         // Calcul du score (0-100)
-        
+
         // Facteur 1: Pourcentage de mois payés (40% du score)
         $payment_rate = ($total_months > 0) ? ($paid_months / $total_months) * 100 : 0;
         $score += (100 - $payment_rate) * 0.4;
@@ -2023,6 +2030,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
         $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
         $ancien_index = isset($_POST['ancien_index']) ? (float) $_POST['ancien_index'] : null;
         $nouvel_index = isset($_POST['nouvel_index']) ? (float) $_POST['nouvel_index'] : null;
+        $montant_verse = isset($_POST['montant_verse']) ? (float) $_POST['montant_verse'] : 0;
         $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
 
         try {
@@ -2037,6 +2045,9 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             }
             if ($nouvel_index < $ancien_index) {
                 throw new Exception("Le nouvel index doit être supérieur ou égal à l'ancien index.");
+            }
+            if ($montant_verse < 0) {
+                throw new Exception("Le montant versé ne peut pas être négatif.");
             }
 
             $aboneInfoReq = Manager::prepare_query("
@@ -2086,7 +2097,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
                 0,
                 $ancien_index,
                 $nouvel_index,
-                0,
+                (int) round($montant_verse),
                 '0000-00-00',
                 0,
                 $id_mois,
