@@ -29,16 +29,24 @@ vendor/
 
 # Fichiers de données générés et logs
 *.log
+log*.txt
+*_log.txt
 *.tmp
 *.cache
 *.bak
 
 # Donnees: ignorer les fichiers générés courants
 /donnees/*.log
+/donnees/log*.txt
+/donnees/*_log*.txt
 /donnees/*.tmp
 /donnees/*.bak
 /donnees/*.csv
 /donnees/*.json
+
+# Traitement: ignorer les logs et fichiers temporaires
+/traitement/*.log
+/traitement/log*.txt
 # Exemple: autoriser des exemples si besoin
 !donnees/example*.json
 

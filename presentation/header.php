@@ -67,8 +67,6 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFacturation">
                             <li><a class="dropdown-item" href="index.php?list=recouvrement"><i
                                         class="bi bi-cash-stack me-2"></i>Recouvrement</a></li>
-                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i
-                                        class="bi bi-star-fill text-warning me-2"></i>Recouvrement V2</a></li>
                             <!--                            <li><a class="dropdown-item" href="index.php?list=facture_month">Facturation</a></li>-->
                             <li><a class="dropdown-item" href="index.php?page=releves"><i
                                         class="bi bi-journal-text me-2"></i>Relèves</a></li>
@@ -84,6 +82,11 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                 <li><a class="dropdown-item" href="index.php?list=cle"><i class="bi bi-key me-2"></i>Clé</a>
                                 </li>
                             <?php endif; ?>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="index.php?list=recouvrement_v2"><i
+                                        class="bi bi-star-fill text-warning me-2"></i>Recouvrement V2</a></li>
                         </ul>
                     </li>
                     <!-- Dropdown: Finances -->

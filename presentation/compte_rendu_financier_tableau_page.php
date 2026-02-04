@@ -227,13 +227,15 @@ function generateCompteRenduTableau($id_aep, $annee)
     foreach ($mois_data as $mois_key => $data) {
         foreach ($data['flux_manuel_recette'] as $cle => $info) {
             if (!isset($categories_recettes[$cle])) {
-                // Récupérer le nom de la catégorie depuis la base
-                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE code_budgetaire = ? OR nom = ? LIMIT 1";
+                // Récupérer le nom de la catégorie depuis la base (filtrer par id_aep)
+                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE (code_budgetaire = ? OR nom = ?) AND (id_aep = ? OR id_aep IS NULL) LIMIT 1";
                 $stmt_cat = $bd->prepare($query_cat);
-                $stmt_cat->execute(array($cle, $cle));
+                $stmt_cat->execute(array($cle, $cle, $id_aep));
                 $cat_info = $stmt_cat->fetch(PDO::FETCH_ASSOC);
+                // Stocker avec la clé originale ($cle) pour la correspondance
                 $categories_recettes[$cle] = array(
-                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: $cle) : $cle,
+                    'cle_origine' => $cle,
+                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: '') : '',
                     'nom_categorie' => $cat_info ? $cat_info['nom'] : $cle,
                     'activite' => $cat_info ? $cat_info['activite_associee'] : 'autre'
                 );
@@ -242,6 +244,7 @@ function generateCompteRenduTableau($id_aep, $annee)
     }
     foreach ($categories_recettes as $cle => $cat_info) {
         $lignes[] = array(
+            'cle_origine' => $cle,
             'code_budgetaire' => $cat_info['code_budgetaire'],
             'nom_categorie' => $cat_info['nom_categorie'],
             'type' => 'recette',
@@ -287,13 +290,15 @@ function generateCompteRenduTableau($id_aep, $annee)
     foreach ($mois_data as $mois_key => $data) {
         foreach ($data['flux_manuel_charge'] as $cle => $info) {
             if (!isset($categories_charges[$cle])) {
-                // Récupérer le nom de la catégorie depuis la base
-                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE code_budgetaire = ? OR nom = ? LIMIT 1";
+                // Récupérer le nom de la catégorie depuis la base (filtrer par id_aep)
+                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE (code_budgetaire = ? OR nom = ?) AND (id_aep = ? OR id_aep IS NULL) LIMIT 1";
                 $stmt_cat = $bd->prepare($query_cat);
-                $stmt_cat->execute(array($cle, $cle));
+                $stmt_cat->execute(array($cle, $cle, $id_aep));
                 $cat_info = $stmt_cat->fetch(PDO::FETCH_ASSOC);
+                // Stocker avec la clé originale ($cle) pour la correspondance
                 $categories_charges[$cle] = array(
-                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: $cle) : $cle,
+                    'cle_origine' => $cle,
+                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: '') : '',
                     'nom_categorie' => $cat_info ? $cat_info['nom'] : $cle,
                     'activite' => $cat_info ? $cat_info['activite_associee'] : 'autre'
                 );
@@ -302,6 +307,7 @@ function generateCompteRenduTableau($id_aep, $annee)
     }
     foreach ($categories_charges as $cle => $cat_info) {
         $lignes[] = array(
+            'cle_origine' => $cle,
             'code_budgetaire' => $cat_info['code_budgetaire'],
             'nom_categorie' => $cat_info['nom_categorie'],
             'type' => 'charge',
@@ -368,6 +374,9 @@ function generateCompteRenduTableau($id_aep, $annee)
             $nom_ligne = isset($ligne['nom_categorie']) ? $ligne['nom_categorie'] : '';
             $base_calcul = isset($ligne['base_calcul']) ? $ligne['base_calcul'] : null;
 
+            // Récupérer la clé originale si disponible (pour les flux manuels)
+            $cle_origine = isset($ligne['cle_origine']) ? $ligne['cle_origine'] : '';
+
             if ($nom_ligne === $libelle_recouvrements || $code_ligne === $code_budgetaire_recouvrements) {
                 $montant = isset($mois_data[$mois_key]['recouvrements']) ? $mois_data[$mois_key]['recouvrements'] : 0;
             } elseif ($nom_ligne === $libelle_branchements || $code_ligne === $code_budgetaire_branchements) {
@@ -377,19 +386,19 @@ function generateCompteRenduTableau($id_aep, $annee)
             } elseif (strpos($nom_ligne, $libelle_redevances) !== false && $base_calcul === 'vente_eau') {
                 $montant = isset($mois_data[$mois_key]['redevances_vente_eau']) ? $mois_data[$mois_key]['redevances_vente_eau'] : 0;
             } elseif ($ligne['type'] === 'recette') {
-                // Chercher par code budgétaire ou nom
+                // Chercher par clé originale, code budgétaire ou nom
                 $montant = 0;
                 foreach ($mois_data[$mois_key]['flux_manuel_recette'] as $cle => $info) {
-                    if ($cle === $code_ligne || $cle === $nom_ligne) {
+                    if ($cle === $cle_origine || ($cle_origine === '' && ($cle === $code_ligne || $cle === $nom_ligne))) {
                         $montant = $info['montant'];
                         break;
                     }
                 }
             } elseif ($ligne['type'] === 'charge') {
-                // Chercher par code budgétaire ou nom
+                // Chercher par clé originale, code budgétaire ou nom
                 $montant = 0;
                 foreach ($mois_data[$mois_key]['flux_manuel_charge'] as $cle => $info) {
-                    if ($cle === $code_ligne || $cle === $nom_ligne) {
+                    if ($cle === $cle_origine || ($cle_origine === '' && ($cle === $code_ligne || $cle === $nom_ligne))) {
                         $montant = $info['montant'];
                         break;
                     }
@@ -585,18 +594,19 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
     $categories_recettes = array();
     foreach ($compte_rendu as $mois_data) {
         foreach ($mois_data['recettes'] as $libelle => $montant) {
-            if (
-                !isset($categories_recettes[$libelle]) &&
-                $libelle !== $libelle_recouvrements &&
-                $libelle !== $libelle_branchements
-            ) {
-                // Récupérer le nom de la catégorie depuis la base
-                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE code_budgetaire = ? OR nom = ? LIMIT 1";
+            // Exclure les recouvrements et branchements (vérifier par libellé ET code budgétaire)
+            $is_recouvrement = ($libelle === $libelle_recouvrements || $libelle === $code_budgetaire_recouvrements);
+            $is_branchement = ($libelle === $libelle_branchements || $libelle === $code_budgetaire_branchements);
+
+            if (!isset($categories_recettes[$libelle]) && !$is_recouvrement && !$is_branchement) {
+                // Récupérer le nom de la catégorie depuis la base (filtrer par id_aep)
+                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE (code_budgetaire = ? OR nom = ?) AND (id_aep = ? OR id_aep IS NULL) LIMIT 1";
                 $stmt_cat = $bd->prepare($query_cat);
-                $stmt_cat->execute(array($libelle, $libelle));
+                $stmt_cat->execute(array($libelle, $libelle, $id_aep));
                 $cat_info = $stmt_cat->fetch(PDO::FETCH_ASSOC);
                 $categories_recettes[$libelle] = array(
-                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: $libelle) : $libelle,
+                    'cle_origine' => $libelle,
+                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: '') : '',
                     'nom_categorie' => $cat_info ? $cat_info['nom'] : $libelle,
                     'activite' => $cat_info ? $cat_info['activite_associee'] : 'autre'
                 );
@@ -605,6 +615,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
     }
     foreach ($categories_recettes as $libelle => $cat_info) {
         $lignes[] = array(
+            'cle_origine' => $libelle,
             'code_budgetaire' => $cat_info['code_budgetaire'],
             'nom_categorie' => $cat_info['nom_categorie'],
             'type' => 'recette',
@@ -650,12 +661,15 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
                 $nom_charge = $libelle;
             }
 
-            // Ignorer les redevances (elles sont déjà ajoutées séparément)
-            if (strpos($nom_charge, $libelle_redevances) === false && !isset($categories_charges[$libelle])) {
-                // Récupérer le nom de la catégorie depuis la base
-                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE code_budgetaire = ? OR nom = ? LIMIT 1";
+            // Ignorer les redevances (elles sont déjà ajoutées séparément) - vérifier par libellé ET code budgétaire
+            $is_redevance = (strpos($nom_charge, $libelle_redevances) !== false) ||
+                ($code_budgetaire_redevances && strpos($libelle, $code_budgetaire_redevances) !== false);
+
+            if (!$is_redevance && !isset($categories_charges[$libelle])) {
+                // Récupérer le nom de la catégorie depuis la base (filtrer par id_aep)
+                $query_cat = "SELECT nom, code_budgetaire, activite_associee FROM categorie_flux_manuel WHERE (code_budgetaire = ? OR nom = ?) AND (id_aep = ? OR id_aep IS NULL) LIMIT 1";
                 $stmt_cat = $bd->prepare($query_cat);
-                $stmt_cat->execute(array($libelle, $libelle));
+                $stmt_cat->execute(array($libelle, $libelle, $id_aep));
                 $cat_info = $stmt_cat->fetch(PDO::FETCH_ASSOC);
 
                 // Si c'est une redevance (déjà gérée séparément), on l'ignore
@@ -664,7 +678,8 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
                 }
 
                 $categories_charges[$libelle] = array(
-                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: $libelle) : $libelle,
+                    'cle_origine' => $libelle,
+                    'code_budgetaire' => $cat_info ? ($cat_info['code_budgetaire'] ?: '') : '',
                     'nom_categorie' => $cat_info ? $cat_info['nom'] : (is_array($data) ? $nom_charge : $libelle),
                     'activite' => $cat_info ? $cat_info['activite_associee'] : 'autre'
                 );
@@ -673,6 +688,7 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
     }
     foreach ($categories_charges as $libelle => $cat_info) {
         $lignes[] = array(
+            'cle_origine' => $libelle,
             'code_budgetaire' => $cat_info['code_budgetaire'],
             'nom_categorie' => $cat_info['nom_categorie'],
             'type' => 'charge',
@@ -706,15 +722,20 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
             if (isset($compte_rendu[$mois_key])) {
                 $mois_data = $compte_rendu[$mois_key];
 
-                // Identifier la ligne par code budgétaire ou nom
+                // Identifier la ligne par clé originale, code budgétaire ou nom
+                $cle_origine = isset($ligne['cle_origine']) ? $ligne['cle_origine'] : '';
                 $code_ligne = isset($ligne['code_budgetaire']) ? $ligne['code_budgetaire'] : '';
                 $nom_ligne = isset($ligne['nom_categorie']) ? $ligne['nom_categorie'] : '';
                 $base_calcul = isset($ligne['base_calcul']) ? $ligne['base_calcul'] : null;
 
                 if ($nom_ligne === $libelle_recouvrements || $code_ligne === $code_budgetaire_recouvrements) {
-                    $montant = isset($mois_data['recettes'][$code_ligne ?: $nom_ligne]) ? $mois_data['recettes'][$code_ligne ?: $nom_ligne] : 0;
+                    // Pour recouvrements, utiliser le code budgétaire comme clé si disponible
+                    $cle_recouvrements = $code_budgetaire_recouvrements ? $code_budgetaire_recouvrements : $libelle_recouvrements;
+                    $montant = isset($mois_data['recettes'][$cle_recouvrements]) ? $mois_data['recettes'][$cle_recouvrements] : 0;
                 } elseif ($nom_ligne === $libelle_branchements || $code_ligne === $code_budgetaire_branchements) {
-                    $montant = isset($mois_data['recettes'][$code_ligne ?: $nom_ligne]) ? $mois_data['recettes'][$code_ligne ?: $nom_ligne] : 0;
+                    // Pour branchements, utiliser le code budgétaire comme clé si disponible
+                    $cle_branchements = $code_budgetaire_branchements ? $code_budgetaire_branchements : $libelle_branchements;
+                    $montant = isset($mois_data['recettes'][$cle_branchements]) ? $mois_data['recettes'][$cle_branchements] : 0;
                 } elseif (strpos($nom_ligne, $libelle_redevances) !== false && $base_calcul === 'branchements') {
                     // Redevances sur branchements
                     $cle = ($code_budgetaire_redevances ? $code_budgetaire_redevances : $libelle_redevances) . '_branchements';
@@ -724,17 +745,21 @@ function generateCompteRenduTableauMois($id_aep, $mois_debut, $mois_fin)
                     $cle = ($code_budgetaire_redevances ? $code_budgetaire_redevances : $libelle_redevances) . '_vente_eau';
                     $montant = isset($mois_data['charges'][$cle]) ? (is_array($mois_data['charges'][$cle]) ? $mois_data['charges'][$cle]['montant'] : $mois_data['charges'][$cle]) : 0;
                 } elseif ($ligne['type'] === 'recette') {
-                    // Chercher par code budgétaire ou nom
+                    // Chercher par clé originale d'abord, puis code budgétaire ou nom
                     $montant = 0;
-                    if (isset($mois_data['recettes'][$code_ligne])) {
+                    if ($cle_origine !== '' && isset($mois_data['recettes'][$cle_origine])) {
+                        $montant = $mois_data['recettes'][$cle_origine];
+                    } elseif ($code_ligne !== '' && isset($mois_data['recettes'][$code_ligne])) {
                         $montant = $mois_data['recettes'][$code_ligne];
                     } elseif (isset($mois_data['recettes'][$nom_ligne])) {
                         $montant = $mois_data['recettes'][$nom_ligne];
                     }
                 } elseif ($ligne['type'] === 'charge') {
-                    // Chercher par code budgétaire ou nom
+                    // Chercher par clé originale d'abord, puis code budgétaire ou nom
                     $montant = 0;
-                    if (isset($mois_data['charges'][$code_ligne])) {
+                    if ($cle_origine !== '' && isset($mois_data['charges'][$cle_origine])) {
+                        $montant = $mois_data['charges'][$cle_origine];
+                    } elseif ($code_ligne !== '' && isset($mois_data['charges'][$code_ligne])) {
                         $montant = $mois_data['charges'][$code_ligne];
                     } elseif (isset($mois_data['charges'][$nom_ligne])) {
                         $montant = $mois_data['charges'][$nom_ligne];

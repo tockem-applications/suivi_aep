@@ -868,6 +868,78 @@ class DatabaseUpdater9To10
                 echo "   ✓ Champ activite_associee existe déjà\n";
             }
 
+            // ============================================================
+            // PARTIE 9: CONVERSION UTF-8
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 9: CONVERSION UTF-8 DE LA BASE DE DONNÉES\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            // 9.1. Convertir la base de données en UTF-8
+            echo "9.1. Conversion de la base de données en UTF-8...\n";
+            try {
+                $dbName = Connexion::$db_name;
+                $bd->exec("ALTER DATABASE `$dbName` CHARACTER SET utf8 COLLATE utf8_general_ci");
+                echo "   ✓ Base de données convertie en UTF-8\n";
+            } catch (Exception $e) {
+                echo "   ⚠ Conversion de la base de données: " . $e->getMessage() . "\n";
+            }
+
+            // 9.2. Convertir toutes les tables en UTF-8
+            echo "\n9.2. Conversion de toutes les tables en UTF-8...\n";
+            try {
+                $tablesQuery = $bd->query("SELECT table_name FROM information_schema.tables WHERE table_schema = DATABASE()");
+                $tables = $tablesQuery->fetchAll(PDO::FETCH_COLUMN);
+                $convertedCount = 0;
+
+                foreach ($tables as $tableName) {
+                    try {
+                        $bd->exec("ALTER TABLE `$tableName` CONVERT TO CHARACTER SET utf8 COLLATE utf8_general_ci");
+                        $convertedCount++;
+                    } catch (Exception $e) {
+                        echo "   ⚠ Table $tableName: " . $e->getMessage() . "\n";
+                    }
+                }
+                echo "   ✓ $convertedCount table(s) convertie(s) en UTF-8\n";
+            } catch (Exception $e) {
+                echo "   ✗ Erreur lors de la conversion des tables: " . $e->getMessage() . "\n";
+            }
+
+            // 9.3. Corriger les données mal encodées (double UTF-8)
+            echo "\n9.3. Correction des données mal encodées...\n";
+            $columnsToFix = array(
+                'abone' => array('nom'),
+                'reseau' => array('nom'),
+                'flux_financier' => array('libele', 'description'),
+                'categorie_flux_manuel' => array('nom', 'description'),
+                'intervention' => array('libele', 'description'),
+                'aep' => array('libele')
+            );
+
+            $fixedCount = 0;
+            foreach ($columnsToFix as $table => $columns) {
+                if (self::tableExists($table)) {
+                    foreach ($columns as $column) {
+                        if (self::columnExists($table, $column)) {
+                            try {
+                                $stmt = $bd->exec("UPDATE `$table` SET `$column` = CONVERT(CAST(CONVERT(`$column` USING latin1) AS BINARY) USING utf8) WHERE `$column` LIKE '%Ã%'");
+                                if ($stmt > 0) {
+                                    echo "   → Corrigé $stmt enregistrement(s) dans $table.$column\n";
+                                    $fixedCount += $stmt;
+                                }
+                            } catch (Exception $e) {
+                                // Ignorer les erreurs de conversion
+                            }
+                        }
+                    }
+                }
+            }
+            if ($fixedCount > 0) {
+                echo "   ✓ $fixedCount enregistrement(s) corrigé(s)\n";
+            } else {
+                echo "   ✓ Aucune donnée mal encodée détectée\n";
+            }
+
             echo "\n╔═══════════════════════════════════════════════════════════════╗\n";
             echo "║     MIGRATION TERMINÉE AVEC SUCCÈS                            ║\n";
             echo "╚═══════════════════════════════════════════════════════════════╝\n";
@@ -885,6 +957,8 @@ class DatabaseUpdater9To10
             echo "- Champ est_mois_base ajouté à mois_facturation\n";
             echo "- Champs code_budgetaire et activite_associee ajoutés aux catégories\n";
             echo "- Vues mises à jour\n";
+            echo "- Base de données et tables converties en UTF-8\n";
+            echo "- Données mal encodées corrigées\n";
 
         } catch (Exception $e) {
             echo "\n✗ Erreur lors de la migration : " . $e->getMessage() . "\n";
@@ -939,6 +1013,7 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
             <li><strong>Bornes Fontaines</strong> - Champ type_abone, tables borne_fontaine et bf_gerant</li>
             <li><strong>Redevances améliorées</strong> - Champs base_calcul, type_calcul, montant_par_m3, est_sortie</li>
             <li><strong>Figer les tarifs</strong> - Champ id_tarif_differencie dans indexes</li>
+            <li><strong>Conversion UTF-8</strong> - Base de données et tables converties en UTF-8, correction des données mal encodées</li>
         </ul>
         <p><strong>Note :</strong> Le script est idempotent, vous pouvez l'exécuter plusieurs fois sans risque.</p>
         <a href='?run_update=1' class='btn'>Lancer la migration</a>
