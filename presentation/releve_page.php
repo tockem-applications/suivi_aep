@@ -284,9 +284,12 @@ function addDaysAndFormat($string_date, $days = 10)
                             <th>N° compteur</th>
                             <th>Nom et Prenom</th>
                             <th>Ancien index</th>
-                            <th>nouvel index</th>
+                            <th>Nouvel index</th>
+                            <th>Conso</th>
+                            <th>Cumul</th>
                         </tr>
                         <?php
+                        $somme_conso = 0;
                         // Intégration du code de creerLigneTableauReleveManuelle
                         foreach ($req2 as $data) {
                             $circle_bg_color = '';
@@ -302,6 +305,7 @@ function addDaysAndFormat($string_date, $days = 10)
                             $ancien_attr = isset($data['ancien_index']) ? (float) $data['ancien_index'] : 0;
                             $nouvel_attr = isset($data['nouvel_index']) ? (float) $data['nouvel_index'] : 0;
                             $ecart_attr = $nouvel_attr - $ancien_attr;
+                            $somme_conso += $ecart_attr;
                             ?>
 
                             <tr class="p-0 m-0" data-numero="<?php echo htmlspecialchars($numero_attr); ?>"
@@ -326,6 +330,8 @@ function addDaysAndFormat($string_date, $days = 10)
                                     <input type="hidden" value="<?php echo $data['nouvel_index'] ?>"
                                         id="ex_nouvel_index<?php echo $data['id'] ?>">
                                 </td>
+                                <td><?php echo $ecart_attr?> </td>
+                                <td><?php echo $somme_conso?> </td>
                             </tr>
                             <?php
                         }
