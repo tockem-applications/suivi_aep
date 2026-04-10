@@ -158,7 +158,7 @@ $queryAbonnes .= ' GROUP BY mf.mois ORDER BY mf.mois';
 $rowsAbonnes = Manager::prepare_query($queryAbonnes, $paramsAbonnes)->fetchAll();
 
 // Consommation des compteurs des reseaux fils directs par mois
-            $queryReseauxFils = 'SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS conso
+$queryReseauxFils = 'SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS conso
      FROM indexes i
      INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
      INNER JOIN reseau rf ON rf.id = cr.id_reseau
@@ -337,16 +337,10 @@ usort($tableauRendement, function ($a, $b) {
                 $deleteReason = 'Suppression impossible: ce reseau a des reseaux fils.';
             }
             ?>
-            <span class="d-inline-block"
-                <?php if ($deleteDisabled): ?>
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    data-bs-title="<?php echo htmlspecialchars($deleteReason); ?>"
-                    tabindex="0"
-                <?php endif; ?>>
+            <span class="d-inline-block" <?php if ($deleteDisabled): ?> data-bs-toggle="tooltip" data-bs-placement="top"
+                    data-bs-title="<?php echo htmlspecialchars($deleteReason); ?>" tabindex="0" <?php endif; ?>>
                 <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal"
-                    data-bs-target="#deleteReseauTopModal"
-                    <?php echo $deleteDisabled ? 'disabled' : ''; ?>>
+                    data-bs-target="#deleteReseauTopModal" <?php echo $deleteDisabled ? 'disabled' : ''; ?>>
                     <i class="bi bi-trash"></i> Supprimer
                 </button>
             </span>
@@ -439,10 +433,9 @@ usort($tableauRendement, function ($a, $b) {
                                             </td>
                                             <td>
                                                 <div class="dropdown">
-                                                    <button class="btn btn-sm btn-outline-secondary compteur-actions-toggle" type="button"
-                                                        data-bs-toggle="dropdown" data-bs-boundary="viewport"
-                                                        aria-expanded="false"
-                                                        title="Actions">
+                                                    <button class="btn btn-sm btn-outline-secondary compteur-actions-toggle"
+                                                        type="button" data-bs-toggle="dropdown" data-bs-boundary="viewport"
+                                                        aria-expanded="false" title="Actions">
                                                         <i class="bi bi-three-dots-vertical"></i>
                                                     </button>
                                                     <ul class="dropdown-menu dropdown-menu-end">
@@ -465,9 +458,12 @@ usort($tableauRendement, function ($a, $b) {
                                                                 <i class="bi bi-clock-history me-2"></i>Voir / Modifier indexes
                                                             </button>
                                                         </li>
-                                                        <li><hr class="dropdown-divider"></li>
                                                         <li>
-                                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal"
+                                                            <hr class="dropdown-divider">
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item text-danger"
+                                                                data-bs-toggle="modal"
                                                                 data-bs-target="#deleteCompteurModal_<?php echo (int) $c['id']; ?>">
                                                                 <i class="bi bi-trash me-2"></i>Supprimer
                                                             </button>
@@ -483,7 +479,8 @@ usort($tableauRendement, function ($a, $b) {
                                             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                                                 <div class="modal-content form-card">
                                                     <div class="modal-header bg-primary text-white">
-                                                        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Modifier le
+                                                        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>Modifier
+                                                            le
                                                             compteur</h5>
                                                         <button type="button" class="btn-close btn-close-white"
                                                             data-bs-dismiss="modal"></button>
@@ -497,7 +494,8 @@ usort($tableauRendement, function ($a, $b) {
                                                             <div class="row g-3">
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Numéro *</label>
-                                                                    <input type="text" class="form-control" name="numero_compteur"
+                                                                    <input type="text" class="form-control"
+                                                                        name="numero_compteur"
                                                                         value="<?php echo htmlspecialchars($c['numero_compteur']); ?>"
                                                                         required>
                                                                 </div>
@@ -554,7 +552,8 @@ usort($tableauRendement, function ($a, $b) {
                                                 <div class="modal-content form-card">
                                                     <div class="modal-header bg-danger text-white">
                                                         <h5 class="modal-title"><i
-                                                                class="bi bi-exclamation-triangle me-2"></i>Supprimer le compteur
+                                                                class="bi bi-exclamation-triangle me-2"></i>Supprimer le
+                                                            compteur
                                                         </h5>
                                                         <button type="button" class="btn-close btn-close-white"
                                                             data-bs-dismiss="modal"></button>
@@ -587,24 +586,28 @@ usort($tableauRendement, function ($a, $b) {
                                         </div>
 
                                         <!-- Modal ajout index compteur -->
-                                        <div class="modal fade" id="addIndexCompteurModal_<?php echo (int) $c['id']; ?>" tabindex="-1">
+                                        <div class="modal fade" id="addIndexCompteurModal_<?php echo (int) $c['id']; ?>"
+                                            tabindex="-1">
                                             <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                                                 <div class="modal-content form-card">
                                                     <div class="modal-header bg-success text-white">
-                                                        <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Ajouter un index
+                                                        <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>Ajouter un
+                                                            index
                                                         </h5>
                                                         <button type="button" class="btn-close btn-close-white"
                                                             data-bs-dismiss="modal"></button>
                                                     </div>
                                                     <form method="post" action="traitement/compteur_t.php">
                                                         <input type="hidden" name="action" value="add_index_compteur_reseau">
-                                                        <input type="hidden" name="compteur_id" value="<?php echo (int) $c['id']; ?>">
+                                                        <input type="hidden" name="compteur_id"
+                                                            value="<?php echo (int) $c['id']; ?>">
                                                         <input type="hidden" name="reseau_id" value="<?php echo $reseauId; ?>">
                                                         <div class="modal-body">
                                                             <div class="row g-3">
                                                                 <div class="col-12">
                                                                     <label class="form-label">Mois de facturation *</label>
-                                                                    <select class="form-select" name="id_mois_facturation" required>
+                                                                    <select class="form-select" name="id_mois_facturation"
+                                                                        required>
                                                                         <option value="">Selectionner un mois...</option>
                                                                         <?php foreach ($moisFacturation as $m): ?>
                                                                             <option value="<?php echo (int) $m['id']; ?>">
@@ -615,18 +618,20 @@ usort($tableauRendement, function ($a, $b) {
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Ancien index *</label>
-                                                                    <input type="number" step="0.01" min="0" class="form-control"
-                                                                        name="ancien_index"
-                                                                        value="<?php echo htmlspecialchars((string) $c['derniers_index']); ?>" required>
+                                                                    <input type="number" step="0.01" min="0"
+                                                                        class="form-control" name="ancien_index"
+                                                                        value="<?php echo htmlspecialchars((string) $c['derniers_index']); ?>"
+                                                                        required>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Nouvel index *</label>
-                                                                    <input type="number" step="0.01" min="0" class="form-control"
-                                                                        name="nouvel_index" required>
+                                                                    <input type="number" step="0.01" min="0"
+                                                                        class="form-control" name="nouvel_index" required>
                                                                 </div>
                                                                 <div class="col-12">
                                                                     <div class="alert alert-info mb-0 py-2">
-                                                                        Le nouvel index doit etre superieur ou egal a l'ancien index.
+                                                                        Le nouvel index doit etre superieur ou egal a l'ancien
+                                                                        index.
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -661,7 +666,8 @@ usort($tableauRendement, function ($a, $b) {
                 <div class="card-header bg-light">Statistiques mensuelles (Rendement distribution)</div>
                 <div class="card-body">
                     <div class="alert alert-info py-2 small">
-                        Formule: Rendement = (Volume compteurs abonnes + Volume compteurs reseaux fils directs) / Volume compteurs reseau.
+                        Formule: Rendement = (Volume compteurs abonnes + Volume compteurs reseaux fils directs) / Volume
+                        compteurs reseau.
                     </div>
                     <canvas id="reseauRendementChart"></canvas>
                 </div>
@@ -701,10 +707,10 @@ usort($tableauRendement, function ($a, $b) {
                                     <th class="text-end th-col-volume">Production</th>
                                     <th class="text-end th-col-volume">Reservoir</th>
                                     <th class="text-end th-col-volume">Distribution</th>
-                                    <th class="text-end th-col-volume">Volume abonnés + fils</th>
-                                    <th class="text-end th-col-percent">Rendement production</th>
-                                    <th class="text-end th-col-percent">Rendement reservoir</th>
-                                    <th class="text-end th-col-percent">Rendement distribution</th>
+                                    <th class="text-end th-col-volume">Abonnés + fils</th>
+                                    <th class="text-end th-col-percent">Production</th>
+                                    <th class="text-end th-col-percent">Reservoir</th>
+                                    <th class="text-end th-col-percent">Distribution</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -712,18 +718,30 @@ usort($tableauRendement, function ($a, $b) {
                                     <?php foreach ($tableauRendement as $row): ?>
                                         <tr>
                                             <td><?php echo htmlspecialchars(getLetterMonth($row['mois'])); ?></td>
-                                            <td class="text-end td-volume-col"><?php echo number_format((float) $row['volume_production'], 2, ',', ' '); ?></td>
-                                            <td class="text-end td-volume-col"><?php echo number_format((float) $row['volume_reservoir'], 2, ',', ' '); ?></td>
-                                            <td class="text-end td-volume-col"><?php echo number_format((float) $row['volume_distribution'], 2, ',', ' '); ?></td>
-                                            <td class="text-end td-volume-col"><?php echo number_format((float) $row['volume_abonnes_fils'], 2, ',', ' '); ?></td>
-                                            <td class="text-end td-percent-col"><?php echo number_format((float) $row['taux_production'], 2, ',', ' '); ?>%</td>
-                                            <td class="text-end td-percent-col"><?php echo number_format((float) $row['taux_reservoir'], 2, ',', ' '); ?>%</td>
-                                            <td class="text-end td-percent-col fw-bold"><?php echo number_format((float) $row['taux_distribution'], 2, ',', ' '); ?>%</td>
+                                            <td class="text-end td-volume-col">
+                                                <?php echo number_format((float) $row['volume_production'], 2, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end td-volume-col">
+                                                <?php echo number_format((float) $row['volume_reservoir'], 2, ',', ' '); ?></td>
+                                            <td class="text-end td-volume-col">
+                                                <?php echo number_format((float) $row['volume_distribution'], 2, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end td-volume-col">
+                                                <?php echo number_format((float) $row['volume_abonnes_fils'], 2, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end td-percent-col">
+                                                <?php echo number_format((float) $row['taux_production'], 2, ',', ' '); ?>%</td>
+                                            <td class="text-end td-percent-col">
+                                                <?php echo number_format((float) $row['taux_reservoir'], 2, ',', ' '); ?>%</td>
+                                            <td class="text-end td-percent-col fw-bold">
+                                                <?php echo number_format((float) $row['taux_distribution'], 2, ',', ' '); ?>%
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="8" class="text-center text-muted">Aucune donnée de rendement disponible.</td>
+                                        <td colspan="8" class="text-center text-muted">Aucune donnée de rendement
+                                            disponible.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -777,7 +795,8 @@ usort($tableauRendement, function ($a, $b) {
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Annuler</button>
                             <button type="submit" class="btn btn-success">
                                 <i class="bi bi-check2-circle me-1"></i>Ajouter
                             </button>
@@ -917,61 +936,61 @@ usort($tableauRendement, function ($a, $b) {
 
             var el = document.getElementById('reseauRendementChart');
             if (el) {
-            var ctx = el.getContext('2d');
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Conso Compteurs Réseau (Distribution) (m³)',
-                            data: dataReseau,
-                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            label: 'Conso Abonnés + Fils directs (Distribution) (m³)',
-                            data: dataAbonnes,
-                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
-                        },
-                        {
-                            type: 'line',
-                            label: 'Rendement (%)',
-                            data: dataRendement,
-                            yAxisID: 'y1',
-                            borderColor: 'rgba(255, 99, 132, 1)',
-                            backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                            tension: 0.2,
-                            borderWidth: 2,
-                            pointRadius: 3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            title: { display: true, text: 'm³' }
-                        },
-                        y1: {
-                            beginAtZero: true,
-                            position: 'right',
-                            title: { display: true, text: '%' },
-                            grid: { drawOnChartArea: false },
-                            suggestedMax: 120
-                        }
+                var ctx = el.getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Conso Compteurs Réseau (Distribution) (m³)',
+                                data: dataReseau,
+                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Conso Abonnés + Fils directs (Distribution) (m³)',
+                                data: dataAbonnes,
+                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                type: 'line',
+                                label: 'Rendement (%)',
+                                data: dataRendement,
+                                yAxisID: 'y1',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                tension: 0.2,
+                                borderWidth: 2,
+                                pointRadius: 3
+                            }
+                        ]
                     },
-                    plugins: {
-                        tooltip: { enabled: true },
-                        legend: { position: 'top' }
+                    options: {
+                        responsive: true,
+                        interaction: { mode: 'index', intersect: false },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: 'm³' }
+                            },
+                            y1: {
+                                beginAtZero: true,
+                                position: 'right',
+                                title: { display: true, text: '%' },
+                                grid: { drawOnChartArea: false },
+                                suggestedMax: 120
+                            }
+                        },
+                        plugins: {
+                            tooltip: { enabled: true },
+                            legend: { position: 'top' }
+                        }
                     }
-                }
-            });
+                });
             }
 
             var elPct = document.getElementById('reseauRendementsPercentChart');

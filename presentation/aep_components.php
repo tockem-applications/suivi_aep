@@ -55,11 +55,18 @@ function display_aep_to_select()
                         }
                     }
 
-                    // Montants facturé/recouvré du dernier mois
+                    // Montants facturé/recouvré du dernier mois (tous abonnés)
                     $montantTotal = 0;
                     $montantVerse = 0;
                     $taux = 0;
                     $consoTotale = 0;
+                    // Bilan dernier mois par type : BP (branchements privés) / BF (bornes fontaine)
+                    $mtBp = 0.0;
+                    $mvBp = 0.0;
+                    $tauxBp = 0;
+                    $mtBf = 0.0;
+                    $mvBf = 0.0;
+                    $tauxBf = 0;
                     if ($lastMoisId > 0) {
                         $resV = Manager::prepare_query(
                             "SELECT SUM(vaf.montant_total) as mt, SUM(vaf.montant_verse) as mv, SUM(vaf.consommation) as cs FROM vue_abones_facturation vaf WHERE vaf.id_mois = ? AND vaf.id_aep = ?",
@@ -72,9 +79,41 @@ function display_aep_to_select()
                             $consoTotale = isset($row['cs']) ? (float) $row['cs'] : 0;
                             $taux = ($montantTotal > 0) ? round(($montantVerse * 100.0) / $montantTotal) : 0;
                         }
+                        try {
+                            $resBp = Manager::prepare_query(
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv
+                                 FROM vue_abones_facturation vaf
+                                 INNER JOIN abone a ON a.id = vaf.id_abone
+                                 WHERE vaf.id_mois = ? AND vaf.id_aep = ?
+                                   AND (a.type_abone IS NULL OR a.type_abone = '' OR a.type_abone = 'BP')",
+                                array($lastMoisId, $aepId)
+                            );
+                            if ($resBp) {
+                                $r = $resBp->fetch();
+                                $mtBp = isset($r['mt']) ? (float) $r['mt'] : 0.0;
+                                $mvBp = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $tauxBp = ($mtBp > 0) ? (int) round(($mvBp * 100.0) / $mtBp) : 0;
+                            }
+                            $resBf = Manager::prepare_query(
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv
+                                 FROM vue_abones_facturation vaf
+                                 INNER JOIN abone a ON a.id = vaf.id_abone
+                                 WHERE vaf.id_mois = ? AND vaf.id_aep = ? AND a.type_abone = 'BF'",
+                                array($lastMoisId, $aepId)
+                            );
+                            if ($resBf) {
+                                $r = $resBf->fetch();
+                                $mtBf = isset($r['mt']) ? (float) $r['mt'] : 0.0;
+                                $mvBf = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $tauxBf = ($mtBf > 0) ? (int) round(($mvBf * 100.0) / $mtBf) : 0;
+                            }
+                        } catch (Exception $e) {
+                            $mtBp = $mvBp = $mtBf = $mvBf = 0.0;
+                            $tauxBp = $tauxBf = 0;
+                        }
                     }
 
-                    // Rendement production (distribution) : vol. abonnés / vol. compteurs réseau « distribution » (même logique que le tableau de bord AEP)
+                    // Rendement production (distribution) : vol. abonnés / vol. compteurs réseau « distribution »
                     $volDistribution = 0.0;
                     $volAbonnesIndexes = 0.0;
                     $tauxRendementProd = null;
@@ -116,7 +155,7 @@ function display_aep_to_select()
                         }
                     }
 
-                    // Styles utilitaires
+                    // Styles utilitaires (en-tête carte)
                     $badgeClass = $lastMoisId <= 0 ? 'bg-secondary' : ($taux >= 95 ? 'bg-success' : ($taux >= 70 ? 'bg-warning' : 'bg-danger'));
                     $badgeProdClass = 'bg-secondary';
                     if ($tauxRendementProd !== null) {
@@ -174,41 +213,45 @@ function display_aep_to_select()
                                     </div>
                                 </div>
                                 <div class="border-top pt-2 mt-2">
-                                    <div class="small text-uppercase text-muted mb-2">Rendements (dernier mois<?php echo $lastMois ? ' : ' . htmlspecialchars($lastMois) : ''; ?>)</div>
+                                    <div class="small text-uppercase text-muted mb-2">Bilan par type (dernier mois<?php echo $lastMois ? ' : ' . htmlspecialchars($lastMois) : ''; ?>)</div>
                                     <div class="row g-2">
                                         <div class="col-md-6">
                                             <div class="p-2 rounded border-start border-4 border-success bg-body-secondary bg-opacity-25">
-                                                <div class="small text-muted">Rendement financier</div>
+                                                <div class="small text-muted">Branchements privés (BP)</div>
                                                 <div class="fs-5 fw-bold text-dark">
-                                                    <?php if ($lastMoisId > 0): ?>
-                                                        <?php echo $taux; ?> %
+                                                    <?php if ($lastMoisId > 0 && $mtBp > 0): ?>
+                                                        <?php echo $tauxBp; ?> %
+                                                    <?php elseif ($lastMoisId > 0): ?>
+                                                        <span class="text-muted fs-6">0 F facturé</span>
                                                     <?php else: ?>
                                                         <span class="text-muted fs-6">—</span>
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="small text-muted">
-                                                    Recouvré / facturé
-                                                    <?php if ($lastMoisId > 0 && $montantTotal > 0): ?>
-                                                        · <?php echo number_format($montantVerse, 0, ',', ' '); ?> / <?php echo number_format($montantTotal, 0, ',', ' '); ?> FCFA
-                                                    <?php endif; ?>
+                                                    Facturé · <?php echo $lastMoisId > 0 ? number_format($mtBp, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBp, 0, ',', ' ') . ' FCFA' : '—'; ?>
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
-                                            <div class="p-2 rounded border-start border-4 border-primary bg-body-secondary bg-opacity-25">
-                                                <div class="small text-muted">Rendement production (distribution)</div>
+                                            <div class="p-2 rounded border-start border-4 border-info bg-body-secondary bg-opacity-25">
+                                                <div class="small text-muted">Bornes fontaine (BF)</div>
                                                 <div class="fs-5 fw-bold text-dark">
-                                                    <?php if ($tauxRendementProd !== null): ?>
-                                                        <?php echo htmlspecialchars((string) $tauxRendementProd); ?> %
+                                                    <?php if ($lastMoisId > 0 && $mtBf > 0): ?>
+                                                        <?php echo $tauxBf; ?> %
+                                                    <?php elseif ($lastMoisId > 0): ?>
+                                                        <span class="text-muted fs-6">0 F facturé</span>
                                                     <?php else: ?>
-                                                        <span class="text-muted fs-6">N/D</span>
+                                                        <span class="text-muted fs-6">—</span>
                                                     <?php endif; ?>
                                                 </div>
                                                 <div class="small text-muted">
-                                                    Vol. abonnés / vol. distribution (m³)
-                                                    <?php if ($lastMoisId > 0): ?>
-                                                        · <?php echo number_format($volAbonnesIndexes, 1, ',', ' '); ?> / <?php echo number_format($volDistribution, 1, ',', ' '); ?>
-                                                    <?php endif; ?>
+                                                    Facturé · <?php echo $lastMoisId > 0 ? number_format($mtBf, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBf, 0, ',', ' ') . ' FCFA' : '—'; ?>
                                                 </div>
                                             </div>
                                         </div>
