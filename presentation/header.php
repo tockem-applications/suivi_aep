@@ -36,6 +36,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownStructure">
                             <li><a class="dropdown-item" href="?page=reseaux"><i
                                         class="bi bi-diagram-3 me-2"></i>Réseaux</a></li>
+                            <!-- <li><a class="dropdown-item" href="?page=reseaux"><i
+                                        class="bi bi-diagram-2 me-2"></i>Arbre des réseaux</a></li> -->
                             <li><a class="dropdown-item" href="?page=abonne"><i class="bi bi-people me-2"></i>Abonnés
                                     (BP)</a></li>
                             <li><a class="dropdown-item" href="?page=borne_fontaine"><i

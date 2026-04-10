@@ -10,6 +10,7 @@ class Compteur extends Manager
     public $latitude;
     public $derniers_index;
     public $description;
+    public $type_compteur;
 
     public static function getAll($table_name)
     {
@@ -90,7 +91,7 @@ class Compteur extends Manager
         return "compteur";
     }
 
-    public function __construct($id ='', $numero_compteur = "", $longitude = null, $latitude = null, $dernier_index = 0, $description = "")
+    public function __construct($id ='', $numero_compteur = "", $longitude = null, $latitude = null, $dernier_index = 0, $description = "", $type_compteur = "distribution")
     {
         $this->id = $id;
         $this->numero_compteur = $numero_compteur;
@@ -98,6 +99,7 @@ class Compteur extends Manager
         $this->latitude = $latitude;
         $this->derniers_index = $dernier_index;
         $this->description = $description;
+        $this->type_compteur = $type_compteur;
     }
 
     public function save_compteur_reseau($id_reseau)
@@ -105,7 +107,10 @@ class Compteur extends Manager
         try {
 
             $this->ajouter();
-            return self::prepare_query("insert into compteur_reseau(id_compteur, id_reseau) values(?, ?)", array($this->id, $id_reseau));
+            return self::prepare_query(
+                "insert into compteur_reseau(id_compteur, id_reseau, type_compteur) values(?, ?, ?)",
+                array($this->id, $id_reseau, $this->type_compteur)
+            );
         }catch (Exception $e){
             echo $e->getMessage();
             throw $e;

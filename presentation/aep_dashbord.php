@@ -48,8 +48,38 @@ $tops = array(
     'abonnes_impayes' => array(),
     'reseaux_conso' => array()
 );
+$rendementDistribution = array(
+    'labels' => array(),
+    'volumes_distribution' => array(),
+    'volumes_abonnes' => array(),
+    'taux' => array()
+);
+$tableauMontantsBfBp = array();
+$dashboardNbMoisBfBp = isset($_GET['nb_mois_bf_bp']) ? max(1, min(36, (int) $_GET['nb_mois_bf_bp'])) : 12;
+$dashboardHasTypeAbone = false;
 
 if ($aepId) {
+    // Sécuriser la présence du type de compteur réseau (distribution par défaut)
+    try {
+        $typeExists = Manager::prepare_query(
+            "SELECT COUNT(*) AS c FROM information_schema.columns
+             WHERE table_schema = DATABASE()
+               AND table_name = 'compteur_reseau'
+               AND column_name = 'type_compteur'",
+            array()
+        )->fetch();
+        if (!$typeExists || (int) $typeExists['c'] === 0) {
+            Manager::prepare_query(
+                "ALTER TABLE `compteur_reseau`
+                 ADD COLUMN `type_compteur` ENUM('production','distribution','reservoir')
+                 NOT NULL DEFAULT 'distribution' AFTER `id_compteur`",
+                array()
+            );
+        }
+    } catch (Exception $e) {
+        // fallback silencieux
+    }
+
     $aepInfo = $model->getAepInfo($aepId);
     if ($aepInfo) {
         $data['libele'] = $aepInfo['libele'];
@@ -126,6 +156,128 @@ if ($aepId) {
             array($lastMoisId, $aepId)
         );
         $tops['reseaux_conso'] = $resTopRes ? $resTopRes->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    // Graphique rendement de distribution global AEP:
+    // taux = somme volumes compteurs distribution réseau / somme volumes compteurs abonnés
+    $rowsDistribution = Manager::prepare_query(
+        "SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS volume_distribution
+         FROM mois_facturation mf
+         INNER JOIN constante_reseau c ON c.id = mf.id_constante
+         LEFT JOIN indexes i ON i.id_mois_facturation = mf.id
+         LEFT JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
+         WHERE c.id_aep = ? AND cr.type_compteur = 'distribution'
+         GROUP BY mf.mois
+         ORDER BY mf.mois ASC",
+        array($aepId)
+    );
+    $mapDistribution = array();
+    if ($rowsDistribution) {
+        foreach ($rowsDistribution->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $mapDistribution[$row['mois']] = isset($row['volume_distribution']) ? (float) $row['volume_distribution'] : 0.0;
+        }
+    }
+
+    $rowsAbonnes = Manager::prepare_query(
+        "SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS volume_abonnes
+         FROM mois_facturation mf
+         INNER JOIN constante_reseau c ON c.id = mf.id_constante
+         LEFT JOIN indexes i ON i.id_mois_facturation = mf.id
+         LEFT JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
+         WHERE c.id_aep = ?
+         GROUP BY mf.mois
+         ORDER BY mf.mois ASC",
+        array($aepId)
+    );
+    $mapAbonnes = array();
+    if ($rowsAbonnes) {
+        foreach ($rowsAbonnes->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $mapAbonnes[$row['mois']] = isset($row['volume_abonnes']) ? (float) $row['volume_abonnes'] : 0.0;
+        }
+    }
+
+    $allMonths = array();
+    foreach ($mapDistribution as $mois => $v) {
+        $allMonths[$mois] = true;
+    }
+    foreach ($mapAbonnes as $mois => $v) {
+        $allMonths[$mois] = true;
+    }
+    $labelsRend = array_keys($allMonths);
+    sort($labelsRend);
+
+    foreach ($labelsRend as $mois) {
+        $vd = isset($mapDistribution[$mois]) ? (float) $mapDistribution[$mois] : 0.0;
+        $va = isset($mapAbonnes[$mois]) ? (float) $mapAbonnes[$mois] : 0.0;
+        $taux = $vd > 0 ? round(($va * 100.0) / $vd, 2) : 0.0;
+
+        $rendementDistribution['labels'][] = getLetterMonth($mois);
+        $rendementDistribution['volumes_distribution'][] = $vd;
+        $rendementDistribution['volumes_abonnes'][] = $va;
+        $rendementDistribution['taux'][] = $taux;
+    }
+
+    // Tableau facturé / recouvré par mois, séparé BF (borne fontaine) vs BP (branchement privé)
+    try {
+        $colType = Manager::prepare_query(
+            "SELECT COUNT(*) AS c FROM information_schema.columns
+             WHERE table_schema = DATABASE() AND table_name = 'abone' AND column_name = 'type_abone'",
+            array()
+        );
+        if ($colType) {
+            $rowCol = $colType->fetch();
+            $dashboardHasTypeAbone = $rowCol && (int) $rowCol['c'] > 0;
+        }
+    } catch (Exception $e) {
+        $dashboardHasTypeAbone = false;
+    }
+
+    $limMoisBfBp = max(1, min(36, (int) $dashboardNbMoisBfBp));
+    if ($dashboardHasTypeAbone) {
+        $sqlBfBp = "
+            SELECT * FROM (
+                SELECT
+                    vaf.mois,
+                    SUM(CASE WHEN COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') = 'BF' THEN vaf.montant_total ELSE 0 END) AS facture_bf,
+                    SUM(CASE WHEN COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') = 'BF' THEN IFNULL(vaf.montant_verse, 0) ELSE 0 END) AS recouvre_bf,
+                    SUM(CASE WHEN COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') <> 'BF' THEN vaf.montant_total ELSE 0 END) AS facture_bp,
+                    SUM(CASE WHEN COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') <> 'BF' THEN IFNULL(vaf.montant_verse, 0) ELSE 0 END) AS recouvre_bp
+                FROM vue_abones_facturation vaf
+                INNER JOIN abone a ON a.id = vaf.id_abone
+                INNER JOIN mois_facturation mf ON mf.id = vaf.id_mois
+                WHERE vaf.id_aep = ? AND mf.est_mois_base = 0
+                GROUP BY vaf.id_mois, vaf.mois
+                ORDER BY vaf.mois DESC
+                LIMIT " . $limMoisBfBp . "
+            ) sub
+            ORDER BY sub.mois DESC
+        ";
+    } else {
+        $sqlBfBp = "
+            SELECT * FROM (
+                SELECT
+                    vaf.mois,
+                    0 AS facture_bf,
+                    0 AS recouvre_bf,
+                    SUM(vaf.montant_total) AS facture_bp,
+                    SUM(IFNULL(vaf.montant_verse, 0)) AS recouvre_bp
+                FROM vue_abones_facturation vaf
+                INNER JOIN mois_facturation mf ON mf.id = vaf.id_mois
+                WHERE vaf.id_aep = ? AND mf.est_mois_base = 0
+                GROUP BY vaf.id_mois, vaf.mois
+                ORDER BY vaf.mois DESC
+                LIMIT " . $limMoisBfBp . "
+            ) sub
+            ORDER BY sub.mois DESC
+        ";
+    }
+    try {
+        $stmtBfBp = Manager::prepare_query($sqlBfBp, array($aepId));
+        if ($stmtBfBp) {
+            $tableauMontantsBfBp = $stmtBfBp->fetchAll(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        $tableauMontantsBfBp = array();
     }
 }
 ?>
@@ -216,6 +368,67 @@ if ($aepId) {
 
     .kpi {
         border-left: 5px solid #2c3e50;
+    }
+
+    /* Tableau BF/BP : bandes de couleur par type de branchement */
+    .table-montants-bf-bp tbody tr,
+    .table-montants-bf-bp tbody tr:nth-child(even),
+    .table-montants-bf-bp tbody tr:hover {
+        background-color: transparent;
+    }
+
+    .table-montants-bf-bp thead .th-mois {
+        background-color: #495057 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .table-montants-bf-bp thead .th-bf {
+        background-color: #0f766e !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .table-montants-bf-bp thead .th-bp {
+        background-color: #5b21b6 !important;
+        color: #fff !important;
+        border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .table-montants-bf-bp tbody .td-mois {
+        background-color: #f1f3f5;
+    }
+
+    .table-montants-bf-bp tbody tr:nth-child(even) .td-mois {
+        background-color: #e9ecef;
+    }
+
+    .table-montants-bf-bp tbody .td-bf {
+        background-color: #ccfbf1;
+    }
+
+    .table-montants-bf-bp tbody tr:nth-child(even) .td-bf {
+        background-color: #99f6e4;
+    }
+
+    .table-montants-bf-bp tbody .td-bp {
+        background-color: #ede9fe;
+    }
+
+    .table-montants-bf-bp tbody tr:nth-child(even) .td-bp {
+        background-color: #ddd6fe;
+    }
+
+    .table-montants-bf-bp tbody tr:hover .td-mois {
+        background-color: #dee2e6;
+    }
+
+    .table-montants-bf-bp tbody tr:hover .td-bf {
+        background-color: #5eead4;
+    }
+
+    .table-montants-bf-bp tbody tr:hover .td-bp {
+        background-color: #c4b5fd;
     }
 </style>
 <div class="container-fluid">
@@ -378,6 +591,150 @@ if ($aepId) {
             </div>
         </div>
 
+        <!-- Rendement distribution global -->
+        <div class="col col-md-12 col-lg-8">
+            <div class="card shadow-sm p-4">
+                <h2 class="h5 fw-semibold text-dark mb-3">Rendement de distribution (global AEP)</h2>
+                <div class="small text-muted mb-2">
+                    Taux = Somme volumes compteurs abonnés / Somme volumes compteurs réseau de type distribution.
+                </div>
+                <div class="chart-container">
+                    <canvas id="rendement-distribution-chart"></canvas>
+                    <script>
+                        var ctxR = document.getElementById('rendement-distribution-chart').getContext('2d');
+                        new Chart(ctxR, {
+                            data: {
+                                labels: <?php echo json_encode($rendementDistribution['labels']); ?>,
+                                datasets: [
+                                    {
+                                        type: 'bar',
+                                        label: 'Volume distribution (m³)',
+                                        data: <?php echo json_encode($rendementDistribution['volumes_distribution']); ?>,
+                                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        type: 'bar',
+                                        label: 'Volume abonnés (m³)',
+                                        data: <?php echo json_encode($rendementDistribution['volumes_abonnes']); ?>,
+                                        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        borderWidth: 1
+                                    },
+                                    {
+                                        type: 'line',
+                                        label: 'Rendement distribution (%)',
+                                        data: <?php echo json_encode($rendementDistribution['taux']); ?>,
+                                        yAxisID: 'y1',
+                                        borderColor: 'rgba(255, 99, 132, 1)',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                        borderWidth: 2,
+                                        tension: 0.2
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                interaction: { mode: 'index', intersect: false },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: 'Volume (m³)' }
+                                    },
+                                    y1: {
+                                        beginAtZero: true,
+                                        position: 'right',
+                                        title: { display: true, text: 'Rendement (%)' },
+                                        grid: { drawOnChartArea: false }
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <?php if ($aepId): ?>
+        <div class="row g-4 mb-4">
+            <div class="col-12">
+                <div class="card shadow-sm p-4">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                        <div>
+                            <h2 class="h5 fw-semibold text-dark mb-1">Facturation et recouvrement par type de branchement</h2>
+                            <p class="small text-muted mb-0">
+                                <strong>BF</strong> : bornes fontaines (<code>type_abone = BF</code>) —
+                                <strong>BP</strong> : branchements privés (tout abonné qui n’est pas BF).
+                            </p>
+                        </div>
+                        <form method="get" action="" class="d-flex align-items-center gap-2">
+                            <input type="hidden" name="page" value="aep_dashboard">
+                            <label class="small text-muted mb-0" for="nb_mois_bf_bp">Mois affichés</label>
+                            <select name="nb_mois_bf_bp" id="nb_mois_bf_bp" class="form-select form-select-sm" style="width: auto;"
+                                onchange="this.form.submit()">
+                                <?php
+                                $choixNbMois = array(6, 12, 18, 24, 36);
+                                if (!in_array($dashboardNbMoisBfBp, $choixNbMois, true)) {
+                                    $choixNbMois[] = $dashboardNbMoisBfBp;
+                                    sort($choixNbMois, SORT_NUMERIC);
+                                }
+                                foreach ($choixNbMois as $n):
+                                    ?>
+                                    <option value="<?php echo (int) $n; ?>" <?php echo $dashboardNbMoisBfBp === (int) $n ? 'selected' : ''; ?>>
+                                        <?php echo (int) $n; ?> mois
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    </div>
+                    <?php if (!$dashboardHasTypeAbone): ?>
+                        <div class="alert alert-warning py-2 small">
+                            La colonne <code>abone.type_abone</code> est absente : les montants sont regroupés en <strong>BP</strong> uniquement (BF à 0).
+                            Exécutez la migration bornes fontaines pour activer la répartition BF/BP.
+                        </div>
+                    <?php endif; ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover table-montants-bf-bp align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="align-middle th-mois">Mois</th>
+                                    <th colspan="2" class="text-center th-bf">Borne fontaine (BF)</th>
+                                    <th colspan="2" class="text-center th-bp">Branchement privé (BP)</th>
+                                </tr>
+                                <tr>
+                                    <th class="text-end th-bf">Facturé (FCFA)</th>
+                                    <th class="text-end th-bf">Recouvré (FCFA)</th>
+                                    <th class="text-end th-bp">Facturé (FCFA)</th>
+                                    <th class="text-end th-bp">Recouvré (FCFA)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (!empty($tableauMontantsBfBp)): ?>
+                                    <?php foreach ($tableauMontantsBfBp as $ligne): ?>
+                                        <tr>
+                                            <td class="td-mois"><?php echo htmlspecialchars(getLetterMonth(isset($ligne['mois']) ? $ligne['mois'] : '')); ?></td>
+                                            <td class="text-end td-bf"><?php echo number_format((float) (isset($ligne['facture_bf']) ? $ligne['facture_bf'] : 0), 0, ',', ' '); ?></td>
+                                            <td class="text-end text-success td-bf"><?php echo number_format((float) (isset($ligne['recouvre_bf']) ? $ligne['recouvre_bf'] : 0), 0, ',', ' '); ?></td>
+                                            <td class="text-end td-bp"><?php echo number_format((float) (isset($ligne['facture_bp']) ? $ligne['facture_bp'] : 0), 0, ',', ' '); ?></td>
+                                            <td class="text-end text-success td-bp"><?php echo number_format((float) (isset($ligne['recouvre_bp']) ? $ligne['recouvre_bp'] : 0), 0, ',', ' '); ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center text-muted py-4 bg-light">Aucune donnée sur la période.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="row g-4">
         <!-- Top abonnés impayés -->
         <div class="col col-md-12 col-lg-4">
             <div class="card shadow-sm p-4">

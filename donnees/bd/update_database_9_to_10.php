@@ -940,6 +940,84 @@ class DatabaseUpdater9To10
                 echo "   ✓ Aucune donnée mal encodée détectée\n";
             }
 
+            // ============================================================
+            // PARTIE 10: HIÉRARCHIE DES RÉSEAUX
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 10: HIÉRARCHIE DES RÉSEAUX\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            echo "10.1. Vérification du champ id_reseau_parent dans la table reseau...\n";
+            if (!self::columnExists('reseau', 'id_reseau_parent')) {
+                echo "   → Ajout du champ id_reseau_parent...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `reseau`
+                        ADD COLUMN `id_reseau_parent` int(5) unsigned NULL DEFAULT NULL
+                        COMMENT 'Réseau parent direct pour construire un arbre'
+                    ");
+                    echo "   ✓ Champ id_reseau_parent ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ id_reseau_parent existe déjà\n";
+            }
+
+            echo "\n10.2. Vérification de l'index idx_reseau_parent...\n";
+            try {
+                $indexCheck = $bd->prepare("
+                    SELECT COUNT(*) AS c
+                    FROM information_schema.statistics
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'reseau'
+                      AND index_name = 'idx_reseau_parent'
+                ");
+                $indexCheck->execute(array());
+                $indexRow = $indexCheck->fetch(PDO::FETCH_ASSOC);
+                if (!$indexRow || (int) $indexRow['c'] === 0) {
+                    $bd->exec("CREATE INDEX `idx_reseau_parent` ON `reseau` (`id_reseau_parent`)");
+                    echo "   ✓ Index idx_reseau_parent créé\n";
+                } else {
+                    echo "   ✓ Index idx_reseau_parent existe déjà\n";
+                }
+            } catch (Exception $e) {
+                echo "   ⚠ Vérification/création index: " . $e->getMessage() . "\n";
+            }
+
+            // ============================================================
+            // PARTIE 11: TYPES DE COMPTEURS RÉSEAU
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 11: TYPES DE COMPTEURS RÉSEAU\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            echo "11.1. Vérification du champ type_compteur dans compteur_reseau...\n";
+            if (!self::columnExists('compteur_reseau', 'type_compteur')) {
+                echo "   → Ajout du champ type_compteur...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `compteur_reseau`
+                        ADD COLUMN `type_compteur` ENUM('production','distribution','reservoir')
+                        NOT NULL DEFAULT 'distribution'
+                        COMMENT 'Type du compteur réseau utilisé pour les calculs de rendement'
+                    ");
+                    echo "   ✓ Champ type_compteur ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ type_compteur existe déjà\n";
+            }
+
+            echo "\n11.2. Initialisation des valeurs existantes à distribution...\n";
+            try {
+                $updated = $bd->exec("UPDATE compteur_reseau SET type_compteur = 'distribution' WHERE type_compteur IS NULL OR type_compteur = ''");
+                echo "   ✓ $updated ligne(s) initialisée(s)\n";
+            } catch (Exception $e) {
+                echo "   ⚠ Initialisation: " . $e->getMessage() . "\n";
+            }
+
             echo "\n╔═══════════════════════════════════════════════════════════════╗\n";
             echo "║     MIGRATION TERMINÉE AVEC SUCCÈS                            ║\n";
             echo "╚═══════════════════════════════════════════════════════════════╝\n";
@@ -959,6 +1037,8 @@ class DatabaseUpdater9To10
             echo "- Vues mises à jour\n";
             echo "- Base de données et tables converties en UTF-8\n";
             echo "- Données mal encodées corrigées\n";
+            echo "- Hiérarchie des réseaux activée (id_reseau_parent)\n";
+            echo "- Types de compteurs réseau activés (production/distribution/reservoir)\n";
 
         } catch (Exception $e) {
             echo "\n✗ Erreur lors de la migration : " . $e->getMessage() . "\n";
@@ -1014,6 +1094,8 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
             <li><strong>Redevances améliorées</strong> - Champs base_calcul, type_calcul, montant_par_m3, est_sortie</li>
             <li><strong>Figer les tarifs</strong> - Champ id_tarif_differencie dans indexes</li>
             <li><strong>Conversion UTF-8</strong> - Base de données et tables converties en UTF-8, correction des données mal encodées</li>
+            <li><strong>Hiérarchie des réseaux</strong> - Champ id_reseau_parent et index pour structurer l'arbre des réseaux</li>
+            <li><strong>Types de compteurs réseau</strong> - Champ type_compteur dans compteur_reseau (distribution par défaut)</li>
         </ul>
         <p><strong>Note :</strong> Le script est idempotent, vous pouvez l'exécuter plusieurs fois sans risque.</p>
         <a href='?run_update=1' class='btn'>Lancer la migration</a>

@@ -74,14 +74,67 @@ function display_aep_to_select()
                         }
                     }
 
+                    // Rendement production (distribution) : vol. abonnés / vol. compteurs réseau « distribution » (même logique que le tableau de bord AEP)
+                    $volDistribution = 0.0;
+                    $volAbonnesIndexes = 0.0;
+                    $tauxRendementProd = null;
+                    if ($lastMoisId > 0) {
+                        try {
+                            $resVD = Manager::prepare_query(
+                                "SELECT SUM(i.nouvel_index - i.ancien_index) AS vd
+                                 FROM indexes i
+                                 INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                                 INNER JOIN constante_reseau c ON c.id = mf.id_constante
+                                 INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur AND cr.type_compteur = 'distribution'
+                                 WHERE c.id_aep = ? AND mf.id = ?",
+                                array($aepId, $lastMoisId)
+                            );
+                            if ($resVD) {
+                                $rVD = $resVD->fetch();
+                                $volDistribution = isset($rVD['vd']) ? (float) $rVD['vd'] : 0.0;
+                            }
+                            $resVA = Manager::prepare_query(
+                                "SELECT SUM(i.nouvel_index - i.ancien_index) AS va
+                                 FROM indexes i
+                                 INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                                 INNER JOIN constante_reseau c ON c.id = mf.id_constante
+                                 INNER JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
+                                 WHERE c.id_aep = ? AND mf.id = ?",
+                                array($aepId, $lastMoisId)
+                            );
+                            if ($resVA) {
+                                $rVA = $resVA->fetch();
+                                $volAbonnesIndexes = isset($rVA['va']) ? (float) $rVA['va'] : 0.0;
+                            }
+                            if ($volDistribution > 0) {
+                                $tauxRendementProd = round(($volAbonnesIndexes * 100.0) / $volDistribution, 1);
+                            }
+                        } catch (Exception $e) {
+                            $tauxRendementProd = null;
+                            $volDistribution = 0.0;
+                            $volAbonnesIndexes = 0.0;
+                        }
+                    }
+
                     // Styles utilitaires
-                    $badgeClass = $taux >= 95 ? 'bg-success' : ($taux >= 70 ? 'bg-warning' : 'bg-danger');
+                    $badgeClass = $lastMoisId <= 0 ? 'bg-secondary' : ($taux >= 95 ? 'bg-success' : ($taux >= 70 ? 'bg-warning' : 'bg-danger'));
+                    $badgeProdClass = 'bg-secondary';
+                    if ($tauxRendementProd !== null) {
+                        $badgeProdClass = ($tauxRendementProd >= 85 && $tauxRendementProd <= 115) ? 'bg-success' : (($tauxRendementProd >= 60) ? 'bg-warning' : 'bg-danger');
+                    }
                     ?>
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card shadow-sm border-0 h-100">
-                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
                                 <strong class="text-primary"><?php echo htmlspecialchars($libele); ?></strong>
-                                <span class="badge <?php echo $badgeClass; ?>"><?php echo $taux; ?>% recouvrement</span>
+                                <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                    <span class="badge <?php echo $badgeClass; ?>" title="Taux de recouvrement sur le dernier mois de facturation">
+                                        <?php echo $lastMoisId > 0 ? $taux . '%' : '—'; ?> financier
+                                    </span>
+                                    <span class="badge <?php echo $badgeProdClass; ?>" title="Volume index abonnés / volume compteurs réseau distribution (dernier mois)">
+                                        <?php echo $tauxRendementProd !== null ? $tauxRendementProd . '% prod.' : '— prod.'; ?>
+                                    </span>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="d-flex justify-content-between mb-2">
@@ -115,8 +168,49 @@ function display_aep_to_select()
                                     </div>
                                     <div class="col-12">
                                         <div class="p-2 bg-light rounded border">
-                                            <div class="small text-muted">Consommation (dernier mois)</div>
+                                            <div class="small text-muted">Consommation facturée (dernier mois)</div>
                                             <div class="fw-bold"><?php echo number_format($consoTotale, 2, ',', ' '); ?> m³</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border-top pt-2 mt-2">
+                                    <div class="small text-uppercase text-muted mb-2">Rendements (dernier mois<?php echo $lastMois ? ' : ' . htmlspecialchars($lastMois) : ''; ?>)</div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="p-2 rounded border-start border-4 border-success bg-body-secondary bg-opacity-25">
+                                                <div class="small text-muted">Rendement financier</div>
+                                                <div class="fs-5 fw-bold text-dark">
+                                                    <?php if ($lastMoisId > 0): ?>
+                                                        <?php echo $taux; ?> %
+                                                    <?php else: ?>
+                                                        <span class="text-muted fs-6">—</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Recouvré / facturé
+                                                    <?php if ($lastMoisId > 0 && $montantTotal > 0): ?>
+                                                        · <?php echo number_format($montantVerse, 0, ',', ' '); ?> / <?php echo number_format($montantTotal, 0, ',', ' '); ?> FCFA
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-2 rounded border-start border-4 border-primary bg-body-secondary bg-opacity-25">
+                                                <div class="small text-muted">Rendement production (distribution)</div>
+                                                <div class="fs-5 fw-bold text-dark">
+                                                    <?php if ($tauxRendementProd !== null): ?>
+                                                        <?php echo htmlspecialchars((string) $tauxRendementProd); ?> %
+                                                    <?php else: ?>
+                                                        <span class="text-muted fs-6">N/D</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Vol. abonnés / vol. distribution (m³)
+                                                    <?php if ($lastMoisId > 0): ?>
+                                                        · <?php echo number_format($volAbonnesIndexes, 1, ',', ' '); ?> / <?php echo number_format($volDistribution, 1, ',', ' '); ?>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -147,7 +241,6 @@ function display_aep_to_select()
                 </div>
             </div>
         </div>
-    </div>
     </div>
     <?php
 
