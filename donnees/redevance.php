@@ -103,6 +103,53 @@ class Redevance extends Manager
     }
 
     /**
+     * Totaux facturation pour un mois (AEP) : taux de recouvrement pour pondérer les redevances.
+     * Taux = somme des montants versés sur factures ÷ facturation TTC (0–1, plafonné à 100 %).
+     * Recouvrement net = versé − entretiens compteur TTC (indicateur complémentaire, non utilisé pour le taux).
+     *
+     * @return array{facture_ttc: float, verse: float, entretien_ttc: float, recouvre_net: float, taux: float}
+     */
+    public static function getStatFacturationRecouvrementMois($id_mois_facturation, $id_aep)
+    {
+        $id_mois_facturation = (int) $id_mois_facturation;
+        $id_aep = (int) $id_aep;
+        if ($id_mois_facturation <= 0 || $id_aep <= 0) {
+            return array(
+                'facture_ttc' => 0.0,
+                'verse' => 0.0,
+                'entretien_ttc' => 0.0,
+                'recouvre_net' => 0.0,
+                'taux' => 0.0,
+            );
+        }
+        $row = Manager::prepare_query(
+            "SELECT 
+                COALESCE(SUM(v.montant_total), 0) AS facture_ttc,
+                COALESCE(SUM(v.montant_verse), 0) AS verse,
+                COALESCE(SUM(v.prix_entretient_compteur * (1 + v.prix_tva / 100)), 0) AS entretien_ttc
+             FROM vue_abones_facturation v
+             INNER JOIN abone a ON a.id = v.id_abone
+             INNER JOIN reseau r ON r.id = a.id_reseau
+             WHERE v.id_mois_facturation = ? AND r.id_aep = ?",
+            array($id_mois_facturation, $id_aep)
+        )->fetch();
+
+        $facture = $row ? (float) $row['facture_ttc'] : 0.0;
+        $verse = $row ? (float) $row['verse'] : 0.0;
+        $entretien = $row ? (float) $row['entretien_ttc'] : 0.0;
+        $recouvreNet = max(0.0, $verse - $entretien);
+        $taux = ($facture > 0.0) ? min(1.0, max(0.0, $verse / $facture)) : 0.0;
+
+        return array(
+            'facture_ttc' => $facture,
+            'verse' => $verse,
+            'entretien_ttc' => $entretien,
+            'recouvre_net' => $recouvreNet,
+            'taux' => $taux,
+        );
+    }
+
+    /**
      * Calcule le montant estimatif maximum d'une redevance pour un mois donné
      * @param int $id_redevance ID de la redevance
      * @param int $id_mois_facturation ID du mois de facturation
@@ -174,21 +221,36 @@ class Redevance extends Manager
     }
 
     /**
-     * Récupère le montant déjà versé pour une redevance et un mois
+     * Récupère le montant déjà versé pour une redevance et un mois de facturation.
+     * Attribue les versements au mois selon DATE(date_versement) : même année-mois que mois_facturation.mois
+     * (aligné sur le tableau « détail par mois », versements globaux inclus).
+     *
      * @param int $id_redevance ID de la redevance
      * @param int $id_mois_facturation ID du mois de facturation
      * @return float Montant déjà versé
      */
     public static function getMontantDejaVerse($id_redevance, $id_mois_facturation)
     {
+        $id_mois_facturation = (int) $id_mois_facturation;
+        if ($id_mois_facturation <= 0) {
+            return 0.0;
+        }
+        $row = Manager::prepare_query(
+            "SELECT m.mois FROM mois_facturation m WHERE m.id = ?",
+            array($id_mois_facturation)
+        )->fetch();
+        if (!$row || empty($row['mois'])) {
+            return 0.0;
+        }
         $result = Manager::prepare_query(
-            "SELECT SUM(montant) as total_verse 
-             FROM versements 
-             WHERE id_redevance = ? AND id_mois_facturation = ?",
-            array($id_redevance, $id_mois_facturation)
+            "SELECT COALESCE(SUM(v.montant), 0) AS total_verse
+             FROM versements v
+             WHERE v.id_redevance = ?
+               AND DATE_FORMAT(v.date_versement, '%Y-%m') = ?",
+            array($id_redevance, $row['mois'])
         )->fetch();
 
-        return $result && $result['total_verse'] ? (float)$result['total_verse'] : 0;
+        return $result ? (float) $result['total_verse'] : 0.0;
     }
 
     /**

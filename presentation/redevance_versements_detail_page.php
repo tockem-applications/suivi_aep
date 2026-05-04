@@ -93,7 +93,7 @@ if (isset($_GET['success'])) {
                     <div class="col-md-3">
                         <div class="card bg-info text-white">
                             <div class="card-body">
-                                <h6>Montant estimatif</h6>
+                                <h6>Redevance brute</h6>
                                 <h4><?php echo number_format($montant_estimatif, 0, ',', ' '); ?> FCFA</h4>
                             </div>
                         </div>

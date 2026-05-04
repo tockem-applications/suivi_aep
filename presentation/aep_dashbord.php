@@ -1,6 +1,8 @@
 <?php
 include_once 'traitement/aep_traitement.php';
 @include_once("donnees/manager.php");
+@include_once("donnees/redevance.php");
+@include_once("../donnees/redevance.php");
 //var_dump($_SESSION);
 // Récupérer l'ID de l'AEP depuis l'URL
 //var_dump($_SESSION);
@@ -55,8 +57,49 @@ $rendementDistribution = array(
     'taux' => array()
 );
 $tableauMontantsBfBp = array();
-$dashboardNbMoisBfBp = isset($_GET['nb_mois_bf_bp']) ? max(1, min(36, (int) $_GET['nb_mois_bf_bp'])) : 12;
+/** Nombre de mois en mode glissant (3, 6 ou 12 derniers mois de facturation). */
+$dashboardNbMoisGlissant = 12;
 $dashboardHasTypeAbone = false;
+/** Mode période : 12 derniers mois | annee | tous | intervalle */
+$dashboardPeriodeMode = '13';
+$dashboardAnneeVue = null;
+$dashboardMfDebutId = isset($_GET['mf_debut']) ? (int) $_GET['mf_debut'] : 0;
+$dashboardMfFinId = isset($_GET['mf_fin']) ? (int) $_GET['mf_fin'] : 0;
+$dashboardListeMoisFact = array();
+$dashboardRedevanceDetail = array();
+$dashboardTauxVersementRedevancesPct = null;
+/** Totaux par base_calcul sur la période du tableau (estimatif, versé par date, reste, taux). */
+$dashboardRecapRedevance = array(
+    'vente_eau' => array('count' => 0, 'estimatif' => 0.0, 'verse' => 0.0, 'reste' => 0.0, 'taux_pct' => null),
+    'branchements' => array('count' => 0, 'estimatif' => 0.0, 'verse' => 0.0, 'reste' => 0.0, 'taux_pct' => null),
+);
+if (isset($_GET['annee'])) {
+    $rawAnnee = $_GET['annee'];
+    if ($rawAnnee === 'tous') {
+        $dashboardPeriodeMode = 'tous';
+    } elseif ($rawAnnee === 'intervalle') {
+        $dashboardPeriodeMode = 'intervalle';
+    } elseif ($rawAnnee === 'm3') {
+        $dashboardPeriodeMode = '12';
+        $dashboardNbMoisGlissant = 4;
+    } elseif ($rawAnnee === 'm6') {
+        $dashboardPeriodeMode = '12';
+        $dashboardNbMoisGlissant = 7;
+    } elseif ($rawAnnee === '') {
+        $dashboardPeriodeMode = '12';
+        $dashboardNbMoisGlissant = 13;
+    } elseif ($rawAnnee !== '') {
+        $yy = (int) $rawAnnee;
+        if ($yy >= 1990 && $yy <= 2100) {
+            $dashboardPeriodeMode = 'annee';
+            $dashboardAnneeVue = $yy;
+        }
+    }
+}
+$dashboardMoisMin = null;
+$dashboardMoisMax = null;
+$dashboardPeriodeLibelle = '';
+$dashboardAnneesDisponibles = array();
 
 if ($aepId) {
     // Sécuriser la présence du type de compteur réseau (distribution par défaut)
@@ -80,6 +123,153 @@ if ($aepId) {
         // fallback silencieux
     }
 
+    // Années proposées : année civile en cours → année du premier mois de facturation (tous les mois civils entre les deux)
+    $yCourante = (int) date('Y');
+    $yPremierMoisFact = $yCourante;
+    $resMinM = Manager::prepare_query(
+        "SELECT MIN(mf.mois) AS min_m FROM mois_facturation mf
+         INNER JOIN constante_reseau c ON c.id = mf.id_constante
+         WHERE c.id_aep = ? AND mf.est_mois_base = 0",
+        array($aepId)
+    );
+    $rowMinM = $resMinM ? $resMinM->fetch() : null;
+    if ($rowMinM && !empty($rowMinM['min_m'])) {
+        $tsMinFact = strtotime($rowMinM['min_m']);
+        if ($tsMinFact !== false) {
+            $yPremierMoisFact = (int) date('Y', $tsMinFact);
+        }
+    }
+    if ($yPremierMoisFact > $yCourante) {
+        $yPremierMoisFact = $yCourante;
+    }
+    for ($y = $yCourante; $y >= $yPremierMoisFact; $y--) {
+        $dashboardAnneesDisponibles[] = $y;
+    }
+
+    $resMaxM = Manager::prepare_query(
+        "SELECT MAX(mf.mois) AS max_m FROM mois_facturation mf
+         INNER JOIN constante_reseau c ON c.id = mf.id_constante
+         WHERE c.id_aep = ? AND mf.est_mois_base = 0",
+        array($aepId)
+    );
+    $rowMaxM = $resMaxM ? $resMaxM->fetch() : null;
+    $maxMoisFact = ($rowMaxM && !empty($rowMaxM['max_m'])) ? $rowMaxM['max_m'] : null;
+
+    $resListeMf = Manager::prepare_query(
+        "SELECT m.id, m.mois FROM mois_facturation m
+         INNER JOIN constante_reseau c ON c.id = m.id_constante
+         WHERE c.id_aep = ?
+         ORDER BY m.mois ASC",
+        array($aepId)
+    );
+    $dashboardListeMoisFact = $resListeMf ? $resListeMf->fetchAll(PDO::FETCH_ASSOC) : array();
+
+    if ($dashboardPeriodeMode === 'annee' && $dashboardAnneeVue !== null) {
+        if (!in_array((int) $dashboardAnneeVue, $dashboardAnneesDisponibles, true)) {
+            $dashboardPeriodeMode = '12';
+            $dashboardAnneeVue = null;
+            $dashboardNbMoisGlissant = 12;
+        }
+    }
+
+    if ($dashboardPeriodeMode === 'intervalle') {
+        if (count($dashboardListeMoisFact) === 0) {
+            $dashboardPeriodeMode = '12';
+            $dashboardNbMoisGlissant = 12;
+        } else {
+            $firstId = (int) $dashboardListeMoisFact[0]['id'];
+            $lastId = (int) $dashboardListeMoisFact[count($dashboardListeMoisFact) - 1]['id'];
+            $debutId = $dashboardMfDebutId > 0 ? $dashboardMfDebutId : $firstId;
+            $finId = $dashboardMfFinId > 0 ? $dashboardMfFinId : $lastId;
+            $chk = Manager::prepare_query(
+                "SELECT m.id, m.mois FROM mois_facturation m
+                 INNER JOIN constante_reseau c ON c.id = m.id_constante
+                 WHERE c.id_aep = ? AND m.id IN (?, ?)",
+                array($aepId, $debutId, $finId)
+            )->fetchAll(PDO::FETCH_ASSOC);
+            $byId = array();
+            foreach ($chk as $cr) {
+                $byId[(int) $cr['id']] = $cr['mois'];
+            }
+            if (!isset($byId[$debutId]) || !isset($byId[$finId])) {
+                $dashboardPeriodeMode = '12';
+                $dashboardNbMoisGlissant = 12;
+            } else {
+                $moisA = $byId[$debutId];
+                $moisB = $byId[$finId];
+                $tsA = strtotime($moisA);
+                $tsB = strtotime($moisB);
+                if ($tsA === false || $tsB === false) {
+                    $dashboardPeriodeMode = '12';
+                    $dashboardNbMoisGlissant = 12;
+                } else {
+                    if ($tsA > $tsB) {
+                        $tmpId = $debutId;
+                        $debutId = $finId;
+                        $finId = $tmpId;
+                        $tmpM = $moisA;
+                        $moisA = $moisB;
+                        $moisB = $tmpM;
+                    }
+                    $dashboardMfDebutId = $debutId;
+                    $dashboardMfFinId = $finId;
+                    $dashboardMoisMin = date('Y-m-01', $tsA);
+                    $dashboardMoisMax = date('Y-m-t', $tsB);
+                    $dashboardPeriodeLibelle = 'Du ' . getLetterMonth($moisA) . ' au ' . getLetterMonth($moisB);
+                }
+            }
+        }
+    }
+
+    if ($dashboardPeriodeMode === 'tous') {
+        if ($rowMinM && !empty($rowMinM['min_m']) && $maxMoisFact) {
+            $tsA = strtotime($rowMinM['min_m']);
+            $tsB = strtotime($maxMoisFact);
+            if ($tsA !== false && $tsB !== false) {
+                $dashboardMoisMin = date('Y-m-01', $tsA);
+                $dashboardMoisMax = date('Y-m-t', $tsB);
+                $dashboardPeriodeLibelle = 'Tous les mois de facturation';
+            } else {
+                $dashboardPeriodeMode = '12';
+                $dashboardNbMoisGlissant = 12;
+            }
+        } else {
+            $dashboardPeriodeMode = '12';
+            $dashboardNbMoisGlissant = 12;
+        }
+    }
+
+    if ($dashboardPeriodeMode === 'annee' && $dashboardAnneeVue !== null) {
+        $dashboardMoisMin = $dashboardAnneeVue . '-00-01';
+        $dashboardMoisMax = $dashboardAnneeVue . '-12-31';
+        $dashboardPeriodeLibelle = (string) (int) $dashboardAnneeVue;
+    } elseif ($dashboardPeriodeMode === '12') {
+        // Fenêtre = les N derniers mois de facturation en base (périodes mf), pas N mois civils.
+        $nM = max(1, (int) $dashboardNbMoisGlissant);
+        $res12 = Manager::prepare_query(
+            "SELECT MIN(t.mois) AS min_m, MAX(t.mois) AS max_m FROM (
+                SELECT mf.mois AS mois FROM mois_facturation mf
+                INNER JOIN constante_reseau c ON c.id = mf.id_constante
+                WHERE c.id_aep = ? AND mf.est_mois_base = 0
+                GROUP BY mf.mois
+                ORDER BY mf.mois DESC
+                LIMIT " . (int) $nM . "
+            ) t",
+            array($aepId)
+        );
+        $row12 = $res12 ? $res12->fetch() : null;
+        if ($row12 && !empty($row12['min_m']) && !empty($row12['max_m'])) {
+            $tsMin = strtotime($row12['min_m']);
+            $tsMax = strtotime($row12['max_m']);
+            if ($tsMin !== false && $tsMax !== false) {
+                $dashboardMoisMin = date('Y-m-01', $tsMin);
+                $dashboardMoisMax = date('Y-m-t', $tsMax);
+                $dashboardPeriodeLibelle = $nM . ' dernier' . ($nM > 1 ? 's' : '')
+                    . ' mois de facturation (jusqu\'à ' . getLetterMonth($row12['max_m']) . ')';
+            }
+        }
+    }
+
     $aepInfo = $model->getAepInfo($aepId);
     if ($aepInfo) {
         $data['libele'] = $aepInfo['libele'];
@@ -95,8 +285,112 @@ if ($aepId) {
     $data['impaye_total'] = $model->getImpayeTotal($aepId);
     $data['flux_financiers'] = $model->getFluxFinanciers($aepId);
     $data['redevances'] = $model->getRedevances($aepId);
-    $data['index_history'] = $model->getIndexHistory($aepId);
-    $data['montants_par_mois'] = $model->getMontantsParMois($aepId); // Nouvelle donnée pour le
+
+    // Synthèse redevances sur la période : estimatif par base ; versés = somme des versements dont l'année-mois de date_versement est dans l'intervalle (aligné page versements redevance)
+    if ($dashboardMoisMin !== null && $dashboardMoisMax !== null && class_exists('Redevance')) {
+        $qIdsRng = Manager::prepare_query(
+            "SELECT m.id FROM mois_facturation m
+             INNER JOIN constante_reseau c ON c.id = m.id_constante
+             WHERE c.id_aep = ? AND m.mois >= ? AND m.mois <= ?
+             ORDER BY m.mois ASC",
+            array($aepId, $dashboardMoisMin, $dashboardMoisMax)
+        );
+        $moisIdsRng = $qIdsRng ? $qIdsRng->fetchAll(PDO::FETCH_COLUMN, 0) : array();
+        $ymMin = substr((string) $dashboardMoisMin, 0, 7);
+        $ymMax = substr((string) $dashboardMoisMax, 0, 7);
+        $sumEstVe = 0.0;
+        $sumVerseVe = 0.0;
+        foreach ($data['redevances'] as $rd) {
+            $rid = (int) $rd['id'];
+            $base = isset($rd['base_calcul']) ? trim((string) $rd['base_calcul']) : 'vente_eau';
+            if ($base === '') {
+                $base = 'vente_eau';
+            }
+            $est = 0.0;
+            if ($base === 'vente_eau') {
+                foreach ($moisIdsRng as $mid) {
+                    $est += (float) Redevance::calculerMontantEstimatif($rid, (int) $mid);
+                }
+                $sumEstVe += $est;
+            } else {
+                $mDebutRd = isset($rd['mois_debut']) && $rd['mois_debut'] !== '' && $rd['mois_debut'] !== null
+                    ? (string) $rd['mois_debut'] : '1900-01';
+                $mDebutYm = strlen($mDebutRd) >= 7 ? substr($mDebutRd, 0, 7) : $mDebutRd;
+                $fromYm = strcmp($mDebutYm, $ymMin) > 0 ? $mDebutYm : $ymMin;
+                $rowBr = Manager::prepare_query(
+                    "SELECT COALESCE(SUM(z.montant_estimatif), 0) AS s FROM (
+                        SELECT COALESCE(
+                            CASE WHEN re.type_calcul = 'montant_fixe'
+                                THEN COUNT(b.mois) * IFNULL(re.montant_par_m3, 0) END,
+                            CASE WHEN re.type_calcul = 'pourcentage'
+                                THEN SUM(IFNULL(b.versement_fcfa, 0)) * IFNULL(re.pourcentage, 0) / 100 END,
+                            0
+                        ) AS montant_estimatif
+                        FROM branchement_abonne b
+                        INNER JOIN abone a ON b.id_abone = a.id
+                        INNER JOIN reseau r ON a.id_reseau = r.id
+                        INNER JOIN redevance re ON b.mois >= re.mois_debut AND re.id = ?
+                        WHERE b.mois >= ? AND b.mois <= ? AND r.id_aep = ?
+                        GROUP BY b.mois, re.type_calcul, re.montant_par_m3, re.pourcentage
+                    ) z",
+                    array($rid, $fromYm, $ymMax, $aepId)
+                )->fetch();
+                $est = $rowBr ? (float) $rowBr['s'] : 0.0;
+            }
+            $rv = Manager::prepare_query(
+                "SELECT COALESCE(SUM(v.montant), 0) AS s
+                 FROM versements v
+                 WHERE v.id_redevance = ?
+                   AND DATE_FORMAT(v.date_versement, '%Y-%m') >= ?
+                   AND DATE_FORMAT(v.date_versement, '%Y-%m') <= ?",
+                array($rid, $ymMin, $ymMax)
+            )->fetch();
+            $verse = $rv ? (float) $rv['s'] : 0.0;
+            if ($base === 'vente_eau') {
+                $sumVerseVe += $verse;
+                $dashboardRecapRedevance['vente_eau']['count']++;
+                $dashboardRecapRedevance['vente_eau']['estimatif'] += $est;
+                $dashboardRecapRedevance['vente_eau']['verse'] += $verse;
+            } else {
+                $dashboardRecapRedevance['branchements']['count']++;
+                $dashboardRecapRedevance['branchements']['estimatif'] += $est;
+                $dashboardRecapRedevance['branchements']['verse'] += $verse;
+            }
+            $dashboardRedevanceDetail[] = array(
+                'libele' => isset($rd['libele']) ? $rd['libele'] : '',
+                'base_calcul' => $base,
+                'estimatif' => $est,
+                'verse' => $verse,
+                'reste' => max(0.0, $est - $verse),
+            );
+        }
+        if ($sumEstVe > 0.0) {
+            $dashboardTauxVersementRedevancesPct = (int) round(($sumVerseVe * 100.0) / $sumEstVe);
+        }
+        $dashboardRecapRedevance['vente_eau']['reste'] = max(
+            0.0,
+            $dashboardRecapRedevance['vente_eau']['estimatif'] - $dashboardRecapRedevance['vente_eau']['verse']
+        );
+        $dashboardRecapRedevance['branchements']['reste'] = max(
+            0.0,
+            $dashboardRecapRedevance['branchements']['estimatif'] - $dashboardRecapRedevance['branchements']['verse']
+        );
+        if ($dashboardRecapRedevance['vente_eau']['estimatif'] > 0.0) {
+            $dashboardRecapRedevance['vente_eau']['taux_pct'] = (int) round(
+                ($dashboardRecapRedevance['vente_eau']['verse'] * 100.0) / $dashboardRecapRedevance['vente_eau']['estimatif']
+            );
+        }
+        if ($dashboardRecapRedevance['branchements']['estimatif'] > 0.0) {
+            $dashboardRecapRedevance['branchements']['taux_pct'] = (int) round(
+                ($dashboardRecapRedevance['branchements']['verse'] * 100.0) / $dashboardRecapRedevance['branchements']['estimatif']
+            );
+        }
+    }
+
+    // En vue année / tous les mois : inclure le mois de référence (est_mois_base = 1), souvent janvier
+    $dashboardExclureMoisBase = ($dashboardPeriodeMode === '12');
+    $data['index_history'] = $model->getIndexHistory($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase);
+    $data['montants_par_mois'] = $model->getMontantsParMois($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase);
 
     // Récupérer les factures (filtrées si un mois est spécifié)
     $mois = isset($_GET['mois']) ? $_GET['mois'] : null;
@@ -160,16 +454,23 @@ if ($aepId) {
 
     // Graphique rendement de distribution global AEP:
     // taux = somme volumes compteurs distribution réseau / somme volumes compteurs abonnés
+    $dashSqlMois = '';
+    $dashParamsMois = array($aepId);
+    if ($dashboardMoisMin !== null && $dashboardMoisMax !== null) {
+        $dashSqlMois = ' AND mf.mois >= ? AND mf.mois <= ?';
+        $dashParamsMois[] = $dashboardMoisMin;
+        $dashParamsMois[] = $dashboardMoisMax;
+    }
     $rowsDistribution = Manager::prepare_query(
         "SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS volume_distribution
          FROM mois_facturation mf
          INNER JOIN constante_reseau c ON c.id = mf.id_constante
          LEFT JOIN indexes i ON i.id_mois_facturation = mf.id
          LEFT JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
-         WHERE c.id_aep = ? AND cr.type_compteur = 'distribution'
+         WHERE c.id_aep = ? AND cr.type_compteur = 'distribution'" . $dashSqlMois . "
          GROUP BY mf.mois
          ORDER BY mf.mois ASC",
-        array($aepId)
+        $dashParamsMois
     );
     $mapDistribution = array();
     if ($rowsDistribution) {
@@ -184,10 +485,10 @@ if ($aepId) {
          INNER JOIN constante_reseau c ON c.id = mf.id_constante
          LEFT JOIN indexes i ON i.id_mois_facturation = mf.id
          LEFT JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
-         WHERE c.id_aep = ?
+         WHERE c.id_aep = ?" . $dashSqlMois . "
          GROUP BY mf.mois
          ORDER BY mf.mois ASC",
-        array($aepId)
+        $dashParamsMois
     );
     $mapAbonnes = array();
     if ($rowsAbonnes) {
@@ -232,7 +533,21 @@ if ($aepId) {
         $dashboardHasTypeAbone = false;
     }
 
-    $limMoisBfBp = max(1, min(36, (int) $dashboardNbMoisBfBp));
+    $sqlBfBpEstMoisBase = $dashboardExclureMoisBase ? ' AND mf.est_mois_base = 0' : '';
+
+    $limMoisBfBp = (int) $dashboardNbMoisGlissant;
+    $bfBpPeriodeSql = '';
+    $bfBpParams = array($aepId);
+    if ($dashboardPeriodeMode === 'annee' && $dashboardAnneeVue !== null) {
+        $bfBpPeriodeSql = ' AND YEAR(mf.mois) = ?';
+        $bfBpParams[] = $dashboardAnneeVue;
+    } elseif ($dashboardMoisMin !== null && $dashboardMoisMax !== null) {
+        $bfBpPeriodeSql = ' AND mf.mois >= ? AND mf.mois <= ?';
+        $bfBpParams[] = $dashboardMoisMin;
+        $bfBpParams[] = $dashboardMoisMax;
+    }
+    $bfBpLimitClause = ($bfBpPeriodeSql !== '') ? '' : (' LIMIT ' . (int) $limMoisBfBp);
+
     if ($dashboardHasTypeAbone) {
         $sqlBfBp = "
             SELECT * FROM (
@@ -245,10 +560,9 @@ if ($aepId) {
                 FROM vue_abones_facturation vaf
                 INNER JOIN abone a ON a.id = vaf.id_abone
                 INNER JOIN mois_facturation mf ON mf.id = vaf.id_mois
-                WHERE vaf.id_aep = ? AND mf.est_mois_base = 0
+                WHERE vaf.id_aep = ?" . $sqlBfBpEstMoisBase . $bfBpPeriodeSql . "
                 GROUP BY vaf.id_mois, vaf.mois
-                ORDER BY vaf.mois DESC
-                LIMIT " . $limMoisBfBp . "
+                ORDER BY vaf.mois DESC" . $bfBpLimitClause . "
             ) sub
             ORDER BY sub.mois DESC
         ";
@@ -263,16 +577,15 @@ if ($aepId) {
                     SUM(IFNULL(vaf.montant_verse, 0)) AS recouvre_bp
                 FROM vue_abones_facturation vaf
                 INNER JOIN mois_facturation mf ON mf.id = vaf.id_mois
-                WHERE vaf.id_aep = ? AND mf.est_mois_base = 0
+                WHERE vaf.id_aep = ?" . $sqlBfBpEstMoisBase . $bfBpPeriodeSql . "
                 GROUP BY vaf.id_mois, vaf.mois
-                ORDER BY vaf.mois DESC
-                LIMIT " . $limMoisBfBp . "
+                ORDER BY vaf.mois DESC" . $bfBpLimitClause . "
             ) sub
             ORDER BY sub.mois DESC
         ";
     }
     try {
-        $stmtBfBp = Manager::prepare_query($sqlBfBp, array($aepId));
+        $stmtBfBp = Manager::prepare_query($sqlBfBp, $bfBpParams);
         if ($stmtBfBp) {
             $tableauMontantsBfBp = $stmtBfBp->fetchAll(PDO::FETCH_ASSOC);
         }
@@ -432,7 +745,59 @@ if ($aepId) {
     }
 </style>
 <div class="container-fluid">
-    <h1 class="display-4 fw-bold text-dark mb-4 pt-3">Tableau de bord AEP <?php echo $data['libele'] ?> </h1>
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 pt-3 mb-3 border-bottom pb-3">
+        <h1 class="display-5 fw-bold text-dark mb-0">Tableau de bord AEP
+            <?php echo htmlspecialchars($data['libele']); ?></h1>
+        <?php if ($aepId): ?>
+            <form method="get" action="" id="form_dashboard_periode" class="d-flex flex-wrap align-items-end gap-2 ms-md-auto">
+                <input type="hidden" name="page" value="aep_dashboard">
+                <div>
+                    <label for="dashboard_annee" class="form-label small text-muted mb-0">Période</label>
+                    <select name="annee" id="dashboard_annee" class="form-select form-select-sm"
+                        style="min-width: 8rem; max-width: 12rem;"
+                        title="<?php echo $dashboardPeriodeLibelle !== '' ? htmlspecialchars($dashboardPeriodeLibelle) : ''; ?>"
+                        onchange="this.form.submit();">
+                        <option value="m3" <?php echo ($dashboardPeriodeMode === '12' && (int) $dashboardNbMoisGlissant === 3) ? 'selected' : ''; ?>>3 derniers mois</option>
+                        <option value="m6" <?php echo ($dashboardPeriodeMode === '12' && (int) $dashboardNbMoisGlissant === 6) ? 'selected' : ''; ?>>6 derniers mois</option>
+                        <option value="" <?php echo ($dashboardPeriodeMode === '12' && (int) $dashboardNbMoisGlissant === 12) ? 'selected' : ''; ?>>12 derniers mois</option>
+                        <option value="tous" <?php echo $dashboardPeriodeMode === 'tous' ? 'selected' : ''; ?>>Tous les mois</option>
+                        <option value="intervalle" <?php echo $dashboardPeriodeMode === 'intervalle' ? 'selected' : ''; ?>>Intervalle (mois)</option>
+                        <?php foreach ($dashboardAnneesDisponibles as $yDisp): ?>
+                            <option value="<?php echo (int) $yDisp; ?>" <?php echo $dashboardPeriodeMode === 'annee' && (int) $dashboardAnneeVue === (int) $yDisp ? 'selected' : ''; ?>>
+                                <?php echo (int) $yDisp; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="d-flex flex-wrap align-items-end gap-1 <?php echo $dashboardPeriodeMode !== 'intervalle' ? 'opacity-50' : ''; ?>">
+                    <div>
+                        <label for="dashboard_mf_debut" class="form-label small text-muted mb-0">Mois début</label>
+                        <select name="mf_debut" id="dashboard_mf_debut" class="form-select form-select-sm" style="min-width: 9rem; max-width: 11rem;"
+                            <?php echo $dashboardPeriodeMode !== 'intervalle' ? 'disabled' : ''; ?>
+                            onchange="this.form.submit();">
+                            <?php foreach ($dashboardListeMoisFact as $lm): ?>
+                                <option value="<?php echo (int) $lm['id']; ?>" <?php echo (int) $lm['id'] === (int) $dashboardMfDebutId ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(getLetterMonth($lm['mois'])); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="dashboard_mf_fin" class="form-label small text-muted mb-0">Mois fin</label>
+                        <select name="mf_fin" id="dashboard_mf_fin" class="form-select form-select-sm" style="min-width: 9rem; max-width: 11rem;"
+                            <?php echo $dashboardPeriodeMode !== 'intervalle' ? 'disabled' : ''; ?>
+                            onchange="this.form.submit();">
+                            <?php foreach ($dashboardListeMoisFact as $lm): ?>
+                                <option value="<?php echo (int) $lm['id']; ?>" <?php echo (int) $lm['id'] === (int) $dashboardMfFinId ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars(getLetterMonth($lm['mois'])); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
 
     <!-- Ligne KPI -->
     <div class="row g-3 mb-4">
@@ -471,6 +836,14 @@ if ($aepId) {
                 <div class="fs-5 fw-bold"><?php echo $kpis['taux_recouvrement_mois']; ?>%</div>
             </div>
         </div>
+        <div class="col-6 col-md-4 col-lg-2">
+            <div class="card kpi p-3">
+                <div class="small text-muted" title="Versements / estimatif (vente d'eau) sur la période sélectionnée">
+                    Versement redevances</div>
+                <div class="fs-5 fw-bold"><?php echo $dashboardTauxVersementRedevancesPct !== null ? (int) $dashboardTauxVersementRedevancesPct . ' %' : '—'; ?></div>
+            </div>
+        </div>
+        
         <div class="col-6 col-md-4 col-lg-2">
             <div class="card kpi p-3">
                 <div class="small text-muted">Impayés totaux</div>
@@ -663,35 +1036,23 @@ if ($aepId) {
                 <div class="card shadow-sm p-4">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
                         <div>
-                            <h2 class="h5 fw-semibold text-dark mb-1">Facturation et recouvrement par type de branchement</h2>
+                            <h2 class="h5 fw-semibold text-dark mb-1">Facturation et recouvrement par type de branchement
+                            </h2>
                             <p class="small text-muted mb-0">
                                 <strong>BF</strong> : bornes fontaines (<code>type_abone = BF</code>) —
                                 <strong>BP</strong> : branchements privés (tout abonné qui n’est pas BF).
                             </p>
                         </div>
-                        <form method="get" action="" class="d-flex align-items-center gap-2">
-                            <input type="hidden" name="page" value="aep_dashboard">
-                            <label class="small text-muted mb-0" for="nb_mois_bf_bp">Mois affichés</label>
-                            <select name="nb_mois_bf_bp" id="nb_mois_bf_bp" class="form-select form-select-sm" style="width: auto;"
-                                onchange="this.form.submit()">
-                                <?php
-                                $choixNbMois = array(6, 12, 18, 24, 36);
-                                if (!in_array($dashboardNbMoisBfBp, $choixNbMois, true)) {
-                                    $choixNbMois[] = $dashboardNbMoisBfBp;
-                                    sort($choixNbMois, SORT_NUMERIC);
-                                }
-                                foreach ($choixNbMois as $n):
-                                    ?>
-                                    <option value="<?php echo (int) $n; ?>" <?php echo $dashboardNbMoisBfBp === (int) $n ? 'selected' : ''; ?>>
-                                        <?php echo (int) $n; ?> mois
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </form>
+                        <p class="small text-muted mb-0">
+                            Période :
+                            <strong><?php echo $dashboardPeriodeLibelle !== '' ? htmlspecialchars($dashboardPeriodeLibelle) : '—'; ?></strong>
+                            — modifiez-la dans le sélecteur en haut de page.
+                        </p>
                     </div>
                     <?php if (!$dashboardHasTypeAbone): ?>
                         <div class="alert alert-warning py-2 small">
-                            La colonne <code>abone.type_abone</code> est absente : les montants sont regroupés en <strong>BP</strong> uniquement (BF à 0).
+                            La colonne <code>abone.type_abone</code> est absente : les montants sont regroupés en
+                            <strong>BP</strong> uniquement (BF à 0).
                             Exécutez la migration bornes fontaines pour activer la répartition BF/BP.
                         </div>
                     <?php endif; ?>
@@ -714,16 +1075,27 @@ if ($aepId) {
                                 <?php if (!empty($tableauMontantsBfBp)): ?>
                                     <?php foreach ($tableauMontantsBfBp as $ligne): ?>
                                         <tr>
-                                            <td class="td-mois"><?php echo htmlspecialchars(getLetterMonth(isset($ligne['mois']) ? $ligne['mois'] : '')); ?></td>
-                                            <td class="text-end td-bf"><?php echo number_format((float) (isset($ligne['facture_bf']) ? $ligne['facture_bf'] : 0), 0, ',', ' '); ?></td>
-                                            <td class="text-end text-success td-bf"><?php echo number_format((float) (isset($ligne['recouvre_bf']) ? $ligne['recouvre_bf'] : 0), 0, ',', ' '); ?></td>
-                                            <td class="text-end td-bp"><?php echo number_format((float) (isset($ligne['facture_bp']) ? $ligne['facture_bp'] : 0), 0, ',', ' '); ?></td>
-                                            <td class="text-end text-success td-bp"><?php echo number_format((float) (isset($ligne['recouvre_bp']) ? $ligne['recouvre_bp'] : 0), 0, ',', ' '); ?></td>
+                                            <td class="td-mois">
+                                                <?php echo htmlspecialchars(getLetterMonth(isset($ligne['mois']) ? $ligne['mois'] : '')); ?>
+                                            </td>
+                                            <td class="text-end td-bf">
+                                                <?php echo number_format((float) (isset($ligne['facture_bf']) ? $ligne['facture_bf'] : 0), 0, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end text-success td-bf">
+                                                <?php echo number_format((float) (isset($ligne['recouvre_bf']) ? $ligne['recouvre_bf'] : 0), 0, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end td-bp">
+                                                <?php echo number_format((float) (isset($ligne['facture_bp']) ? $ligne['facture_bp'] : 0), 0, ',', ' '); ?>
+                                            </td>
+                                            <td class="text-end text-success td-bp">
+                                                <?php echo number_format((float) (isset($ligne['recouvre_bp']) ? $ligne['recouvre_bp'] : 0), 0, ',', ' '); ?>
+                                            </td>
                                         </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
                                     <tr>
-                                        <td colspan="5" class="text-center text-muted py-4 bg-light">Aucune donnée sur la période.</td>
+                                        <td colspan="5" class="text-center text-muted py-4 bg-light">Aucune donnée sur la
+                                            période.</td>
                                     </tr>
                                 <?php endif; ?>
                             </tbody>
@@ -840,6 +1212,55 @@ if ($aepId) {
         <div class="col col-md-12">
             <div class="card shadow-sm p-4">
                 <h2 class="h4 fw-semibold text-dark mb-3">Redevances</h2>
+                <?php if (count($dashboardRedevanceDetail) > 0): ?>
+                    <p class="small text-muted mb-2">
+                        Récapitulatif sur la période du tableau
+                        (<strong><?php echo $dashboardPeriodeLibelle !== '' ? htmlspecialchars($dashboardPeriodeLibelle) : '—'; ?></strong>) :
+                        estimatif cumulé par base, versements (dates de versement dans l’intervalle), reste, taux de versement.
+                    </p>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card border-primary h-100 shadow-sm">
+                                <div class="card-header bg-primary text-white py-2">
+                                    <strong><i class="fas fa-tint me-1"></i>Vente d'eau</strong>
+                                    <span class="badge bg-light text-primary ms-1"><?php echo (int) $dashboardRecapRedevance['vente_eau']['count']; ?> redevance(s)</span>
+                                </div>
+                                <div class="card-body py-3">
+                                    <div class="row g-2 small">
+                                        <div class="col-6 text-muted">Estimatif</div>
+                                        <div class="col-6 text-end fw-semibold"><?php echo number_format($dashboardRecapRedevance['vente_eau']['estimatif'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Versé</div>
+                                        <div class="col-6 text-end text-success fw-semibold"><?php echo number_format($dashboardRecapRedevance['vente_eau']['verse'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Reste</div>
+                                        <div class="col-6 text-end text-warning fw-semibold"><?php echo number_format($dashboardRecapRedevance['vente_eau']['reste'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Taux versement</div>
+                                        <div class="col-6 text-end fw-bold"><?php echo $dashboardRecapRedevance['vente_eau']['taux_pct'] !== null ? (int) $dashboardRecapRedevance['vente_eau']['taux_pct'] . ' %' : '—'; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-secondary h-100 shadow-sm">
+                                <div class="card-header bg-secondary text-white py-2">
+                                    <strong><i class="fas fa-plug me-1"></i>Branchements</strong>
+                                    <span class="badge bg-light text-secondary ms-1"><?php echo (int) $dashboardRecapRedevance['branchements']['count']; ?> redevance(s)</span>
+                                </div>
+                                <div class="card-body py-3">
+                                    <div class="row g-2 small">
+                                        <div class="col-6 text-muted">Estimatif</div>
+                                        <div class="col-6 text-end fw-semibold"><?php echo number_format($dashboardRecapRedevance['branchements']['estimatif'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Versé</div>
+                                        <div class="col-6 text-end text-success fw-semibold"><?php echo number_format($dashboardRecapRedevance['branchements']['verse'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Reste</div>
+                                        <div class="col-6 text-end text-warning fw-semibold"><?php echo number_format($dashboardRecapRedevance['branchements']['reste'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Taux versement</div>
+                                        <div class="col-6 text-end fw-bold"><?php echo $dashboardRecapRedevance['branchements']['taux_pct'] !== null ? (int) $dashboardRecapRedevance['branchements']['taux_pct'] . ' %' : '—'; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endif; ?>
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <thead class="table-light">
@@ -863,6 +1284,41 @@ if ($aepId) {
                         </tbody>
                     </table>
                 </div>
+                <?php if (count($dashboardRedevanceDetail) > 0): ?>
+                    <p class="small text-muted mb-2 mt-3">Détail par redevance (même période et mêmes règles que le récapitulatif ci-dessus).</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Redevance</th>
+                                    <th class="text-end">Estimatif (FCFA)</th>
+                                    <th class="text-end">Versé (FCFA)</th>
+                                    <th class="text-end">Restant (FCFA)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($dashboardRedevanceDetail as $dr): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($dr['libele']); ?>
+                                            <?php if (isset($dr['base_calcul']) && $dr['base_calcul'] === 'branchements'): ?>
+                                                <span class="badge bg-secondary ms-1">Branchements</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-primary ms-1">Vente d'eau</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-end"><?php echo number_format($dr['estimatif'], 0, ',', ' '); ?></td>
+                                        <td class="text-end"><?php echo number_format($dr['verse'], 0, ',', ' '); ?></td>
+                                        <td class="text-end"><?php echo number_format($dr['reste'], 0, ',', ' '); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-0 mt-2">
+                        KPI « Taux versement redevances » : versements / estimatif pour la base <strong>vente d'eau</strong> uniquement.
+                        Les montants versés sont ceux dont la <strong>date de versement</strong> (année-mois) tombe dans la période sélectionnée.
+                    </p>
+                <?php endif; ?>
                 <a href="?page=redevance" class="text-primary text-decoration-underline text-sm mt-3 d-inline-block">
                     Voir détails <i class="fas fa-arrow-right link-icon"></i>
                 </a>

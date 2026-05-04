@@ -76,8 +76,6 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                         class="bi bi-exclamation-triangle text-warning me-2"></i>Pénalités</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation"><i
                                         class="bi bi-calendar-month me-2"></i>Mois Facturés</a></li>
-                            <li><a class="dropdown-item" href="index.php?form=constante_reseau"><i
-                                        class="bi bi-tag me-2"></i>Tarifs AEP</a></li>
                             <li><a class="dropdown-item" href="index.php?page=reseau"><i
                                         class="bi bi-bar-chart me-2"></i>Statistiques</a></li>
                             <?php if (isset($_SESSION['id'], $_SESSION['email'], $_SESSION['nom'], $_SESSION['prenom']) && $_SESSION['id'] == '1'): ?>

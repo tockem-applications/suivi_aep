@@ -1,5 +1,7 @@
 <?php
 @include_once("traitement/versement_t.php");
+@include_once("donnees/redevance.php");
+@include_once("../donnees/redevance.php");
 
 // Récupérer l'AEP actuel
 $aepId = (int)$_SESSION['id_aep'];
@@ -43,7 +45,7 @@ $moisMontants = Manager::prepare_query($queryMois, $paramsMois)->fetchAll();
 // Récupérer les redevances (une seule si $redevanceId est défini, toutes sinon)
 if ($redevanceId) {
     $redevances = Manager::prepare_query("
-        SELECT id, libele
+        SELECT id, libele, base_calcul
         FROM redevance
         WHERE id = ? AND id_aep = ?
         LIMIT 1
@@ -53,11 +55,61 @@ if ($redevanceId) {
     }
 } else {
     $redevances = Manager::prepare_query("
-        SELECT id, libele
+        SELECT id, libele, base_calcul
         FROM redevance
         WHERE id_aep = ?
     ", array($aepId))->fetchAll();
 }
+
+// Estimatif brut vs pondéré au taux de recouvrement (base vente d'eau uniquement)
+$ponderationVenteEau = array(
+    'nb_mois' => 0,
+    'somme_facture_ttc' => 0.0,
+    'somme_verse' => 0.0,
+    'somme_entretien_ttc' => 0.0,
+    'somme_recouvre_net' => 0.0,
+    'estimatif_brut' => 0.0,
+    'estimatif_pondere' => 0.0,
+    'nb_redevances_vente_eau' => 0,
+);
+$moisIdsPonderation = array();
+if ($selectedMoisId) {
+    $moisIdsPonderation[] = (int) $selectedMoisId;
+} else {
+    foreach ($moisMontants as $mm) {
+        $moisIdsPonderation[] = (int) $mm['mois_id'];
+    }
+}
+$moisIdsPonderation = array_values(array_unique(array_filter($moisIdsPonderation)));
+foreach ($redevances as $rd) {
+    $base = isset($rd['base_calcul']) ? (string) $rd['base_calcul'] : 'vente_eau';
+    if ($base === '' || $base === 'vente_eau') {
+        $ponderationVenteEau['nb_redevances_vente_eau']++;
+    }
+}
+if ($ponderationVenteEau['nb_redevances_vente_eau'] > 0 && count($moisIdsPonderation) > 0) {
+    foreach ($moisIdsPonderation as $mid) {
+        $st = Redevance::getStatFacturationRecouvrementMois($mid, $aepId);
+        $ponderationVenteEau['nb_mois']++;
+        $ponderationVenteEau['somme_facture_ttc'] += $st['facture_ttc'];
+        $ponderationVenteEau['somme_verse'] += $st['verse'];
+        $ponderationVenteEau['somme_entretien_ttc'] += $st['entretien_ttc'];
+        $ponderationVenteEau['somme_recouvre_net'] += $st['recouvre_net'];
+        $tauxMois = $st['taux'];
+        foreach ($redevances as $rd) {
+            $baseRd = isset($rd['base_calcul']) ? (string) $rd['base_calcul'] : 'vente_eau';
+            if ($baseRd !== '' && $baseRd !== 'vente_eau') {
+                continue;
+            }
+            $est = Redevance::calculerMontantEstimatif((int) $rd['id'], $mid);
+            $ponderationVenteEau['estimatif_brut'] += $est;
+            $ponderationVenteEau['estimatif_pondere'] += $est * $tauxMois;
+        }
+    }
+}
+$ponderationVenteEau['taux_implicite'] = ($ponderationVenteEau['estimatif_brut'] > 0)
+    ? min(1.0, max(0.0, $ponderationVenteEau['estimatif_pondere'] / $ponderationVenteEau['estimatif_brut']))
+    : null;
 
 // Récupérer les détails des versements pour chaque redevance et le mois sélectionné
 $versementsDetails = array();
@@ -193,6 +245,72 @@ if (isset($_GET['success'])) {
                     </option>
                 <?php endforeach; ?>
             </select>
+        </div>
+    </div>
+
+    <!-- Pondération estimatif / recouvrement (vente d'eau) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-primary shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <strong>Estimatif pondéré au recouvrement (vente d'eau)</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Les versements de redevance ne peuvent pas dépasser ce qui est réellement recouvrable sur la facturation.
+                        Pour chaque mois, le <strong>taux de recouvrement</strong> est :
+                        somme des montants versés sur factures ÷ facturation TTC du mois (ex. 10 000 ÷ 10 000 = 100 %).
+                        L'<strong>estimatif pondéré</strong> est la somme, mois par mois, de (montant estimatif brut du mois × ce taux).
+                        Le bloc « recouvrement net » (versé − entretiens) reste un indicateur complémentaire.
+                        <?php if ($selectedMoisId): ?>
+                            <span class="d-block mt-1">Période affichée : <strong>un mois</strong> (filtre actif).</span>
+                        <?php else: ?>
+                            <span class="d-block mt-1">Période affichée : <strong>tous les mois</strong> listés à gauche (cumul mois par mois).</span>
+                        <?php endif; ?>
+                    </p>
+                    <?php if ($ponderationVenteEau['nb_redevances_vente_eau'] <= 0): ?>
+                        <div class="alert alert-secondary mb-0">
+                            Aucune redevance sur la base « vente d'eau » dans le filtre actuel (ex. redevances « branchements » uniquement).
+                        </div>
+                    <?php elseif (count($moisIdsPonderation) === 0): ?>
+                        <div class="alert alert-secondary mb-0">Aucun mois de facturation disponible pour ce calcul.</div>
+                    <?php else: ?>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="small text-muted">Facturation TTC (cumul période)</div>
+                                <div class="fs-5 fw-bold"><?php echo number_format($ponderationVenteEau['somme_facture_ttc'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="small text-muted">Versé sur factures (cumul)</div>
+                                <div class="fs-5"><?php echo number_format($ponderationVenteEau['somme_verse'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="small text-muted">Entretiens compteur TTC (cumul)</div>
+                                <div class="fs-5"><?php echo number_format($ponderationVenteEau['somme_entretien_ttc'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted">Recouvrement net (versé − entretiens)</div>
+                                <div class="fs-5 fw-bold text-success"><?php echo number_format($ponderationVenteEau['somme_recouvre_net'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted">Taux implicite sur l'estimatif (pondéré ÷ brut)</div>
+                                <div class="fs-5 fw-bold">
+                                    <?php echo $ponderationVenteEau['taux_implicite'] !== null ? number_format($ponderationVenteEau['taux_implicite'] * 100, 2, ',', ' ') . ' %' : '—'; ?>
+                                </div>
+                            </div>
+                            <div class="col-12"><hr class="my-2"></div>
+                            <div class="col-md-6">
+                                <div class="small text-muted">Montant estimatif brut (redevances vente d'eau, période)</div>
+                                <div class="fs-5"><?php echo number_format($ponderationVenteEau['estimatif_brut'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small text-muted">Montant estimatif pondéré (plafond cohérent avec le recouvrement)</div>
+                                <div class="fs-5 fw-bold text-primary"><?php echo number_format($ponderationVenteEau['estimatif_pondere'], 2, ',', ' '); ?> FCFA</div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 

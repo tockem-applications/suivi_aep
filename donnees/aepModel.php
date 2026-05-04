@@ -6,10 +6,11 @@ const DB_USER = 'root'; // Remplacez par votre utilisateur MySQL
 const DB_PASS = ''; // Remplacez par votre mot de passe MySQL
 const DB_NAME = 'suivi_aep_fokoue';
 
-function getDbConnection() {
+function getDbConnection()
+{
     try {
         $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8';
-        $conn = new PDO($dsn, DB_USER, DB_PASS, array(PDO::ATTR_PERSISTENT=>true));
+        $conn = new PDO($dsn, DB_USER, DB_PASS, array(PDO::ATTR_PERSISTENT => true));
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $conn;
@@ -18,15 +19,18 @@ function getDbConnection() {
     }
 }
 
-class AepModel {
+class AepModel
+{
     private $conn;
 
-    public function __construct() {
+    public function __construct()
+    {
         $this->conn = getDbConnection();
     }
 
     // Récupérer les informations de l'AEP
-    public function getAepInfo($aepId) {
+    public function getAepInfo($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT * FROM aep WHERE id = :aepId");
             $stmt->execute(array(':aepId' => $aepId));
@@ -37,7 +41,8 @@ class AepModel {
     }
 
     // Récupérer les réseaux associés
-    public function getReseaux($aepId) {
+    public function getReseaux($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT id, nom FROM reseau WHERE id_aep = :aepId");
             $stmt->execute(array(':aepId' => $aepId));
@@ -52,7 +57,8 @@ class AepModel {
     }
 
     // Récupérer le nombre total d'abonnés
-    public function getAbonesCount($aepId) {
+    public function getAbonesCount($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT COUNT(DISTINCT a.id) as count
                 FROM abone a
@@ -67,7 +73,8 @@ class AepModel {
     }
 
     // Récupérer le total des factures
-    public function getFactureTotal($aepId) {
+    public function getFactureTotal($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT SUM(f.montant_verse) as total
                 FROM facture f
@@ -84,7 +91,8 @@ class AepModel {
     }
 
     // Récupérer le total des impayés
-    public function getImpayeTotal($aepId) {
+    public function getImpayeTotal($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT SUM(i.montant) as total
                 FROM impaye i
@@ -102,7 +110,8 @@ class AepModel {
     }
 
     // Récupérer les flux financiers (entrées et sorties)
-    public function getFluxFinanciers($aepId) {
+    public function getFluxFinanciers($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT type, SUM(prix) as total
                 FROM flux_financier
@@ -124,11 +133,14 @@ class AepModel {
     }
 
     // Récupérer les redevances
-    public function getRedevances($aepId) {
+    public function getRedevances($aepId)
+    {
         try {
-            $stmt = $this->conn->prepare("SELECT libele, pourcentage, type, mois_debut
+            $stmt = $this->conn->prepare("SELECT id, libele, pourcentage, type, mois_debut,
+                COALESCE(NULLIF(TRIM(base_calcul), ''), 'vente_eau') AS base_calcul
                 FROM redevance
-                WHERE id_aep = :aepId");
+                WHERE id_aep = :aepId
+                ORDER BY libele");
             $stmt->execute(array(':aepId' => $aepId));
             $redevances = array();
             while ($row = $stmt->fetch()) {
@@ -140,21 +152,35 @@ class AepModel {
         }
     }
 
-    // Récupérer l'historique des index (simplifié pour le graphique) - exclut le mois de base
-    public function getIndexHistory($aepId) {
+    // Récupérer l'historique des index (simplifié pour le graphique)
+    // $moisMin / $moisMax : bornes inclusives sur m.mois (format date Y-m-d), null = pas de filtre
+    // $excludeMoisBase : si true, exclut mois_facturation.est_mois_base = 1 (vue « opérationnelle » 12 derniers mois)
+    public function getIndexHistory($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true)
+    {
         try {
-            $stmt = $this->conn->prepare("SELECT SUM(i.nouvel_index - i.ancien_index) as value, m.mois as date
+            $sql = "SELECT SUM(i.nouvel_index - i.ancien_index) as value, m.mois as date
                 FROM indexes i
                 JOIN mois_facturation m ON i.id_mois_facturation = m.id
                 JOIN compteur c ON i.id_compteur = c.id
                 JOIN compteur_abone ca ON c.id = ca.id_compteur
                 JOIN abone a ON ca.id_abone = a.id
                 JOIN reseau r ON a.id_reseau = r.id
-                WHERE r.id_aep = :aepId
-                AND m.est_mois_base = 0
-                GROUP BY m.id
-                ORDER BY m.mois");
-            $stmt->execute(array(':aepId' => $aepId));
+                WHERE r.id_aep = :aepId";
+            $params = array(':aepId' => $aepId);
+            if ($excludeMoisBase) {
+                $sql .= " AND m.est_mois_base = 0";
+            }
+            if ($moisMin !== null && $moisMin !== '') {
+                $sql .= " AND m.mois >= :mois_min";
+                $params[':mois_min'] = $moisMin;
+            }
+            if ($moisMax !== null && $moisMax !== '') {
+                $sql .= " AND m.mois <= :mois_max";
+                $params[':mois_max'] = $moisMax;
+            }
+            $sql .= " GROUP BY m.id ORDER BY m.mois ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
             $indexHistory = array();
             while ($row = $stmt->fetch()) {
                 $indexHistory[] = $row;
@@ -166,7 +192,8 @@ class AepModel {
     }
 
     // Récupérer les factures récentes (limitées à 5)
-    public function getRecentFactures($aepId, $mois = null) {
+    public function getRecentFactures($aepId, $mois = null)
+    {
         try {
             $query = "SELECT a.nom as abone_nom, f.montant_verse, f.date_paiement
                 FROM facture f
@@ -195,7 +222,8 @@ class AepModel {
     }
 
     // Récupérer les impayés
-    public function getImpayes($aepId) {
+    public function getImpayes($aepId)
+    {
         try {
             $stmt = $this->conn->prepare("SELECT i.id_facture, i.montant, i.date_reglement
                 FROM impaye i
@@ -215,10 +243,11 @@ class AepModel {
     }
 
 
-    // Nouvelle méthode : Récupérer les montants facturés et recouvrés par mois (exclut le mois de base)
-    public function getMontantsParMois($aepId) {
+    // Nouvelle méthode : Récupérer les montants facturés et recouvrés par mois
+    public function getMontantsParMois($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true)
+    {
         try {
-            $stmt = $this->conn->prepare("
+            $sql = "
                 SELECT 
                     m.mois as date,
                     SUM((i.nouvel_index - i.ancien_index)*(1 + cr.prix_tva/100) * cr.prix_metre_cube_eau + cr.prix_entretient_compteur) as montant_facture,
@@ -229,12 +258,22 @@ class AepModel {
                 JOIN indexes i ON f.id_indexes = i.id
                 JOIN mois_facturation m ON i.id_mois_facturation = m.id
                 INNER JOIN constante_reseau cr ON m.id_constante = cr.id
-                WHERE r.id_aep = :aepId
-                AND m.est_mois_base = 0
-                GROUP BY m.id
-                ORDER BY m.mois
-            ");
-            $stmt->execute(array(':aepId' => $aepId));
+                WHERE r.id_aep = :aepId";
+            $params = array(':aepId' => $aepId);
+            if ($excludeMoisBase) {
+                $sql .= " AND m.est_mois_base = 0";
+            }
+            if ($moisMin !== null && $moisMin !== '') {
+                $sql .= " AND m.mois >= :mois_min";
+                $params[':mois_min'] = $moisMin;
+            }
+            if ($moisMax !== null && $moisMax !== '') {
+                $sql .= " AND m.mois <= :mois_max";
+                $params[':mois_max'] = $moisMax;
+            }
+            $sql .= " GROUP BY m.id ORDER BY m.mois ASC";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute($params);
             $montants = array();
             while ($row = $stmt->fetch()) {
                 $montants[] = $row;
@@ -245,7 +284,8 @@ class AepModel {
         }
     }
 
-    public function __destruct() {
+    public function __destruct()
+    {
         $this->conn = null; // PDO ferme automatiquement la connexion à la destruction
     }
 }

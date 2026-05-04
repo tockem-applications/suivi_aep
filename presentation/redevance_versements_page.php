@@ -39,11 +39,17 @@ if (!$aepId) {
     }
 }
 
-// Calculer le montant total estimatif de la redevance sur tous les mois
+// Totaux redevance brute / nette (vente eau) sur tous les mois
 $montantTotalEstimatif = 0;
+$montantTotalEstimatifPondere = 0;
 $montantTotalVerse = 0;
 $resteTotalAVerser = 0;
+$resteTotalPondere = null;
 $donneesMois = array(); // Détail par mois
+$ponderationCumulFactureTtc = 0.0;
+$ponderationCumulVerse = 0.0;
+$ponderationCumulEntretienTtc = 0.0;
+$ponderationCumulRecouvreNet = 0.0;
 
 if ($redevance && $aepId) {
     if ($redevance->base_calcul == 'branchements') {
@@ -92,8 +98,15 @@ if ($redevance && $aepId) {
 
             $montantTotalEstimatif += $montant_estimatif;
 
-            // Pour les versements, on ne peut pas lier à un mois de facturation spécifique
-            $verseMois = 0;
+            // Montant versé affiché : somme des versements dont la date (année-mois) = mois de la ligne (comme l'historique global, sans exiger id_mois_facturation)
+            $resultVerseBr = Manager::prepare_query(
+                "SELECT COALESCE(SUM(montant), 0) AS verse_mois
+                 FROM versements
+                 WHERE id_redevance = ?
+                   AND DATE_FORMAT(date_versement, '%Y-%m') = ?",
+                array($id_redevance, $moisBranchementStr)
+            )->fetch();
+            $verseMois = $resultVerseBr ? (float) $resultVerseBr['verse_mois'] : 0.0;
 
             $donneesMois[] = array(
                 'mois' => array('mois' => $moisBranchementStr, 'id' => null),
@@ -120,15 +133,16 @@ if ($redevance && $aepId) {
             $montant_estimatif = Redevance::calculerMontantEstimatif($id_redevance, $mois['id']);
             $montantTotalEstimatif += $montant_estimatif;
 
-            // Récupérer le montant versé pour ce mois spécifique
+            // Montant versé par ligne : même mois calendaire (YYYY-MM) que le mois de facturation, d'après date_versement (inclut les versements « globaux » sans id_mois_facturation)
             $resultMois = Manager::prepare_query(
-                "SELECT COALESCE(SUM(montant), 0) as verse_mois 
-                 FROM versements 
-                 WHERE id_redevance = ? AND id_mois_facturation = ?",
-                array($id_redevance, $mois['id'])
+                "SELECT COALESCE(SUM(montant), 0) AS verse_mois
+                 FROM versements
+                 WHERE id_redevance = ?
+                   AND DATE_FORMAT(date_versement, '%Y-%m') = ?",
+                array($id_redevance, $mois['mois'])
             )->fetch();
 
-            $verseMois = $resultMois ? (float) $resultMois['verse_mois'] : 0;
+            $verseMois = $resultMois ? (float) $resultMois['verse_mois'] : 0.0;
 
             // Récupérer les données de base pour le calcul (m³)
             $stats = Manager::prepare_query(
@@ -145,13 +159,27 @@ if ($redevance && $aepId) {
             $quantite = $stats ? (float) $stats['total_conso'] : 0;
             $montant_total_facture = $stats ? (float) $stats['montant_total_facture'] : 0;
 
+            $stRec = Redevance::getStatFacturationRecouvrementMois((int) $mois['id'], $redevance->id_aep);
+            $tauxRec = $stRec['taux'];
+            $montantPondere = $montant_estimatif * $tauxRec;
+            $montantTotalEstimatifPondere += $montantPondere;
+            $ponderationCumulFactureTtc += $stRec['facture_ttc'];
+            $ponderationCumulVerse += $stRec['verse'];
+            $ponderationCumulEntretienTtc += $stRec['entretien_ttc'];
+            $ponderationCumulRecouvreNet += $stRec['recouvre_net'];
+
             $donneesMois[] = array(
                 'mois' => $mois,
                 'montant_estimatif' => $montant_estimatif,
                 'montant_verse' => $verseMois,
                 'reste_a_verser' => max(0, $montant_estimatif - $verseMois),
                 'quantite' => $quantite,
-                'montant_total_facture' => $montant_total_facture
+                'montant_total_facture' => $montant_total_facture,
+                'taux_recouvrement' => $tauxRec,
+                'montant_estimatif_pondere' => $montantPondere,
+                'reste_a_verser_pondere' => max(0, $montantPondere - $verseMois),
+                'facture_ttc_mois' => $stRec['facture_ttc'],
+                'recouvre_net_mois' => $stRec['recouvre_net'],
             );
         }
     }
@@ -166,6 +194,9 @@ if ($redevance && $aepId) {
 
     $montantTotalVerse = $result ? (float) $result['total_verse'] : 0;
     $resteTotalAVerser = max(0, $montantTotalEstimatif - $montantTotalVerse);
+    if ($redevance->base_calcul !== 'branchements') {
+        $resteTotalPondere = max(0, $montantTotalEstimatifPondere - $montantTotalVerse);
+    }
 }
 
 // Récupérer l'historique des versements
@@ -180,6 +211,42 @@ if ($redevance) {
          LIMIT 50",
         array($id_redevance)
     )->fetchAll();
+}
+
+$tauxImpliciteGlobalRevVer = null;
+if ($redevance && $redevance->base_calcul !== 'branchements' && $montantTotalEstimatif > 0) {
+    $tauxImpliciteGlobalRevVer = min(1.0, max(0.0, $montantTotalEstimatifPondere / $montantTotalEstimatif));
+}
+
+// Lignes pour export CSV (détail par mois) — mêmes données que le tableau
+$redevanceDetailMoisCsvRows = array();
+if ($redevance && !empty($donneesMois)) {
+    foreach ($donneesMois as $data) {
+        $moisLabel = function_exists('getLetterMonth') ? getLetterMonth($data['mois']['mois']) : (string) $data['mois']['mois'];
+        if ($redevance->base_calcul == 'vente_eau') {
+            $redevanceDetailMoisCsvRows[] = array(
+                'Mois' => $moisLabel,
+                'Eau vendue' => round((float) $data['quantite'], 2),
+                'Montant consommé' => round((float) $data['montant_total_facture'], 2),
+                'Facturation Totale' => round((float) (isset($data['facture_ttc_mois']) ? $data['facture_ttc_mois'] : 0), 2),
+                'Taux recouvrement' => round((isset($data['taux_recouvrement']) ? (float) $data['taux_recouvrement'] : 0) * 100, 2),
+                'Redevance brute' => round((float) $data['montant_estimatif'], 2),
+                'Redevance nette' => round((float) (isset($data['montant_estimatif_pondere']) ? $data['montant_estimatif_pondere'] : 0), 2),
+                'Montant versé' => round((float) $data['montant_verse'], 2),
+                'Reste brut' => round((float) $data['reste_a_verser'], 2),
+                'Reste net' => round((float) (isset($data['reste_a_verser_pondere']) ? $data['reste_a_verser_pondere'] : 0), 2),
+            );
+        } else {
+            $redevanceDetailMoisCsvRows[] = array(
+                'Mois' => $moisLabel,
+                'Nombre de branchements' => (int) $data['quantite'],
+                'Montant consommé' => round((float) $data['montant_total_facture'], 2),
+                'Redevance brute' => round((float) $data['montant_estimatif'], 2),
+                'Montant versé' => round((float) $data['montant_verse'], 2),
+                'Reste brut' => round((float) $data['reste_a_verser'], 2),
+            );
+        }
+    }
 }
 
 // Gérer les messages
@@ -258,34 +325,101 @@ if (isset($_GET['success'])) {
             </div>
         </div>
 
-        <!-- Résumé des versements -->
-        <div class="row mb-3">
-            <div class="col-md-4">
-                <div class="card bg-info text-white">
-                    <div class="card-body">
-                        <h6>Montant total estimatif</h6>
-                        <h4><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA</h4>
-                        <small>Sur tous les mois depuis
-                            <?php echo function_exists('getLetterMonth') && $redevance->mois_debut ? getLetterMonth($redevance->mois_debut) : $redevance->mois_debut; ?></small>
+        <?php if ($redevance->base_calcul !== 'branchements' && count($donneesMois) > 0): ?>
+            <div class="card border-primary shadow-sm mb-3">
+                <div class="card-header bg-primary text-white">
+                    <strong>Redevance nette au recouvrement (vente d'eau)</strong>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        Par mois : <strong>taux de recouvrement</strong> = montants versés sur factures ÷ facturation totale
+                        (ex. facturation totale 10 000 et versé 10 000 → 100 %). La <strong>redevance nette</strong> du mois = redevance brute × ce taux.
+                        Les versements de redevance ne peuvent pas dépasser ce plafond. Le « recouvrement net » (versé − entretiens compteur TTC) reste affiché à titre informatif.
+                    </p>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="small text-muted">Facturation Totale (cumul)</div>
+                            <div class="fs-6 fw-bold"><?php echo number_format($ponderationCumulFactureTtc, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Versé (factures)</div>
+                            <div class="fs-6"><?php echo number_format($ponderationCumulVerse, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Entretiens compteur TTC</div>
+                            <div class="fs-6"><?php echo number_format($ponderationCumulEntretienTtc, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="small text-muted">Recouvrement net</div>
+                            <div class="fs-6 fw-bold text-success"><?php echo number_format($ponderationCumulRecouvreNet, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted">Redevance brute (cumul)</div>
+                            <div class="fs-5"><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="small text-muted">Redevance nette (plafond cohérent)</div>
+                            <div class="fs-5 fw-bold text-primary"><?php echo number_format($montantTotalEstimatifPondere, 0, ',', ' '); ?> FCFA</div>
+                        </div>
+                        <div class="col-12">
+                            <div class="small text-muted">Taux implicite (redevance nette ÷ redevance brute)</div>
+                            <div class="fs-5"><?php echo $tauxImpliciteGlobalRevVer !== null ? number_format($tauxImpliciteGlobalRevVer * 100, 2, ',', ' ') . ' %' : '—'; ?></div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-success text-white">
-                    <div class="card-body">
+        <?php endif; ?>
+
+        <!-- Résumé des versements (hauteur égale sur la ligne) -->
+        <div class="row mb-3 align-items-stretch">
+            <div class="col-md-4 d-flex">
+                <div class="card bg-info text-white w-100 h-100 d-flex flex-column">
+                    <div class="card-body d-flex flex-column flex-grow-1">
+                        <?php if ($redevance->base_calcul !== 'branchements'): ?>
+                            <h6>Redevance nette</h6>
+                            <h4><?php echo number_format($montantTotalEstimatifPondere, 0, ',', ' '); ?> FCFA</h4>
+                            <small class="mt-auto">Plafond cohérent avec le recouvrement (réf. redevance brute :
+                                <?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA) — depuis
+                                <?php echo function_exists('getLetterMonth') && $redevance->mois_debut ? getLetterMonth($redevance->mois_debut) : $redevance->mois_debut; ?></small>
+                        <?php else: ?>
+                            <h6>Redevance brute (total)</h6>
+                            <h4><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA</h4>
+                            <small class="mt-auto">Sur tous les mois depuis
+                                <?php echo function_exists('getLetterMonth') && $redevance->mois_debut ? getLetterMonth($redevance->mois_debut) : $redevance->mois_debut; ?></small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 d-flex">
+                <div class="card bg-success text-white w-100 h-100 d-flex flex-column">
+                    <div class="card-body d-flex flex-column flex-grow-1">
                         <h6>Montant total versé</h6>
                         <h4><?php echo number_format($montantTotalVerse, 0, ',', ' '); ?> FCFA</h4>
-                        <small><?php echo $montantTotalEstimatif > 0 ? number_format(($montantTotalVerse / $montantTotalEstimatif) * 100, 1) : 0; ?>%
-                            du total</small>
+                        <small class="mt-auto"><?php
+                        if ($redevance->base_calcul !== 'branchements' && $montantTotalEstimatifPondere > 0) {
+                            echo number_format(($montantTotalVerse / $montantTotalEstimatifPondere) * 100, 1);
+                        } elseif ($montantTotalEstimatif > 0) {
+                            echo number_format(($montantTotalVerse / $montantTotalEstimatif) * 100, 1);
+                        } else {
+                            echo '0';
+                        }
+                        ?>%
+                            <?php echo $redevance->base_calcul !== 'branchements' ? 'de la redevance nette' : 'de la redevance brute'; ?></small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card bg-warning text-white">
-                    <div class="card-body">
-                        <h6>Reste à verser</h6>
-                        <h4><?php echo number_format($resteTotalAVerser, 0, ',', ' '); ?> FCFA</h4>
-                        <small>Maximum autorisé</small>
+            <div class="col-md-4 d-flex">
+                <div class="card bg-warning text-white w-100 h-100 d-flex flex-column">
+                    <div class="card-body d-flex flex-column flex-grow-1">
+                        <?php if ($redevance->base_calcul !== 'branchements' && $resteTotalPondere !== null): ?>
+                            <h6>Reste à verser (net)</h6>
+                            <h4><?php echo number_format($resteTotalPondere, 0, ',', ' '); ?> FCFA</h4>
+                            <small class="mt-auto">Sur base recouvrement réel (réf. reste brut : <?php echo number_format($resteTotalAVerser, 0, ',', ' '); ?> FCFA)</small>
+                        <?php else: ?>
+                            <h6>Reste à verser</h6>
+                            <h4><?php echo number_format($resteTotalAVerser, 0, ',', ' '); ?> FCFA</h4>
+                            <small class="mt-auto">Maximum autorisé (redevance brute)</small>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -293,26 +427,47 @@ if (isset($_GET['success'])) {
 
         <!-- Détail par mois -->
         <div class="card shadow-sm mb-3">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <h5 class="mb-0"><i class="bi bi-calendar-month"></i> Détail par mois</h5>
+                <div class="ms-auto">
+                    <?php
+                    if (!empty($redevanceDetailMoisCsvRows) && function_exists('create_csv_exportation_button')) {
+                        $fnCsv = 'redevance_detail_mois_' . (int) $id_redevance . '_' . date('Ymd_His') . '.csv';
+                        create_csv_exportation_button(
+                            $redevanceDetailMoisCsvRows,
+                            $fnCsv,
+                            'Télécharger le détail par mois au format CSV'
+                        );
+                    }
+                    ?>
+                </div>
             </div>
             <div class="card-body">
                 <?php if (count($donneesMois) > 0): ?>
+                    <p class="small text-muted mb-2">Montants en FCFA, eau vendue en m³, taux de recouvrement en % (unités non répétées dans les en-têtes). « Montant consommé » = montant facturé sur la consommation ; « Facturation Totale » = facturation globale du mois.</p>
                     <div class="table-responsive">
                         <table class="table table-striped table-hover">
                             <thead class="table-dark">
                                 <tr>
                                     <th>Mois</th>
                                     <?php if ($redevance->base_calcul == 'vente_eau'): ?>
-                                        <th>Eau vendue (m³)</th>
-                                        <th>Montant facturé (FCFA)</th>
+                                        <th>Eau vendue</th>
+                                        <th>Montant consommé</th>
+                                        <th>Facturation Totale</th>
+                                        <th>Taux recouvrement</th>
                                     <?php else: ?>
                                         <th>Nombre de branchements</th>
-                                        <th>Montant facturé (FCFA)</th>
+                                        <th>Montant consommé</th>
                                     <?php endif; ?>
-                                    <th>Montant estimatif (FCFA)</th>
-                                    <th>Montant versé (FCFA)</th>
-                                    <th>Reste à verser (FCFA)</th>
+                                    <th>Redevance brute</th>
+                                    <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                        <th>Redevance nette</th>
+                                    <?php endif; ?>
+                                    <th>Montant versé</th>
+                                    <th>Reste brut</th>
+                                    <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                        <th>Reste net</th>
+                                    <?php endif; ?>
                                 </tr>
                             </thead>
                             <tbody>
@@ -323,12 +478,22 @@ if (isset($_GET['success'])) {
                                         <?php if ($redevance->base_calcul == 'vente_eau'): ?>
                                             <td>
                                                 <span class="badge bg-primary">
-                                                    <?php echo number_format($data['quantite'], 0, ',', ' '); ?> m³
+                                                    <?php echo number_format($data['quantite'], 0, ',', ' '); ?>
                                                 </span>
                                             </td>
                                             <td>
                                                 <span class="badge bg-secondary">
                                                     <?php echo number_format($data['montant_total_facture'], 0, ',', ' '); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-dark">
+                                                    <?php echo number_format(isset($data['facture_ttc_mois']) ? $data['facture_ttc_mois'] : 0, 0, ',', ' '); ?>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary">
+                                                    <?php echo number_format((isset($data['taux_recouvrement']) ? $data['taux_recouvrement'] : 0) * 100, 1, ',', ' '); ?>
                                                 </span>
                                             </td>
                                         <?php else: ?>
@@ -348,6 +513,13 @@ if (isset($_GET['success'])) {
                                                 <?php echo number_format($data['montant_estimatif'], 0, ',', ' '); ?>
                                             </span>
                                         </td>
+                                        <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                            <td>
+                                                <span class="badge bg-primary">
+                                                    <?php echo number_format(isset($data['montant_estimatif_pondere']) ? $data['montant_estimatif_pondere'] : 0, 0, ',', ' '); ?>
+                                                </span>
+                                            </td>
+                                        <?php endif; ?>
                                         <td>
                                             <span class="badge bg-success">
                                                 <?php echo number_format($data['montant_verse'], 0, ',', ' '); ?>
@@ -359,23 +531,38 @@ if (isset($_GET['success'])) {
                                                 <?php echo number_format($data['reste_a_verser'], 0, ',', ' '); ?>
                                             </span>
                                         </td>
+                                        <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                            <td>
+                                                <span class="badge <?php echo (isset($data['reste_a_verser_pondere']) && $data['reste_a_verser_pondere'] > 0) ? 'bg-warning' : 'bg-secondary'; ?>">
+                                                    <?php echo number_format(isset($data['reste_a_verser_pondere']) ? $data['reste_a_verser_pondere'] : 0, 0, ',', ' '); ?>
+                                                </span>
+                                            </td>
+                                        <?php endif; ?>
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
                             <tfoot>
+                                <?php $totalVerseMois = 0; $totalRestePondMois = 0; ?>
                                 <tr class="table-info">
                                     <th>Total</th>
                                     <?php if ($redevance->base_calcul == 'vente_eau'): ?>
                                         <?php
                                         $totalEauVendue = 0;
-                                        $totalFacture = 0;
+                                        $totalFactureConso = 0;
+                                        $totalPondere = 0;
+                                        $totalRestePondMois = 0;
                                         foreach ($donneesMois as $data) {
                                             $totalEauVendue += $data['quantite'];
-                                            $totalFacture += $data['montant_total_facture'];
+                                            $totalFactureConso += $data['montant_total_facture'];
+                                            $totalVerseMois += $data['montant_verse'];
+                                            $totalPondere += isset($data['montant_estimatif_pondere']) ? $data['montant_estimatif_pondere'] : 0;
+                                            $totalRestePondMois += isset($data['reste_a_verser_pondere']) ? $data['reste_a_verser_pondere'] : 0;
                                         }
                                         ?>
-                                        <th><strong><?php echo number_format($totalEauVendue, 0, ',', ' '); ?> m³</strong></th>
-                                        <th><strong><?php echo number_format($totalFacture, 0, ',', ' '); ?> FCFA</strong></th>
+                                        <th><strong><?php echo number_format($totalEauVendue, 0, ',', ' '); ?></strong></th>
+                                        <th><strong><?php echo number_format($totalFactureConso, 0, ',', ' '); ?></strong></th>
+                                        <th><strong><?php echo number_format($ponderationCumulFactureTtc, 0, ',', ' '); ?></strong></th>
+                                        <th><strong><?php echo $tauxImpliciteGlobalRevVer !== null ? number_format($tauxImpliciteGlobalRevVer * 100, 2, ',', ' ') : '—'; ?></strong></th>
                                     <?php else: ?>
                                         <?php
                                         $totalBranchements = 0;
@@ -386,28 +573,35 @@ if (isset($_GET['success'])) {
                                         }
                                         ?>
                                         <th><strong><?php echo number_format($totalBranchements, 0, ',', ' '); ?></strong></th>
-                                        <th><strong><?php echo number_format($totalFacture, 0, ',', ' '); ?> FCFA</strong></th>
+                                        <th><strong><?php echo number_format($totalFacture, 0, ',', ' '); ?></strong></th>
                                     <?php endif; ?>
-                                    <th><strong><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA</strong>
+                                    <th><strong><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?></strong>
                                     </th>
-                                    <th><strong><?php echo number_format($montantTotalVerse, 0, ',', ' '); ?> FCFA</strong></th>
-                                    <th><strong><?php echo number_format($resteTotalAVerser, 0, ',', ' '); ?> FCFA</strong></th>
+                                    <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                        <th><strong><?php echo number_format($montantTotalEstimatifPondere, 0, ',', ' '); ?></strong></th>
+                                    <?php endif; ?>
+                                    <th><strong><?php echo number_format($redevance->base_calcul === 'vente_eau' ? $totalVerseMois : $montantTotalVerse, 0, ',', ' '); ?></strong></th>
+                                    <th><strong><?php echo number_format($resteTotalAVerser, 0, ',', ' '); ?></strong></th>
+                                    <?php if ($redevance->base_calcul == 'vente_eau'): ?>
+                                        <th><strong><?php echo number_format($totalRestePondMois, 0, ',', ' '); ?></strong></th>
+                                    <?php endif; ?>
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                     <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle"></i> <strong>Comment le montant estimatif est calculé :</strong>
+                        <i class="bi bi-info-circle"></i> <strong>Comment la redevance brute est calculée :</strong>
                         <ul class="mb-0 mt-2">
                             <?php if ($redevance->base_calcul == 'vente_eau'): ?>
                                 <li><strong>Base de calcul :</strong> Vente d'eau consommée (m³)</li>
+                                <li><strong>Pondération :</strong> la redevance nette et le « reste net » utilisent le taux de recouvrement du mois : montants versés sur factures ÷ facturation totale (100 % si les deux montants sont égaux).</li>
                                 <?php if ($redevance->type_calcul == 'pourcentage'): ?>
                                     <li><strong>Type de calcul :</strong> <?php echo $redevance->pourcentage; ?>% du montant total
-                                        facturé pour chaque mois</li>
-                                    <li><strong>Formule :</strong> (Montant total facturé du mois) ×
+                                        consommé (facturé sur l'eau) pour chaque mois</li>
+                                    <li><strong>Formule :</strong> (Montant consommé du mois) ×
                                         <?php echo $redevance->pourcentage; ?>%
                                     </li>
-                                    <li><strong>Exemple :</strong> Si le montant facturé est de 1 000 000 FCFA, la redevance = 1 000 000
+                                    <li><strong>Exemple :</strong> Si le montant consommé est de 1 000 000 FCFA, la redevance brute = 1 000 000
                                         × <?php echo $redevance->pourcentage; ?>% =
                                         <?php echo number_format(1000000 * $redevance->pourcentage / 100, 0, ',', ' '); ?> FCFA
                                     </li>
@@ -427,11 +621,11 @@ if (isset($_GET['success'])) {
                                 <li><strong>Base de calcul :</strong> Nombre de branchements actifs</li>
                                 <?php if ($redevance->type_calcul == 'pourcentage'): ?>
                                     <li><strong>Type de calcul :</strong> <?php echo $redevance->pourcentage; ?>% du montant total
-                                        facturé pour chaque mois</li>
-                                    <li><strong>Formule :</strong> (Montant total facturé du mois) ×
+                                        consommé (versements branchements du mois) pour chaque mois</li>
+                                    <li><strong>Formule :</strong> (Montant consommé du mois) ×
                                         <?php echo $redevance->pourcentage; ?>%
                                     </li>
-                                    <li><strong>Exemple :</strong> Si le montant facturé est de 1 000 000 FCFA, la redevance = 1 000 000
+                                    <li><strong>Exemple :</strong> Si le montant consommé est de 1 000 000 FCFA, la redevance brute = 1 000 000
                                         × <?php echo $redevance->pourcentage; ?>% =
                                         <?php echo number_format(1000000 * $redevance->pourcentage / 100, 0, ',', ' '); ?> FCFA
                                     </li>
@@ -506,7 +700,7 @@ if (isset($_GET['success'])) {
                     <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle"></i> <strong>Important :</strong> Ce versement sera global
                         (non attribué à un mois spécifique).
-                        Le montant total versé ne peut pas dépasser le montant estimatif total de
+                        Le montant total versé ne peut pas dépasser la redevance brute totale de
                         <strong><?php echo number_format($montantTotalEstimatif, 0, ',', ' '); ?> FCFA</strong>.
                     </div>
                 </form>

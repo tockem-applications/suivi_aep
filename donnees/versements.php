@@ -35,15 +35,29 @@ class Versement extends Manager
     /**
      * @throws Exception
      */
-    public static function getMontantVerse($id_redevance, $id_mois_facturation){
-        $req = self::prepare_query("
-            SELECT sum(montant) montant  from versements where id_redevance = ? and id_mois_facturation = ?
-        ", array($id_redevance, $id_mois_facturation))->fetch();
-//        var_dump($req['montant']);
-        if (!count($req)){
-            return 0;
+    /**
+     * Montant versé pour la redevance sur le mois : année-mois de date_versement = mois_facturation.mois
+     * (même règle que Redevance::getMontantDejaVerse / tableau détail par mois).
+     */
+    public static function getMontantVerse($id_redevance, $id_mois_facturation)
+    {
+        $id_mois_facturation = (int) $id_mois_facturation;
+        if ($id_mois_facturation <= 0) {
+            return 0.0;
         }
-        return $req['montant'];
+        $row = self::prepare_query(
+            "SELECT mois FROM mois_facturation WHERE id = ?",
+            array($id_mois_facturation)
+        )->fetch();
+        if (!$row || empty($row['mois'])) {
+            return 0.0;
+        }
+        $req = self::prepare_query(
+            "SELECT COALESCE(SUM(montant), 0) AS montant FROM versements
+             WHERE id_redevance = ? AND DATE_FORMAT(date_versement, '%Y-%m') = ?",
+            array($id_redevance, $row['mois'])
+        )->fetch();
+        return $req ? (float) $req['montant'] : 0.0;
     }
     public static function CalculeVersement($id_aep)
     {

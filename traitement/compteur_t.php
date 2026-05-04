@@ -162,20 +162,23 @@ class Compteur_t
     {
         self::ensureCompteurTypeColumn();
         if (isset($_GET['ajouter_compteur_reseau'], $_GET['id_reseau'])) {
+            $reseau_id = (int) $_GET['id_reseau'];
             try {
-                $id_reseau = $_GET['id_reseau'];
                 $compteur = self::createCompteurFromPost($_POST);
                 if ($compteur instanceof Compteur) {
-                    $res = $compteur->save_compteur_reseau($id_reseau);
-                    if ($res)
-                        header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=success");
-                    else
-                        header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=error&message=erreurd'ajour");
+                    $res = $compteur->save_compteur_reseau($reseau_id);
+                    if ($res) {
+                        header('Location: ../?page=reseau_detail&id=' . $reseau_id . '&success=compteur_added');
+                    } else {
+                        header('Location: ../?page=reseau_detail&id=' . $reseau_id . '&error=save&message=' . urlencode("Erreur d'enregistrement du compteur."));
+                    }
+                } else {
+                    header('Location: ../?page=reseau_detail&id=' . $reseau_id . '&error=invalid&message=' . urlencode('Données compteur invalides.'));
                 }
             } catch (Exception $e) {
-                echo $e->getMessage();
-                header("Location: ../index.php?page=reseaux&id_reseau=$id_reseau&operation=error&message=erreur innattendu dau programme");
+                header('Location: ../?page=reseau_detail&id=' . $reseau_id . '&error=exception&message=' . urlencode($e->getMessage()));
             }
+            exit;
         }
     }
 

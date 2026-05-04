@@ -63,9 +63,11 @@ function display_aep_to_select()
                     // Bilan dernier mois par type : BP (branchements privés) / BF (bornes fontaine)
                     $mtBp = 0.0;
                     $mvBp = 0.0;
+                    $consoBp = 0.0;
                     $tauxBp = 0;
                     $mtBf = 0.0;
                     $mvBf = 0.0;
+                    $consoBf = 0.0;
                     $tauxBf = 0;
                     if ($lastMoisId > 0) {
                         $resV = Manager::prepare_query(
@@ -81,7 +83,7 @@ function display_aep_to_select()
                         }
                         try {
                             $resBp = Manager::prepare_query(
-                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv, SUM(vaf.consommation) AS cs
                                  FROM vue_abones_facturation vaf
                                  INNER JOIN abone a ON a.id = vaf.id_abone
                                  WHERE vaf.id_mois = ? AND vaf.id_aep = ?
@@ -92,10 +94,11 @@ function display_aep_to_select()
                                 $r = $resBp->fetch();
                                 $mtBp = isset($r['mt']) ? (float) $r['mt'] : 0.0;
                                 $mvBp = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $consoBp = isset($r['cs']) ? (float) $r['cs'] : 0.0;
                                 $tauxBp = ($mtBp > 0) ? (int) round(($mvBp * 100.0) / $mtBp) : 0;
                             }
                             $resBf = Manager::prepare_query(
-                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv, SUM(vaf.consommation) AS cs
                                  FROM vue_abones_facturation vaf
                                  INNER JOIN abone a ON a.id = vaf.id_abone
                                  WHERE vaf.id_mois = ? AND vaf.id_aep = ? AND a.type_abone = 'BF'",
@@ -105,10 +108,11 @@ function display_aep_to_select()
                                 $r = $resBf->fetch();
                                 $mtBf = isset($r['mt']) ? (float) $r['mt'] : 0.0;
                                 $mvBf = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $consoBf = isset($r['cs']) ? (float) $r['cs'] : 0.0;
                                 $tauxBf = ($mtBf > 0) ? (int) round(($mvBf * 100.0) / $mtBf) : 0;
                             }
                         } catch (Exception $e) {
-                            $mtBp = $mvBp = $mtBf = $mvBf = 0.0;
+                            $mtBp = $mvBp = $consoBp = $mtBf = $mvBf = $consoBf = 0.0;
                             $tauxBp = $tauxBf = 0;
                         }
                     }
@@ -233,6 +237,9 @@ function display_aep_to_select()
                                                 <div class="small text-muted">
                                                     Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBp, 0, ',', ' ') . ' FCFA' : '—'; ?>
                                                 </div>
+                                                <div class="small text-muted mt-1">
+                                                    Volume consommé · <?php echo $lastMoisId > 0 ? number_format($consoBp, 2, ',', ' ') . ' m³' : '—'; ?>
+                                                </div>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -252,6 +259,9 @@ function display_aep_to_select()
                                                 </div>
                                                 <div class="small text-muted">
                                                     Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBf, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Volume consommé · <?php echo $lastMoisId > 0 ? number_format($consoBf, 2, ',', ' ') . ' m³' : '—'; ?>
                                                 </div>
                                             </div>
                                         </div>

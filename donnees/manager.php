@@ -185,8 +185,13 @@ function getLetterMonth($mois)
 
     );
     $tab = explode('-', $mois);
-    $index = $tab[1];
-    return isset($lettreMonth[$index]) ? $lettreMonth[$index] . ' ' . $tab[0] : '';
+    if (count($tab) < 2) {
+        return '';
+    }
+    // MySQL / exports peuvent renvoyer 2024-1-1 au lieu de 2024-01-01
+    $index = str_pad((string) (int) $tab[1], 2, '0', STR_PAD_LEFT);
+    $annee = isset($tab[0]) ? $tab[0] : '';
+    return isset($lettreMonth[$index]) ? $lettreMonth[$index] . ' ' . $annee : '';
 }
 
 function addZeros($chaine, $nomber_of_zero = 5)
