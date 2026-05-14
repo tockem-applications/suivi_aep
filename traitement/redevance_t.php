@@ -110,10 +110,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "UPDATE redevance SET libele = ?, pourcentage = ?, description = ?, id_aep = ?, type = ?, mois_debut = ?, base_calcul = ?, type_calcul = ?, montant_par_m3 = ?, est_sortie = 1 WHERE id = ?",
                     array($libele, $pourcentage, $description, $id_aep, $type_redevance, $mois_debut, $base_calcul, $type_calcul, $montant_par_m3, $id)
                 );
-                header('Location: ..?page=redevance&success=redevance_updated');
+                header('Location: ..?page=redevance&success=redevance_updated&id=' . $id);
                 exit;
             } catch (Exception $e) {
-                header('Location: ..?page=redevance&error=update_failed&message=' . urlencode($e->getMessage()));
+                header('Location: ..?page=redevance&error=update_failed&id=' . $id . '&message=' . urlencode($e->getMessage()));
                 exit;
             }
         } elseif ($_POST['action'] === 'delete_redevance') {

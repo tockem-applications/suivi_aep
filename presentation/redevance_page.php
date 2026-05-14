@@ -3,6 +3,8 @@
 // Inclure la classe Manager et le modèle Redevance
 @include_once("../donnees/redevance.php");
 @include_once("donnees/redevance.php");
+@include_once("../donnees/redevance_synopsis_helper.php");
+@include_once("donnees/redevance_synopsis_helper.php");
 
 // Vérifier si l'utilisateur est connecté
 if (!isset($_SESSION['user_id'])) {
@@ -25,6 +27,28 @@ if (!$aepId) {
         array($aepId)
     )->fetchAll();
     $message = '';
+}
+
+$synRedevancePage = null;
+if ($aepId && class_exists('RedevanceSynopsisHelper')) {
+    $synRedevancePage = RedevanceSynopsisHelper::compute($aepId, $redevances);
+}
+$redevancePageSelectedId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$redevancePageSelected = null;
+foreach ($redevances as $_rdSel) {
+    if ((int) $_rdSel['id'] === $redevancePageSelectedId) {
+        $redevancePageSelected = $_rdSel;
+        break;
+    }
+}
+$redevancePageSynRow = null;
+if ($synRedevancePage && $redevancePageSelectedId > 0) {
+    foreach ($synRedevancePage['detail'] as $_dr) {
+        if ((int) $_dr['id'] === $redevancePageSelectedId) {
+            $redevancePageSynRow = $_dr;
+            break;
+        }
+    }
 }
 
 // Gérer les messages de retour
@@ -79,104 +103,293 @@ if (isset($_GET['success'])) {
 }
 ?>
 
-<div class="container mt-5">
-    <h2 class="mb-4">Gestion des Redevances</h2>
-    <?php echo $message; ?>
-    <a href="dashboard.php" class="btn btn-secondary mb-3">Retour au tableau de bord</a>
-
-    <!-- Section des Redevances -->
-    <div class="card">
-        <div class="card-header bg-warning text-dark">
-            <h4 class="mb-0"><i class="bi bi-percent"></i> Redevances</h4>
-        </div>
-        <div class="card-body">
-            <!-- Bouton pour ajouter une redevance -->
-            <button type="button" class="btn btn-warning mb-3" data-bs-toggle="modal"
+<div class="container-fluid mt-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h2 class="mb-0">Gestion des redevances</h2>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="?page=aep_dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-speedometer2"></i> Tableau de bord AEP
+            </a>
+            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
                 data-bs-target="#addRedevanceModal" <?php echo $aepId ? '' : 'disabled'; ?>>
                 <i class="bi bi-plus-circle"></i> Ajouter une redevance
             </button>
-
-            <!-- Tableau des redevances -->
-            <div class="table-responsive">
-                <table class="table_searching table table-striped table-bordered">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Libellé</th>
-                            <th>Base de calcul</th>
-                            <th>Type de calcul</th>
-                            <th>Valeur</th>
-                            <th>Mois de début</th>
-                            <th>Description</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($redevances) > 0): ?>
-                            <?php foreach ($redevances as $redevance): ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($redevance['libele']); ?></td>
-                                    <td>
-                                        <span class="badge bg-info">
-                                            <?php 
-                                            $base = isset($redevance['base_calcul']) ? $redevance['base_calcul'] : 'vente_eau';
-                                            echo $base == 'vente_eau' ? 'Vente d\'eau' : 'Branchements'; 
-                                            ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">
-                                            <?php 
-                                            $type_calc = isset($redevance['type_calcul']) ? $redevance['type_calcul'] : 'pourcentage';
-                                            echo $type_calc == 'pourcentage' ? 'Pourcentage' : 'Montant fixe'; 
-                                            ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                        $type_calc = isset($redevance['type_calcul']) ? $redevance['type_calcul'] : 'pourcentage';
-                                        if ($type_calc == 'pourcentage') {
-                                            echo number_format($redevance['pourcentage'], 2) . '%';
-                                        } else {
-                                            $montant = isset($redevance['montant_par_m3']) ? $redevance['montant_par_m3'] : 0;
-                                            echo number_format($montant, 0, ',', ' ') . ' FCFA';
-                                            if ($base == 'vente_eau') {
-                                                echo ' / m³';
-                                            } else {
-                                                echo ' / branchement';
-                                            }
-                                        }
-                                        ?>
-                                    </td>
-                                    <td><?php echo $redevance['mois_debut']; ?></td>
-                                    <td><?php echo htmlspecialchars($redevance['description']); ?></td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="?page=redevance_versements&id_redevance=<?php echo $redevance['id']; ?>" 
-                                               class="btn btn-sm btn-outline-success" title="Gérer les versements">
-                                                <i class="bi bi-cash-coin"></i>
-                                            </a>
-                                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                                onclick="editRedevance(<?php echo $redevance['id']; ?>)">
-                                                <i class="bi bi-pencil"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-danger"
-                                                onclick="deleteRedevance(<?php echo $redevance['id']; ?>)">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr>
-                                <td colspan="7" class="text-center text-muted">Aucune redevance configurée</td>
-                            </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
+    <?php echo $message; ?>
+
+    <?php if (!$aepId): ?>
+        <div class="alert alert-warning">Sélectionnez un AEP pour gérer les redevances.</div>
+    <?php else: ?>
+        <div class="row g-3">
+            <!-- Liste à gauche -->
+            <div class="col-lg-3 col-md-4">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header bg-light py-2">
+                        <strong><i class="bi bi-list-ul"></i> Liste</strong>
+                        <span class="d-block small text-muted fw-normal mt-1">Clic sur la ligne = détail · <i class="bi bi-cash-coin text-success"></i> = versements</span>
+                    </div>
+                    <div class="list-group list-group-flush overflow-auto" style="max-height: 75vh;">
+                        <?php
+                        $rdqPeriod = array('page' => 'redevance');
+                        if (isset($_GET['annee'])) {
+                            $rdqPeriod['annee'] = $_GET['annee'];
+                        }
+                        if (isset($_GET['mf_debut']) && (int) $_GET['mf_debut'] > 0) {
+                            $rdqPeriod['mf_debut'] = (int) $_GET['mf_debut'];
+                        }
+                        if (isset($_GET['mf_fin']) && (int) $_GET['mf_fin'] > 0) {
+                            $rdqPeriod['mf_fin'] = (int) $_GET['mf_fin'];
+                        }
+                        $hrefToutes = '?' . http_build_query($rdqPeriod);
+                        ?>
+                        <a href="<?php echo htmlspecialchars($hrefToutes); ?>"
+                            class="list-group-item list-group-item-action py-2 small <?php echo $redevancePageSelectedId === 0 ? 'border border-primary border-2 bg-light fw-semibold' : ''; ?>">
+                            <i class="bi bi-grid-3x3-gap"></i> Vue globale (synthèse)
+                        </a>
+                        <?php if (count($redevances) > 0): ?>
+                            <?php foreach ($redevances as $redevance):
+                                $rdq = $rdqPeriod;
+                                $rdq['id'] = (int) $redevance['id'];
+                                $hrefRd = '?' . http_build_query($rdq);
+                                $base = isset($redevance['base_calcul']) ? $redevance['base_calcul'] : 'vente_eau';
+                                $type_calc = isset($redevance['type_calcul']) ? $redevance['type_calcul'] : 'pourcentage';
+                                if ($type_calc == 'pourcentage') {
+                                    $valeurListe = number_format($redevance['pourcentage'], 2) . ' %';
+                                } else {
+                                    $montant = isset($redevance['montant_par_m3']) ? $redevance['montant_par_m3'] : 0;
+                                    $valeurListe = number_format($montant, 0, ',', ' ') . ' FCFA'
+                                        . ($base == 'vente_eau' ? ' / m³' : ' / br.');
+                                }
+                                $isActive = $redevancePageSelectedId === (int) $redevance['id'];
+                                $hrefVersements = '?page=redevance_versements&id_redevance=' . (int) $redevance['id'];
+                                ?>
+                                <div class="list-group-item py-2 d-flex align-items-stretch gap-1 <?php echo $isActive ? 'border border-primary border-2 bg-light' : ''; ?>">
+                                    <a href="<?php echo htmlspecialchars($hrefRd); ?>"
+                                        class="list-group-item-action flex-grow-1 text-decoration-none text-reset py-0 pe-0 min-w-0">
+                                        <div class="fw-semibold text-truncate" title="<?php echo htmlspecialchars($redevance['libele']); ?>">
+                                            <?php echo htmlspecialchars($redevance['libele']); ?></div>
+                                        <div class="small mt-1">
+                                            <span class="badge <?php echo $base == 'vente_eau' ? 'bg-primary' : 'bg-secondary'; ?>">
+                                                <?php echo $base == 'vente_eau' ? 'Eau' : 'Branchements'; ?>
+                                            </span>
+                                        </div>
+                                        <div class="small text-muted mt-1"><?php echo htmlspecialchars($valeurListe); ?></div>
+                                    </a>
+                                    <a href="<?php echo htmlspecialchars($hrefVersements); ?>"
+                                        class="btn btn-success btn-sm align-self-center flex-shrink-0 px-2"
+                                        title="Versements (un clic)">
+                                        <i class="bi bi-cash-coin"></i>
+                                    </a>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="list-group-item text-muted small">Aucune redevance</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zone principale : période + même synthèse que le tableau de bord -->
+            <div class="col-lg-9 col-md-8">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <form method="get" action="" id="form_redevance_periode" class="d-flex flex-wrap align-items-end gap-2 mb-0">
+                            <input type="hidden" name="page" value="redevance">
+                            <?php if ($redevancePageSelectedId > 0): ?>
+                                <input type="hidden" name="id" value="<?php echo (int) $redevancePageSelectedId; ?>">
+                            <?php endif; ?>
+                            <div>
+                                <label for="redevance_periode_annee" class="form-label small text-muted mb-0">Période</label>
+                                <select name="annee" id="redevance_periode_annee" class="form-select form-select-sm"
+                                    style="min-width: 8rem; max-width: 12rem;"
+                                    title="<?php echo $synRedevancePage && $synRedevancePage['periode_libelle'] !== '' ? htmlspecialchars($synRedevancePage['periode_libelle']) : ''; ?>"
+                                    onchange="this.form.submit();">
+                                    <?php
+                                    $spm = $synRedevancePage ? $synRedevancePage['periode_mode'] : '12';
+                                    $snm = $synRedevancePage ? (int) $synRedevancePage['nb_mois_glissant'] : 12;
+                                    ?>
+                                    <option value="m3" <?php echo ($spm === '12' && $snm === 4) ? 'selected' : ''; ?>>3 derniers mois</option>
+                                    <option value="m6" <?php echo ($spm === '12' && $snm === 7) ? 'selected' : ''; ?>>6 derniers mois</option>
+                                    <option value="" <?php echo ($spm === '12' && in_array($snm, array(12, 13), true)) ? 'selected' : ''; ?>>12 derniers mois</option>
+                                    <option value="tous" <?php echo $spm === 'tous' ? 'selected' : ''; ?>>Tous les mois</option>
+                                    <option value="intervalle" <?php echo $spm === 'intervalle' ? 'selected' : ''; ?>>Intervalle (mois)</option>
+                                    <?php if ($synRedevancePage): ?>
+                                        <?php foreach ($synRedevancePage['annees_disponibles'] as $yDisp): ?>
+                                            <option value="<?php echo (int) $yDisp; ?>" <?php echo $spm === 'annee' && (int) $synRedevancePage['annee_vue'] === (int) $yDisp ? 'selected' : ''; ?>>
+                                                <?php echo (int) $yDisp; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </select>
+                            </div>
+                            <div class="d-flex flex-wrap align-items-end gap-1 <?php echo ($synRedevancePage && $synRedevancePage['periode_mode'] === 'intervalle') ? '' : 'opacity-50'; ?>">
+                                <div>
+                                    <label for="redevance_mf_debut" class="form-label small text-muted mb-0">Mois début</label>
+                                    <select name="mf_debut" id="redevance_mf_debut" class="form-select form-select-sm" style="min-width: 9rem; max-width: 11rem;"
+                                        <?php echo ($synRedevancePage && $synRedevancePage['periode_mode'] === 'intervalle') ? '' : 'disabled'; ?>
+                                        onchange="this.form.submit();">
+                                        <?php if ($synRedevancePage): ?>
+                                            <?php foreach ($synRedevancePage['liste_mois_fact'] as $lm): ?>
+                                                <option value="<?php echo (int) $lm['id']; ?>" <?php echo (int) $lm['id'] === (int) $synRedevancePage['mf_debut_id'] ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars(getLetterMonth($lm['mois'])); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="redevance_mf_fin" class="form-label small text-muted mb-0">Mois fin</label>
+                                    <select name="mf_fin" id="redevance_mf_fin" class="form-select form-select-sm" style="min-width: 9rem; max-width: 11rem;"
+                                        <?php echo ($synRedevancePage && $synRedevancePage['periode_mode'] === 'intervalle') ? '' : 'disabled'; ?>
+                                        onchange="this.form.submit();">
+                                        <?php if ($synRedevancePage): ?>
+                                            <?php foreach ($synRedevancePage['liste_mois_fact'] as $lm): ?>
+                                                <option value="<?php echo (int) $lm['id']; ?>" <?php echo (int) $lm['id'] === (int) $synRedevancePage['mf_fin_id'] ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars(getLetterMonth($lm['mois'])); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        <?php endif; ?>
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <?php if ($synRedevancePage && count($synRedevancePage['detail']) > 0): ?>
+                    <p class="small text-muted mb-2">
+                        Synthèse sur la période
+                        (<strong><?php echo $synRedevancePage['periode_libelle'] !== '' ? htmlspecialchars($synRedevancePage['periode_libelle']) : '—'; ?></strong>).
+                    </p>
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="card border-primary h-100 shadow-sm">
+                                <div class="card-header bg-primary text-white py-2">
+                                    <strong><i class="bi bi-droplet me-1"></i>Vente d'eau</strong>
+                                    <span class="badge bg-light text-primary ms-1"><?php echo (int) $synRedevancePage['recap']['vente_eau']['count']; ?> redevance(s)</span>
+                                </div>
+                                <div class="card-body py-3">
+                                    <div class="row g-2 small">
+                                        <div class="col-6 text-muted">Estimatif</div>
+                                        <div class="col-6 text-end fw-semibold"><?php echo number_format($synRedevancePage['recap']['vente_eau']['estimatif'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Versé</div>
+                                        <div class="col-6 text-end text-success fw-semibold"><?php echo number_format($synRedevancePage['recap']['vente_eau']['verse'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Reste</div>
+                                        <div class="col-6 text-end text-warning fw-semibold"><?php echo number_format($synRedevancePage['recap']['vente_eau']['reste'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Taux versement</div>
+                                        <div class="col-6 text-end fw-bold"><?php echo $synRedevancePage['recap']['vente_eau']['taux_pct'] !== null ? (int) $synRedevancePage['recap']['vente_eau']['taux_pct'] . ' %' : '—'; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-secondary h-100 shadow-sm">
+                                <div class="card-header bg-secondary text-white py-2">
+                                    <strong><i class="bi bi-diagram-3 me-1"></i>Branchements</strong>
+                                    <span class="badge bg-light text-secondary ms-1"><?php echo (int) $synRedevancePage['recap']['branchements']['count']; ?> redevance(s)</span>
+                                </div>
+                                <div class="card-body py-3">
+                                    <div class="row g-2 small">
+                                        <div class="col-6 text-muted">Estimatif</div>
+                                        <div class="col-6 text-end fw-semibold"><?php echo number_format($synRedevancePage['recap']['branchements']['estimatif'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Versé</div>
+                                        <div class="col-6 text-end text-success fw-semibold"><?php echo number_format($synRedevancePage['recap']['branchements']['verse'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Reste</div>
+                                        <div class="col-6 text-end text-warning fw-semibold"><?php echo number_format($synRedevancePage['recap']['branchements']['reste'], 0, ',', ' '); ?> FCFA</div>
+                                        <div class="col-6 text-muted">Taux versement</div>
+                                        <div class="col-6 text-end fw-bold"><?php echo $synRedevancePage['recap']['branchements']['taux_pct'] !== null ? (int) $synRedevancePage['recap']['branchements']['taux_pct'] . ' %' : '—'; ?></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php if ($redevancePageSelected && $redevancePageSynRow): ?>
+                        <div class="card border-warning shadow-sm mb-3">
+                            <div class="card-header bg-warning text-dark d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <strong><i class="bi bi-info-circle"></i> <?php echo htmlspecialchars($redevancePageSelected['libele']); ?></strong>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="?page=redevance_versements&id_redevance=<?php echo (int) $redevancePageSelected['id']; ?>"
+                                        class="btn btn-success"><i class="bi bi-cash-coin"></i> Versements</a>
+                                    <button type="button" class="btn btn-primary" onclick="editRedevance(<?php echo (int) $redevancePageSelected['id']; ?>)">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </button>
+                                    <button type="button" class="btn btn-danger" onclick="deleteRedevance(<?php echo (int) $redevancePageSelected['id']; ?>)">
+                                        <i class="bi bi-trash"></i> Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2 small mb-3">
+                                    <div class="col-md-4"><span class="text-muted">Type de calcul</span><br>
+                                        <span class="badge bg-secondary"><?php echo (isset($redevancePageSelected['type_calcul']) && $redevancePageSelected['type_calcul'] === 'montant_fixe') ? 'Montant fixe' : 'Pourcentage'; ?></span>
+                                    </div>
+                                    <div class="col-md-4"><span class="text-muted">Mois de début</span><br>
+                                        <strong><?php echo htmlspecialchars($redevancePageSelected['mois_debut'] ? $redevancePageSelected['mois_debut'] : '—'); ?></strong>
+                                    </div>
+                                    <div class="col-md-4"><span class="text-muted">Sur la période</span><br>
+                                        Estimatif <strong><?php echo number_format($redevancePageSynRow['estimatif'], 0, ',', ' '); ?></strong> FCFA —
+                                        Versé <strong class="text-success"><?php echo number_format($redevancePageSynRow['verse'], 0, ',', ' '); ?></strong> FCFA —
+                                        Reste <strong class="text-warning"><?php echo number_format($redevancePageSynRow['reste'], 0, ',', ' '); ?></strong> FCFA
+                                    </div>
+                                    <?php if (!empty($redevancePageSelected['description'])): ?>
+                                        <div class="col-12"><span class="text-muted">Description</span><br>
+                                            <?php echo nl2br(htmlspecialchars($redevancePageSelected['description'])); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <a href="?page=redevance_details&id=<?php echo (int) $redevancePageSelected['id']; ?>" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-table"></i> Détail analytique (redevance_details)
+                                </a>
+                            </div>
+                        </div>
+                    <?php elseif ($redevancePageSelected && !$redevancePageSynRow): ?>
+                        <div class="alert alert-secondary">Données de synthèse indisponibles pour cette période.</div>
+                    <?php endif; ?>
+
+                    <p class="small text-muted mb-2">Détail par redevance</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered bg-white">
+                            <thead class="table-secondary">
+                                <tr>
+                                    <th>Redevance</th>
+                                    <th class="text-end">Estimatif (FCFA)</th>
+                                    <th class="text-end">Versé (FCFA)</th>
+                                    <th class="text-end">Restant (FCFA)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($synRedevancePage['detail'] as $dr): ?>
+                                    <tr class="<?php echo $redevancePageSelectedId === (int) $dr['id'] ? 'table-info' : ''; ?>">
+                                        <td>
+                                            <a href="?<?php
+                                            $q = $rdqPeriod;
+                                            $q['id'] = (int) $dr['id'];
+                                            echo htmlspecialchars(http_build_query($q));
+                                            ?>"><?php echo htmlspecialchars($dr['libele']); ?></a>
+                                            <?php if (isset($dr['base_calcul']) && $dr['base_calcul'] === 'branchements'): ?>
+                                                <span class="badge bg-secondary ms-1">Branchements</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-primary ms-1">Vente d'eau</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-end"><?php echo number_format($dr['estimatif'], 0, ',', ' '); ?></td>
+                                        <td class="text-end"><?php echo number_format($dr['verse'], 0, ',', ' '); ?></td>
+                                        <td class="text-end"><?php echo number_format($dr['reste'], 0, ',', ' '); ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-muted mb-0">
+                        Les montants versés sont ceux dont la <strong>date de versement</strong> (année-mois) est dans la période sélectionnée.
+                    </p>
+                <?php elseif ($synRedevancePage): ?>
+                    <div class="alert alert-info mb-0">Aucune donnée de synthèse pour cette période (pas de mois de facturation ou plage vide).</div>
+                <?php endif; ?>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal pour ajouter une redevance -->
