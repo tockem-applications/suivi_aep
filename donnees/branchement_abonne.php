@@ -4,6 +4,11 @@
 
 class BranchementAbonne
 {
+    const COTE_RESEAU = 'reseau';
+    const COTE_OPPOSE = 'oppose';
+    const MONTANT_COTE_RESEAU = 62500;
+    const MONTANT_COTE_OPPOSE = 70000;
+
     public static function ensureTable()
     {
         try {
@@ -26,6 +31,79 @@ class BranchementAbonne
             );
         } catch (Exception $e) {
         }
+        self::ensureCoteReseauColumn();
+        self::migrateCotesParMontant();
+    }
+
+    public static function ensureCoteReseauColumn()
+    {
+        try {
+            $req = Manager::prepare_query(
+                "SELECT COUNT(*) AS c FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = 'branchement_abonne' AND column_name = 'cote_reseau'",
+                array()
+            );
+            if ($req && (int) $req->fetchColumn() === 0) {
+                Manager::prepare_query(
+                    "ALTER TABLE branchement_abonne
+                     ADD COLUMN cote_reseau ENUM('reseau','oppose') NULL DEFAULT NULL
+                     COMMENT 'Côté réseau ou côté opposé (abonnement au service)'
+                     AFTER versement_fcfa",
+                    array()
+                );
+            }
+        } catch (Exception $e) {
+        }
+    }
+
+    /**
+     * Initialise cote_reseau selon le montant pour les enregistrements sans côté défini.
+     */
+    public static function migrateCotesParMontant()
+    {
+        self::ensureCoteReseauColumn();
+        try {
+            Manager::prepare_query(
+                "UPDATE branchement_abonne SET cote_reseau = ?
+                 WHERE versement_fcfa = ? AND (cote_reseau IS NULL OR cote_reseau = '')",
+                array(self::COTE_RESEAU, self::MONTANT_COTE_RESEAU)
+            );
+            Manager::prepare_query(
+                "UPDATE branchement_abonne SET cote_reseau = ?
+                 WHERE versement_fcfa = ? AND (cote_reseau IS NULL OR cote_reseau = '')",
+                array(self::COTE_OPPOSE, self::MONTANT_COTE_OPPOSE)
+            );
+        } catch (Exception $e) {
+        }
+    }
+
+    /**
+     * @return string|null 'reseau' | 'oppose' | null
+     */
+    public static function normalizeCote($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        $v = strtolower(trim((string) $value));
+        if ($v === self::COTE_RESEAU || $v === 'réseau' || $v === 'cote reseau' || $v === 'côté réseau') {
+            return self::COTE_RESEAU;
+        }
+        if ($v === self::COTE_OPPOSE || $v === 'opposé' || $v === 'oppose' || $v === 'côté opposé') {
+            return self::COTE_OPPOSE;
+        }
+        return null;
+    }
+
+    public static function libelleCote($cote)
+    {
+        if ($cote === self::COTE_RESEAU) {
+            return 'Côté réseau';
+        }
+        if ($cote === self::COTE_OPPOSE) {
+            return 'Côté opposé';
+        }
+        return '—';
     }
 
     public static function getByAboneId($id_abone)
@@ -41,9 +119,10 @@ class BranchementAbonne
     public static function create($data)
     {
         self::ensureTable();
+        $cote = isset($data['cote_reseau']) ? self::normalizeCote($data['cote_reseau']) : null;
         return Manager::prepare_query(
-            "INSERT INTO branchement_abonne (id_abone, quartier, code_abonne, telephone, statut, mois, versement_fcfa)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO branchement_abonne (id_abone, quartier, code_abonne, telephone, statut, mois, versement_fcfa, cote_reseau)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             array(
                 (int) $data['id_abone'],
                 isset($data['quartier']) ? trim($data['quartier']) : null,
@@ -51,7 +130,8 @@ class BranchementAbonne
                 isset($data['telephone']) ? trim($data['telephone']) : null,
                 isset($data['statut']) ? trim($data['statut']) : null,
                 isset($data['mois']) ? trim($data['mois']) : null,
-                isset($data['versement_fcfa']) ? (int) $data['versement_fcfa'] : 0
+                isset($data['versement_fcfa']) ? (int) $data['versement_fcfa'] : 0,
+                $cote,
             )
         );
     }
@@ -59,8 +139,9 @@ class BranchementAbonne
     public static function update($id, $data)
     {
         self::ensureTable();
+        $cote = isset($data['cote_reseau']) ? self::normalizeCote($data['cote_reseau']) : null;
         return Manager::prepare_query(
-            "UPDATE branchement_abonne SET quartier = ?, code_abonne = ?, telephone = ?, statut = ?, mois = ?, versement_fcfa = ? WHERE id = ?",
+            "UPDATE branchement_abonne SET quartier = ?, code_abonne = ?, telephone = ?, statut = ?, mois = ?, versement_fcfa = ?, cote_reseau = ? WHERE id = ?",
             array(
                 isset($data['quartier']) ? trim($data['quartier']) : null,
                 isset($data['code_abonne']) ? trim($data['code_abonne']) : null,
@@ -68,7 +149,8 @@ class BranchementAbonne
                 isset($data['statut']) ? trim($data['statut']) : null,
                 isset($data['mois']) ? trim($data['mois']) : null,
                 isset($data['versement_fcfa']) ? (int) $data['versement_fcfa'] : 0,
-                (int) $id
+                $cote,
+                (int) $id,
             )
         );
     }
@@ -79,5 +161,3 @@ class BranchementAbonne
         return Manager::prepare_query("DELETE FROM branchement_abonne WHERE id = ?", array((int) $id));
     }
 }
-
-

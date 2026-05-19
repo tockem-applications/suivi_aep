@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nom_banque = trim($_POST['nom_banque']);
     $numero_compte = trim($_POST['numero_compte']);
     $fichier_facture = trim($_POST['fichier_facture']);
+    $type_distribution = isset($_POST['type_distribution']) ? trim($_POST['type_distribution']) : '';
 
     // Validation
     $errors = array();
@@ -43,11 +44,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $aep = new Aep($aep_id, $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte);
+        $aep = new Aep($aep_id, $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution);
         $data = $aep->getDonnee();
         $query = Manager::prepare_query(
-            "UPDATE aep SET libele = ?, fichier_facture = ?, date = ?, description = ?, nom_banque = ?, numero_compte = ? WHERE id = ?",
-            array($data['libele'], $data['fichier_facture'], $data['date'], $data['description'], $data['nom_banque'], $data['numero_compte'], $aep_id)
+            "UPDATE aep SET libele = ?, fichier_facture = ?, date = ?, description = ?, nom_banque = ?, numero_compte = ?, type_distribution = ? WHERE id = ?",
+            array($data['libele'], $data['fichier_facture'], $data['date'], $data['description'], $data['nom_banque'], $data['numero_compte'], $data['type_distribution'], $aep_id)
         );
         if ($query) {
             header('Location: ?page=aep');
@@ -94,6 +95,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-3">
                     <label for="numero_compte" class="form-label">Numéro de compte</label>
                     <input type="text" class="form-control" id="numero_compte" name="numero_compte" value="<?php echo htmlspecialchars($aep_data['numero_compte']); ?>">
+                </div>
+                <?php $type_dist_actuel = isset($aep_data['type_distribution']) ? Aep::normaliserTypeDistribution($aep_data['type_distribution']) : null; ?>
+                <div class="mb-3">
+                    <label class="form-label">Type de réseau <span class="text-muted small">(production / distribution)</span></label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type_distribution"
+                            id="type_distribution_rds" value="RDS" <?php echo $type_dist_actuel === 'RDS' ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_distribution_rds">
+                            <strong>RDS</strong> — Refoulement Distribution Séparé
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type_distribution"
+                            id="type_distribution_rdc" value="RDC" <?php echo $type_dist_actuel === 'RDC' ? 'checked' : ''; ?>>
+                        <label class="form-check-label" for="type_distribution_rdc">
+                            <strong>RDC</strong> — Refoulement Distribution Confondu
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type_distribution"
+                            id="type_distribution_none" value="" <?php echo $type_dist_actuel === null ? 'checked' : ''; ?>>
+                        <label class="form-check-label text-muted" for="type_distribution_none">Non défini</label>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Modèle de facture <span class="text-danger">*</span></label>

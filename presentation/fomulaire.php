@@ -225,6 +225,36 @@ if (isset($_GET['form'])) {
             </div>
         </div>
 
+        <!-- Section : Type de distribution -->
+        <div class="form-section">
+            <h5>Type de réseau <span class="text-muted small">(production / distribution)</span></h5>
+            <p class="small text-muted mb-2">
+                Cette information conditionne le calcul du <strong>rendement</strong> du réseau.
+            </p>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type_distribution"
+                            id="type_distribution_rds" value="RDS">
+                        <label class="form-check-label" for="type_distribution_rds">
+                            <strong>RDS</strong> — Refoulement Distribution Séparé
+                            <span class="d-block small text-muted">Compteurs de refoulement et de distribution distincts.</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="type_distribution"
+                            id="type_distribution_rdc" value="RDC">
+                        <label class="form-check-label" for="type_distribution_rdc">
+                            <strong>RDC</strong> — Refoulement Distribution Confondu
+                            <span class="d-block small text-muted">Refoulement et distribution sur le même point de mesure (partagé).</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Section : Modèle de facture -->
         <div class="form-section">
             <h5>Modèle de facture <span class="text-danger">*</span></h5>
@@ -333,7 +363,10 @@ if (isset($_GET['form'])) {
                 }
 
                 function validateModelSelection() {
-                    const errorMessage = form.querySelectorAll('.form-section')[2].querySelector('.error-message');
+                    const sections = form.querySelectorAll('.form-section');
+                    const modelSection = sections[sections.length - 1];
+                    const errorMessage = modelSection ? modelSection.querySelector('.error-message') : null;
+                    if (!errorMessage) return true;
                     // console.log(errorMessage);
                     const isSelected = fichierFactureInput.value !== '';
                     errorMessage.style.display = isSelected ? 'none' : 'block';

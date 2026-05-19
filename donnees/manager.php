@@ -138,21 +138,21 @@ function enregistrerCSV($tableauAssociatif, $nomFichier, $id_user)
     return $chemin;
 }
 
-function create_csv_exportation_button($data, $filename, $tooltip_message)
+function create_csv_exportation_button($data, $filename, $tooltip_message, $btn_class = 'float-sm-end btn btn-dark', $link_label = 'Exporter CSV')
 {
-    if (count($data) == 0)
+    if (count($data) == 0) {
         return;
-    //    var_dump($data);
+    }
     $filename = str_replace(' ', '_', $filename);
     $filename = str_replace('-', '_', $filename);
     enregistrerCSV($data, $filename, $_SESSION['user_id']);
 
     ?>
 
-    <a href="traitement/download_csv.php?file_name=<?php echo $filename; ?>" target="_blank"
-        class="float-sm-end btn btn-dark" data-bs-placement="top" data-bs-toggle="tooltip"
-        data-bs-title="<?php echo $tooltip_message; ?>">
-        <i class="bi bi-arrow-down-circle-fill"></i> Exporter</a>
+    <a href="traitement/download_csv.php?file_name=<?php echo htmlspecialchars($filename, ENT_QUOTES, 'UTF-8'); ?>" target="_blank"
+        class="<?php echo htmlspecialchars($btn_class, ENT_QUOTES, 'UTF-8'); ?>" data-bs-placement="top" data-bs-toggle="tooltip"
+        data-bs-title="<?php echo htmlspecialchars($tooltip_message, ENT_QUOTES, 'UTF-8'); ?>">
+        <i class="bi bi-arrow-down-circle-fill"></i> <?php echo htmlspecialchars($link_label, ENT_QUOTES, 'UTF-8'); ?></a>
     <?php
 }
 

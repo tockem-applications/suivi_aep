@@ -413,7 +413,8 @@ include_once("donnees/manager.php");
             ?>
 
         </article>
-        <?php include_once "presentation/footer.php"; ?>
+        <br/>
+        <?php //include_once "presentation/footer.php"; ?>
     </main>
 
     <div id="container"></div>

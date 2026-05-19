@@ -1,6 +1,10 @@
 <?php
 @include_once("../donnees/manager.php");
 @include_once("donnees/manager.php");
+@include_once(__DIR__ . "/../donnees/branchement_abonne.php");
+@include_once("donnees/branchement_abonne.php");
+
+BranchementAbonne::ensureTable();
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: ?page=login');
@@ -14,6 +18,7 @@ $filtre_quartier = isset($_GET['quartier']) ? trim($_GET['quartier']) : '';
 $filtre_reseau = isset($_GET['reseau_id']) ? (int) $_GET['reseau_id'] : 0;
 $filtre_statut = isset($_GET['statut']) ? trim($_GET['statut']) : '';
 $filtre_montant = isset($_GET['montant']) && $_GET['montant'] !== '' ? (int) $_GET['montant'] : null;
+$filtre_cote = isset($_GET['cote_reseau']) ? trim($_GET['cote_reseau']) : '';
 
 // Construction du WHERE
 $whereParts = array();
@@ -34,6 +39,12 @@ if ($filtre_statut !== '' && in_array(strtolower($filtre_statut), array('ok', 'e
 if (!is_null($filtre_montant)) {
     $whereParts[] = "IFNULL(ba.versement_fcfa,0) = ?";
     $params[] = $filtre_montant;
+}
+if ($filtre_cote !== '' && in_array($filtre_cote, array('reseau', 'oppose'), true)) {
+    $whereParts[] = "ba.cote_reseau = ?";
+    $params[] = $filtre_cote;
+} elseif ($filtre_cote === '_null') {
+    $whereParts[] = "(ba.cote_reseau IS NULL OR ba.cote_reseau = '')";
 }
 if ($filtre_reseau > 0) {
     $whereParts[] = "a.id_reseau = ?";
@@ -100,9 +111,9 @@ if (isset($_GET['export'])) {
             fputcsv($out, array(getLetterMonth($r['mois']), (int) $r['nb_branchements'], (int) $r['total_verse'], (int) $r['moyenne_verse'], (int) $r['nb_ok'], (int) $r['nb_attente']), ';');
         }
     } elseif ($exportType === 'details') {
-        fputcsv($out, array('Mois', 'Abonne', 'Montant (FCFA)', 'Statut', 'Quartier', 'Code abonne', 'Telephone', 'Reseau'), ';');
+        fputcsv($out, array('Mois', 'Abonne', 'Montant (FCFA)', 'Cote', 'Statut', 'Quartier', 'Code abonne', 'Telephone', 'Reseau'), ';');
         foreach ($detailRows as $d) {
-            fputcsv($out, array(getLetterMonth($d['mois']), isset($d['nom']) ? $d['nom'] : '', (int) (isset($d['versement_fcfa']) ? $d['versement_fcfa'] : 0), isset($d['statut']) ? $d['statut'] : '', isset($d['quartier']) ? $d['quartier'] : '', isset($d['code_abonne']) ? $d['code_abonne'] : '', isset($d['telephone']) ? $d['telephone'] : '', isset($d['reseau_nom']) ? $d['reseau_nom'] : ''), ';');
+            fputcsv($out, array(getLetterMonth($d['mois']), isset($d['nom']) ? $d['nom'] : '', (int) (isset($d['versement_fcfa']) ? $d['versement_fcfa'] : 0), BranchementAbonne::libelleCote(isset($d['cote_reseau']) ? $d['cote_reseau'] : null), isset($d['statut']) ? $d['statut'] : '', isset($d['quartier']) ? $d['quartier'] : '', isset($d['code_abonne']) ? $d['code_abonne'] : '', isset($d['telephone']) ? $d['telephone'] : '', isset($d['reseau_nom']) ? $d['reseau_nom'] : ''), ';');
         }
     }
     fclose($out);
@@ -158,6 +169,15 @@ if (isset($_GET['export'])) {
                 <input type="number" name="montant" class="form-control" min="0" step="500"
                     value="<?php echo htmlspecialchars(is_null($filtre_montant) ? '' : $filtre_montant); ?>"
                     placeholder="Ex: 70000">
+            </div>
+            <div class="col-12 col-md-3">
+                <label class="form-label">Côté</label>
+                <select name="cote_reseau" class="form-select">
+                    <option value="">Tous</option>
+                    <option value="reseau" <?php echo $filtre_cote === 'reseau' ? 'selected' : ''; ?>>Côté réseau</option>
+                    <option value="oppose" <?php echo $filtre_cote === 'oppose' ? 'selected' : ''; ?>>Côté opposé</option>
+                    <option value="_null" <?php echo $filtre_cote === '_null' ? 'selected' : ''; ?>>Non défini</option>
+                </select>
             </div>
             <div class="col-12 col-md-3">
                 <label class="form-label">Statut</label>
@@ -299,6 +319,7 @@ if (isset($_GET['export'])) {
                                 <th>Mois</th>
                                 <th>Abonné</th>
                                 <th class="text-end">Montant (FCFA)</th>
+                                <th>Côté</th>
                                 <th>Statut</th>
                                 <th>Quartier</th>
                                 <th>Code abonné</th>
@@ -319,6 +340,7 @@ if (isset($_GET['export'])) {
                                         <td class="text-end">
                                             <?php echo number_format((int) (isset($d['versement_fcfa']) ? $d['versement_fcfa'] : 0), 0, ',', ' '); ?>
                                         </td>
+                                        <td><?php echo htmlspecialchars(BranchementAbonne::libelleCote(isset($d['cote_reseau']) ? $d['cote_reseau'] : null), ENT_QUOTES, 'UTF-8'); ?></td>
                                         <td
                                             class="<?php echo (isset($d['statut']) && strtoupper(trim($d['statut'])) == 'OK') ? 'text-success' : 'text-warning'; ?>">
                                             <?php echo htmlspecialchars(isset($d['statut']) ? $d['statut'] : ''); ?>
@@ -331,7 +353,7 @@ if (isset($_GET['export'])) {
                                 <?php }
                             } else { ?>
                                 <tr>
-                                    <td colspan="7" class="text-center text-muted">Aucune donnée</td>
+                                    <td colspan="8" class="text-center text-muted">Aucune donnée</td>
                                 </tr>
                             <?php } ?>
                         </tbody>

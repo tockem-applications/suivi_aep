@@ -11,6 +11,7 @@
  * 2. Bornes Fontaines (champ type_abone, tables borne_fontaine et bf_gerant)
  * 3. Redevances améliorées (champs base_calcul, type_calcul, montant_par_m3, est_sortie)
  * 4. Figer les tarifs différenciés (champ id_tarif_differencie dans indexes)
+ * 5. Type de distribution AEP (champ type_distribution RDS/RDC sur aep)
  * 
  * Pour ajouter une nouvelle migration:
  * 1. Ajoutez le code de migration dans une nouvelle section PARTIE X
@@ -1018,6 +1019,85 @@ class DatabaseUpdater9To10
                 echo "   ⚠ Initialisation: " . $e->getMessage() . "\n";
             }
 
+            // ============================================================
+            // PARTIE 12: TYPE DE DISTRIBUTION AEP (RDS / RDC)
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 12: TYPE DE DISTRIBUTION AEP (RDS / RDC)\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            echo "12.1. Vérification du champ type_distribution dans la table aep...\n";
+            if (!self::columnExists('aep', 'type_distribution')) {
+                echo "   → Ajout du champ type_distribution...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `aep`
+                        ADD COLUMN `type_distribution` ENUM('RDS','RDC') NULL DEFAULT NULL
+                        COMMENT 'Type de réseau: RDS=Refoulement Distribution Séparé, RDC=Refoulement Distribution Confondu'
+                    ");
+                    echo "   ✓ Champ type_distribution ajouté avec succès\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur lors de l'ajout du champ: " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ type_distribution existe déjà\n";
+            }
+
+            echo "\n12.2. Vérification de l'index idx_type_distribution...\n";
+            try {
+                $indexCheck = $bd->prepare("
+                    SELECT COUNT(*) AS c
+                    FROM information_schema.statistics
+                    WHERE table_schema = DATABASE()
+                      AND table_name = 'aep'
+                      AND index_name = 'idx_type_distribution'
+                ");
+                $indexCheck->execute(array());
+                $indexRow = $indexCheck->fetch(PDO::FETCH_ASSOC);
+                if (!$indexRow || (int) $indexRow['c'] === 0) {
+                    $bd->exec("CREATE INDEX `idx_type_distribution` ON `aep` (`type_distribution`)");
+                    echo "   ✓ Index idx_type_distribution créé\n";
+                } else {
+                    echo "   ✓ Index idx_type_distribution existe déjà\n";
+                }
+            } catch (Exception $e) {
+                echo "   ⚠ Vérification/création index: " . $e->getMessage() . "\n";
+            }
+
+
+            // ============================================================
+            // PARTIE 13: CÔTÉ RÉSEAU / OPPOSE SUR BRANCHEMENTS
+            // ============================================================
+            echo "\n═══════════════════════════════════════════════════════════════\n";
+            echo "PARTIE 13: CÔTÉ RÉSEAU / OPPOSE (branchement_abonne.cote_reseau)\n";
+            echo "═══════════════════════════════════════════════════════════════\n\n";
+
+            echo "13.1. Colonne cote_reseau...\n";
+            if (!self::columnExists('branchement_abonne', 'cote_reseau')) {
+                try {
+                    $bd->exec("
+                        ALTER TABLE `branchement_abonne`
+                        ADD COLUMN `cote_reseau` ENUM('reseau','oppose') NULL DEFAULT NULL
+                        COMMENT 'Côté réseau ou côté opposé'
+                        AFTER `versement_fcfa`
+                    ");
+                    echo "   ✓ Colonne cote_reseau ajoutée\n";
+                } catch (Exception $e) {
+                    echo "   ✗ " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Colonne cote_reseau existe déjà\n";
+            }
+
+            echo "\n13.2. Initialisation par montant (62 500 / 70 000 FCFA)...\n";
+            try {
+                $n1 = $bd->exec("UPDATE branchement_abonne SET cote_reseau = 'reseau' WHERE versement_fcfa = 62500 AND (cote_reseau IS NULL OR cote_reseau = '')");
+                $n2 = $bd->exec("UPDATE branchement_abonne SET cote_reseau = 'oppose' WHERE versement_fcfa = 70000 AND (cote_reseau IS NULL OR cote_reseau = '')");
+                echo "   ✓ Côté réseau: $n1 ligne(s), côté opposé: $n2 ligne(s)\n";
+            } catch (Exception $e) {
+                echo "   ⚠ " . $e->getMessage() . "\n";
+            }
+
             echo "\n╔═══════════════════════════════════════════════════════════════╗\n";
             echo "║     MIGRATION TERMINÉE AVEC SUCCÈS                            ║\n";
             echo "╚═══════════════════════════════════════════════════════════════╝\n";
@@ -1039,6 +1119,8 @@ class DatabaseUpdater9To10
             echo "- Données mal encodées corrigées\n";
             echo "- Hiérarchie des réseaux activée (id_reseau_parent)\n";
             echo "- Types de compteurs réseau activés (production/distribution/reservoir)\n";
+            echo "- Type de distribution AEP activé (RDS / RDC) — champ aep.type_distribution\n";
+            echo "- Côté réseau/opposé sur branchements (cote_reseau)\n";
 
         } catch (Exception $e) {
             echo "\n✗ Erreur lors de la migration : " . $e->getMessage() . "\n";
@@ -1096,6 +1178,7 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
             <li><strong>Conversion UTF-8</strong> - Base de données et tables converties en UTF-8, correction des données mal encodées</li>
             <li><strong>Hiérarchie des réseaux</strong> - Champ id_reseau_parent et index pour structurer l'arbre des réseaux</li>
             <li><strong>Types de compteurs réseau</strong> - Champ type_compteur dans compteur_reseau (distribution par défaut)</li>
+            <li><strong>Type de distribution AEP</strong> - Champ type_distribution dans aep (RDS / RDC) + index</li>
         </ul>
         <p><strong>Note :</strong> Le script est idempotent, vous pouvez l'exécuter plusieurs fois sans risque.</p>
         <a href='?run_update=1' class='btn'>Lancer la migration</a>

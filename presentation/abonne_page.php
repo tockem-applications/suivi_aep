@@ -375,11 +375,14 @@ if ($aepId) {
                                             <?php echo $nbImpayes; ?> impayés
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <a href="?page=info_abone&id=<?php echo $abonne['id']; ?>"
-                                            class="btn btn-sm btn-outline-info" title="Voir les détails">
-                                            <!--                                            <i class="bi bi-eye"></i>-->
-                                            Afficher
+                                            class="btn btn-sm btn-primary" title="Fiche détaillée (vue GCP)">
+                                            <i class="bi bi-layout-sidebar"></i> Fiche
+                                        </a>
+                                        <a href="?page=info_abone&id=<?php echo $abonne['id']; ?>&layout=classic"
+                                            class="btn btn-sm btn-outline-secondary" title="Vue classique (2 colonnes)">
+                                            Classique
                                         </a>
                                     </td>
                                 </tr>

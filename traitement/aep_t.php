@@ -19,13 +19,14 @@ class Aep_t
                 $date = htmlspecialchars(trim($_POST['date']));
                 $description = htmlspecialchars(trim($_POST['description']));
                 $fichier_facture = htmlspecialchars(trim($_POST['fichier_facture']));
+                $type_distribution = isset($_POST['type_distribution']) ? trim($_POST['type_distribution']) : '';
 
                 // Valider les données (ajoutez d'autres validations si nécessaire)
                 if (empty($libele) || empty($date) || empty($description) || empty($fichier_facture)) {
 //                    die("Tous les champs sont requis.");
                     header("location: ../index.php?form=aep&operation=error&message=veuillez saisir tout les champs");
                 }
-                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte);
+                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution);
                 var_dump($date);
                 var_dump($nouvel_aep->getDonnee());
                 $res = $nouvel_aep->ajouter();

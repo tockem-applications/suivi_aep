@@ -262,6 +262,8 @@ if (isset($_GET['list'])) {
     }
 } elseif (isset($_GET['page'])) {
     if ($_GET['page'] == 'info_abone') {
+        require_once 'presentation/info_abone_page.php';
+    } else if (false) {
         include_once('traitement/abone_t.php');
         $id_abone = 0;
         if (isset($_GET['id'])) {
@@ -318,13 +320,24 @@ if (isset($_GET['list'])) {
         <?php
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
+        @include_once(__DIR__ . '/../donnees/redevance_synopsis_helper.php');
+        @include_once('donnees/redevance_synopsis_helper.php');
         $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
-        $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : null;
-        $mois_fin = isset($_GET['mois_fin']) ? $_GET['mois_fin'] : null;
-        ob_start();
-        $statistiqueReseau = afficherStatistiqueReseau($id_reseau, $mois_debut, $mois_fin);
-        $code_html = ob_get_clean();
-        afficherPageReseau($id_reseau, $statistiqueReseau, $code_html);
+        $aepId = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
+        $periodeReseau = ($aepId > 0 && class_exists('RedevanceSynopsisHelper'))
+            ? RedevanceSynopsisHelper::compute($aepId, array())
+            : null;
+        $mois_debut = null;
+        $mois_fin = null;
+        if ($periodeReseau && !empty($periodeReseau['mois_min']) && !empty($periodeReseau['mois_max'])) {
+            $mois_debut = $periodeReseau['mois_min'];
+            $mois_fin = $periodeReseau['mois_max'];
+        } elseif (isset($_GET['mois_debut']) || isset($_GET['mois_fin'])) {
+            $mois_debut = isset($_GET['mois_debut']) && $_GET['mois_debut'] !== '' ? $_GET['mois_debut'] : null;
+            $mois_fin = isset($_GET['mois_fin']) && $_GET['mois_fin'] !== '' ? $_GET['mois_fin'] : null;
+        }
+        $statistiqueReseau = computeStatistiqueReseau($id_reseau, $mois_debut, $mois_fin);
+        afficherPageReseau($id_reseau, $statistiqueReseau, $periodeReseau);
 
         //        echo "<div class='row d-flex'> ";
 //        echo "<div class='col-12 col-md-4'>".$code_html. "</div>";
@@ -408,6 +421,10 @@ if (isset($_GET['list'])) {
         require_once 'presentation/compte_rendu_financier_page.php';
     } else if ($_GET['page'] == 'compte_rendu_tableau') {
         require_once 'presentation/compte_rendu_financier_tableau_page.php';
+    } else if ($_GET['page'] == 'nouveau_compte_exploitation') {
+        require_once 'presentation/nouveau_compte_exploitation_page.php';
+    } else if ($_GET['page'] == 'synthese_compte_exploitation') {
+        require_once 'presentation/synthese_compte_exploitation_page.php';
     } else if ($_GET['page'] == 'analyse_financiere') {
         require_once 'presentation/analyse_financiere_page.php';
     } else if ($_GET['page'] == 'config_compte_rendu') {

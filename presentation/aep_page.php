@@ -216,6 +216,7 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
             <thead>
                 <tr>
                     <th>Libellé</th>
+                    <th>Type</th>
                     <th>Date</th>
                     <th>Description</th>
                     <th>Actions</th>
@@ -227,6 +228,18 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                     as $aep): ?>
                     <tr>
                         <td><?php echo htmlspecialchars($aep['libele']); ?></td>
+                        <td>
+                            <?php
+                            $td = isset($aep['type_distribution']) ? Aep::normaliserTypeDistribution($aep['type_distribution']) : null;
+                            if ($td === 'RDS') {
+                                echo '<span class="badge bg-primary" title="Refoulement Distribution Séparé">RDS</span>';
+                            } elseif ($td === 'RDC') {
+                                echo '<span class="badge bg-info text-dark" title="Refoulement Distribution Confondu">RDC</span>';
+                            } else {
+                                echo '<span class="badge bg-light text-muted border" title="Type non défini">—</span>';
+                            }
+                            ?>
+                        </td>
                         <td><?php echo htmlspecialchars($aep['date']); ?></td>
                         <td class="truncate"><?php echo htmlspecialchars($aep['description']); ?></td>
                         <td class="d-flex gap-2">
@@ -249,101 +262,227 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                         </td>
                     </tr>
 
-                    <!-- Modale pour les détails -->
-                    <div class="modal fade" id="edit_Modal_<?php echo $aep['id']; ?>" tabindex="-1"
-                        aria-labelledby="detailsModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="detailsModalLabel">Modifier l'AEP</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <form action="?page=edit_aep&id=<?php echo $aep['id']; ?>" method="post">
-                                        <div>
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="libele" class="form-label">Libellé <span
-                                                            class="text-danger">*</span></label>
-                                                    <input type="text" class="form-control" id="libele" name="libele"
-                                                        value="<?php echo htmlspecialchars($aep['libele']); ?>" required>
-                                                    <div class="error-message">Le libellé doit contenir au moins 3
-                                                        caractères.
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="date" class="form-label">Date <span
-                                                            class="text-danger">*</span></label>
-                                                    <input type="date" class="form-control" id="date" name="date"
-                                                        value="<?php echo htmlspecialchars($aep['date']); ?>" required>
-                                                    <div class="error-message">Veuillez sélectionner une date valide.</div>
-                                                </div>
+                    <?php
+                    $aid = (int) $aep['id'];
+                    $type_dist_actuel = isset($aep['type_distribution']) ? Aep::normaliserTypeDistribution($aep['type_distribution']) : null;
+                    $modele_actuel = isset($aep['fichier_facture']) ? $aep['fichier_facture'] : '';
+                    ?>
+                    <div class="modal fade aep-edit-modal" id="edit_Modal_<?php echo $aid; ?>" tabindex="-1"
+                        aria-labelledby="editModalLabel_<?php echo $aid; ?>" aria-hidden="true">
+                        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                            <div class="modal-content border-0 shadow-lg">
+                                <form id="aep-edit-form-<?php echo $aid; ?>" class="aep-edit-form"
+                                    action="?page=edit_aep&id=<?php echo $aid; ?>" method="post" novalidate>
+                                    <div class="modal-header aep-edit-header text-white border-0">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="aep-edit-icon rounded-circle d-inline-flex align-items-center justify-content-center">
+                                                <i class="bi bi-droplet-half fs-4"></i>
                                             </div>
-                                            <div class="mb-3">
-                                                <label for="description" class="form-label">Description <span
-                                                        class="text-danger">*</span></label>
-                                                <textarea class="form-control" id="description" name="description" rows="3"
-                                                    placeholder="Décrivez votre AEP"
-                                                    required><?php echo htmlspecialchars($aep['description']); ?></textarea>
-                                                <div class="error-message">La description doit contenir au moins 10
-                                                    caractères.
+                                            <div>
+                                                <h5 class="modal-title mb-0 fw-semibold" id="editModalLabel_<?php echo $aid; ?>">
+                                                    Modifier l'AEP
+                                                </h5>
+                                                <div class="small opacity-75">
+                                                    <i class="bi bi-pencil-square me-1"></i>
+                                                    <?php echo htmlspecialchars($aep['libele']); ?>
                                                 </div>
                                             </div>
                                         </div>
+                                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                            aria-label="Fermer"></button>
+                                    </div>
 
-                                        <!-- Section : Détails bancaires -->
-                                        <div class="form-section">
-                                            <h5>Détails bancaires (optionnel)</h5>
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="nom_banque" class="form-label">Nom de la banque</label>
-                                                    <input type="text" class="form-control" id="nom_banque"
-                                                        name="nom_banque"
-                                                        value="<?php echo htmlspecialchars($aep['nom_banque']); ?>">
-                                                    <div class="error-message">Le nom de la banque ne peut pas dépasser 100
-                                                        caractères.
+                                    <div class="modal-body bg-body-tertiary p-4">
+                                        <!-- Identité -->
+                                        <section class="aep-edit-section card border-0 shadow-sm mb-3">
+                                            <div class="card-body">
+                                                <h6 class="text-uppercase text-muted small fw-bold mb-3">
+                                                    <i class="bi bi-info-circle me-1"></i> Identité
+                                                </h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-7">
+                                                        <label for="libele_<?php echo $aid; ?>" class="form-label">
+                                                            Libellé <span class="text-danger">*</span>
+                                                        </label>
+                                                        <input type="text" class="form-control" id="libele_<?php echo $aid; ?>"
+                                                            name="libele" value="<?php echo htmlspecialchars($aep['libele']); ?>"
+                                                            minlength="3" required>
+                                                        <div class="invalid-feedback">Le libellé doit contenir au moins 3 caractères.</div>
+                                                    </div>
+                                                    <div class="col-md-5">
+                                                        <label for="date_<?php echo $aid; ?>" class="form-label">
+                                                            Date <span class="text-danger">*</span>
+                                                        </label>
+                                                        <input type="date" class="form-control" id="date_<?php echo $aid; ?>"
+                                                            name="date"
+                                                            value="<?php echo htmlspecialchars($aep['date']); ?>" required>
+                                                        <div class="invalid-feedback">Veuillez sélectionner une date valide.</div>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label for="description_<?php echo $aid; ?>" class="form-label">
+                                                            Description
+                                                        </label>
+                                                        <textarea class="form-control" id="description_<?php echo $aid; ?>"
+                                                            name="description" rows="2"
+                                                            placeholder="Décrivez votre AEP"><?php echo htmlspecialchars($aep['description']); ?></textarea>
                                                     </div>
                                                 </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label for="numero_compte" class="form-label">Numéro de compte</label>
-                                                    <input type="text" class="form-control" id="numero_compte"
-                                                        name="numero_compte"
-                                                        value="<?php echo htmlspecialchars($aep['numero_compte']); ?>">
-                                                    <div class="error-message">Le numéro de compte doit être alphanumérique
-                                                        et
-                                                        ne pas dépasser 50 caractères.
-                                                    </div>
-                                                </div>
                                             </div>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label">Modèle de facture <span
-                                                    class="text-danger">*</span></label>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="fichier_facture"
-                                                    id="fokoue" value="model_fokoue" <?php echo $aep['fichier_facture'] === 'model_fokoue' ? 'checked' : ''; ?> required>
-                                                <label class="form-check-label" for="fokoue">Modèle de Fokoué</label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="radio" name="fichier_facture"
-                                                    id="nkongzem" value="model_nkongzem" <?php echo $aep['fichier_facture'] === 'model_nkongzem' ? 'checked' : ''; ?>>
-                                                <label class="form-check-label" for="nkongzem">Modèle de Nkongzem</label>
-                                            </div>
-                                        </div>
-                                </div>
+                                        </section>
 
-                                <div class="text-end pb-3 pe-5">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                                    <!--                                        <a href="?page=edit_aep&id=-->
-                                    <?php //echo $aep['id']; ?><!--" class="btn btn-secondary">Annuler</a>-->
-                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
-                                </div>
+                                        <!-- Type de réseau -->
+                                        <section class="aep-edit-section card border-0 shadow-sm mb-3">
+                                            <div class="card-body">
+                                                <h6 class="text-uppercase text-muted small fw-bold mb-1">
+                                                    <i class="bi bi-diagram-3 me-1"></i> Type de réseau
+                                                </h6>
+                                                <p class="small text-muted mb-3">
+                                                    Conditionne le calcul du <strong>rendement</strong> du réseau (production / distribution).
+                                                </p>
+                                                <div class="row g-2 aep-type-options">
+                                                    <div class="col-md-4">
+                                                        <input class="form-check-input visually-hidden aep-type-input"
+                                                            type="radio" name="type_distribution"
+                                                            id="td_rds_<?php echo $aid; ?>" value="RDS"
+                                                            <?php echo $type_dist_actuel === 'RDS' ? 'checked' : ''; ?>>
+                                                        <label class="aep-type-card border rounded-3 p-3 d-block h-100"
+                                                            for="td_rds_<?php echo $aid; ?>">
+                                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                                <i class="bi bi-arrow-right-square text-primary fs-5"></i>
+                                                                <span class="fw-bold">RDS</span>
+                                                                <i class="bi bi-check-circle-fill aep-type-check ms-auto text-success"></i>
+                                                            </div>
+                                                            <div class="small text-muted">Refoulement Distribution <strong>Séparé</strong></div>
+                                                        </label>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <input class="form-check-input visually-hidden aep-type-input"
+                                                            type="radio" name="type_distribution"
+                                                            id="td_rdc_<?php echo $aid; ?>" value="RDC"
+                                                            <?php echo $type_dist_actuel === 'RDC' ? 'checked' : ''; ?>>
+                                                        <label class="aep-type-card border rounded-3 p-3 d-block h-100"
+                                                            for="td_rdc_<?php echo $aid; ?>">
+                                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                                <i class="bi bi-share text-info fs-5"></i>
+                                                                <span class="fw-bold">RDC</span>
+                                                                <i class="bi bi-check-circle-fill aep-type-check ms-auto text-success"></i>
+                                                            </div>
+                                                            <div class="small text-muted">Refoulement Distribution <strong>Confondu</strong></div>
+                                                        </label>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <input class="form-check-input visually-hidden aep-type-input"
+                                                            type="radio" name="type_distribution"
+                                                            id="td_none_<?php echo $aid; ?>" value=""
+                                                            <?php echo $type_dist_actuel === null ? 'checked' : ''; ?>>
+                                                        <label class="aep-type-card border rounded-3 p-3 d-block h-100"
+                                                            for="td_none_<?php echo $aid; ?>">
+                                                            <div class="d-flex align-items-center gap-2 mb-1">
+                                                                <i class="bi bi-dash-circle text-muted fs-5"></i>
+                                                                <span class="fw-bold text-muted">Non défini</span>
+                                                                <i class="bi bi-check-circle-fill aep-type-check ms-auto text-success"></i>
+                                                            </div>
+                                                            <div class="small text-muted">À renseigner ultérieurement</div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <!-- Détails bancaires -->
+                                        <section class="aep-edit-section card border-0 shadow-sm mb-3">
+                                            <div class="card-body">
+                                                <h6 class="text-uppercase text-muted small fw-bold mb-3">
+                                                    <i class="bi bi-bank me-1"></i> Détails bancaires
+                                                    <span class="text-muted fw-normal text-lowercase">— optionnel</span>
+                                                </h6>
+                                                <div class="row g-3">
+                                                    <div class="col-md-6">
+                                                        <label for="nom_banque_<?php echo $aid; ?>" class="form-label">Nom de la banque</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-body-tertiary"><i class="bi bi-building"></i></span>
+                                                            <input type="text" class="form-control"
+                                                                id="nom_banque_<?php echo $aid; ?>" name="nom_banque"
+                                                                maxlength="100"
+                                                                value="<?php echo htmlspecialchars($aep['nom_banque']); ?>">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="numero_compte_<?php echo $aid; ?>" class="form-label">Numéro de compte</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text bg-body-tertiary"><i class="bi bi-credit-card-2-front"></i></span>
+                                                            <input type="text" class="form-control"
+                                                                id="numero_compte_<?php echo $aid; ?>" name="numero_compte"
+                                                                pattern="[A-Za-z0-9\-]{0,50}"
+                                                                value="<?php echo htmlspecialchars($aep['numero_compte']); ?>">
+                                                        </div>
+                                                        <div class="invalid-feedback">Alphanumérique, 50 caractères max.</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <!-- Modèle de facture -->
+                                        <section class="aep-edit-section card border-0 shadow-sm">
+                                            <div class="card-body">
+                                                <h6 class="text-uppercase text-muted small fw-bold mb-3">
+                                                    <i class="bi bi-receipt me-1"></i> Modèle de facture
+                                                    <span class="text-danger">*</span>
+                                                </h6>
+                                                <div class="row g-3 aep-model-options">
+                                                    <div class="col-md-6">
+                                                        <input class="visually-hidden aep-model-input" type="radio"
+                                                            name="fichier_facture" id="mf_fokoue_<?php echo $aid; ?>"
+                                                            value="model_fokoue" required
+                                                            <?php echo $modele_actuel === 'model_fokoue' ? 'checked' : ''; ?>>
+                                                        <label for="mf_fokoue_<?php echo $aid; ?>"
+                                                            class="aep-model-card border rounded-3 d-block h-100 overflow-hidden">
+                                                            <div class="ratio ratio-16x9 bg-body-tertiary">
+                                                                <img src="presentation/assets/images/model_fokoue.png"
+                                                                    alt="Modèle Fokoué" class="object-fit-contain p-2">
+                                                            </div>
+                                                            <div class="p-2 d-flex align-items-center justify-content-between">
+                                                                <span class="fw-semibold">Modèle de Fokoué</span>
+                                                                <i class="bi bi-check-circle-fill aep-model-check text-success"></i>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <input class="visually-hidden aep-model-input" type="radio"
+                                                            name="fichier_facture" id="mf_nkong_<?php echo $aid; ?>"
+                                                            value="model_nkongzem"
+                                                            <?php echo $modele_actuel === 'model_nkongzem' ? 'checked' : ''; ?>>
+                                                        <label for="mf_nkong_<?php echo $aid; ?>"
+                                                            class="aep-model-card border rounded-3 d-block h-100 overflow-hidden">
+                                                            <div class="ratio ratio-16x9 bg-body-tertiary">
+                                                                <img src="presentation/assets/images/model_nkongzem.png"
+                                                                    alt="Modèle Nkongzem" class="object-fit-contain p-2">
+                                                            </div>
+                                                            <div class="p-2 d-flex align-items-center justify-content-between">
+                                                                <span class="fw-semibold">Modèle de Nkongzem</span>
+                                                                <i class="bi bi-check-circle-fill aep-model-check text-success"></i>
+                                                            </div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+                                    </div>
+
+                                    <div class="modal-footer bg-white border-top">
+                                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                                            <i class="bi bi-x-lg me-1"></i> Annuler
+                                        </button>
+                                        <a href="?page=edit_aep&id=<?php echo $aid; ?>"
+                                            class="btn btn-outline-secondary" title="Ouvrir la page complète">
+                                            <i class="bi bi-arrows-fullscreen me-1"></i> Page complète
+                                        </a>
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="bi bi-check2 me-1"></i> Enregistrer
+                                        </button>
+                                    </div>
                                 </form>
                             </div>
-                            <!--                            <div class="modal-footer">-->
-                            <!--                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>-->
-                            <!--                            </div>-->
                         </div>
                     </div>
 
@@ -398,7 +537,7 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
     <?php endforeach; ?>
     <?php if (empty($aeps)): ?>
         <tr>
-            <td colspan="4" class="text-center">Aucun AEP trouvé.</td>
+            <td colspan="5" class="text-center">Aucun AEP trouvé.</td>
         </tr>
     <?php endif; ?>
     </tbody>
@@ -441,6 +580,52 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
     </div>
 </div>
 
+<style>
+    /* Modal de modification d'AEP — apparence moderne */
+    .aep-edit-modal .modal-content { border-radius: 1rem; overflow: hidden; }
+    .aep-edit-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #4dabf7 100%);
+        padding: 1.1rem 1.5rem;
+    }
+    .aep-edit-icon {
+        width: 2.75rem; height: 2.75rem;
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+    .aep-edit-section { transition: box-shadow .2s ease, transform .2s ease; }
+    .aep-edit-section:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.06) !important; }
+
+    /* Cartes radio (type de réseau) */
+    .aep-type-card {
+        cursor: pointer;
+        transition: border-color .15s ease, background-color .15s ease, transform .15s ease, box-shadow .15s ease;
+        background-color: #fff;
+    }
+    .aep-type-card .aep-type-check { opacity: 0; transform: scale(.7); transition: opacity .15s ease, transform .15s ease; }
+    .aep-type-card:hover { border-color: #0d6efd; transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(13,110,253,.08); }
+    .aep-type-input:checked + .aep-type-card {
+        border-color: #0d6efd; border-width: 2px;
+        background-color: #f1f7ff;
+        box-shadow: 0 .25rem .75rem rgba(13,110,253,.12);
+    }
+    .aep-type-input:checked + .aep-type-card .aep-type-check { opacity: 1; transform: scale(1); }
+    .aep-type-input:focus-visible + .aep-type-card { outline: 2px solid #0d6efd; outline-offset: 2px; }
+
+    /* Cartes radio (modèle de facture) */
+    .aep-model-card {
+        cursor: pointer;
+        transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+        background-color: #fff;
+    }
+    .aep-model-card .aep-model-check { opacity: 0; transform: scale(.7); transition: opacity .15s ease, transform .15s ease; }
+    .aep-model-card:hover { border-color: #0d6efd; transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(13,110,253,.08); }
+    .aep-model-input:checked + .aep-model-card {
+        border-color: #0d6efd; border-width: 2px;
+        box-shadow: 0 .25rem .75rem rgba(13,110,253,.12);
+    }
+    .aep-model-input:checked + .aep-model-card .aep-model-check { opacity: 1; transform: scale(1); }
+    .aep-model-input:focus-visible + .aep-model-card { outline: 2px solid #0d6efd; outline-offset: 2px; }
+</style>
 <script>
     // Activation du bouton de suppression quand les deux saisies correspondent exactement au nom attendu
     (function () {
@@ -458,5 +643,18 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
             var ok = (v1 === expected && v2 === expected);
             if (btn) btn.disabled = !ok;
         });
+    })();
+
+    // Validation Bootstrap moderne du formulaire de modification d'AEP
+    (function () {
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form || !form.classList.contains('aep-edit-form')) return;
+            if (!form.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, true);
     })();
 </script>

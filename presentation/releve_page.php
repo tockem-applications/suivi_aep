@@ -155,54 +155,56 @@ function addDaysAndFormat($string_date, $days = 10)
             ?>
 
             <?php if (isset($tarifs_differencies) && count($tarifs_differencies) > 0): ?>
-                <!-- Alerte pour les tarifs différenciés -->
-                <div class="alert alert-info mb-3" role="alert">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle fs-4 me-3 mt-1"></i>
-                        <div class="flex-grow-1">
-                            <h5 class="alert-heading mb-2">
-                                <i class="bi bi-tags me-2"></i>Tarifs différenciés actifs pour ce mois
-                            </h5>
-                            <p class="mb-2">
-                                Ce mois de facturation utilise des tarifs différenciés selon la consommation. 
-                                Les tarifs appliqués sont les suivants :
-                            </p>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered mb-0">
-                                    <thead class="table-light">
+                <!-- Bandeau compact : tarif différencié utilisé -->
+                <div class="alert alert-info py-2 px-3 mb-3" role="alert">
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <i class="bi bi-tags-fill"></i>
+                        <span class="fw-semibold">Tarif différencié utilisé</span>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                            <?php echo (int) count($tarifs_differencies); ?> tranche<?php echo count($tarifs_differencies) > 1 ? 's' : ''; ?>
+                        </span>
+                        <button class="btn btn-sm btn-outline-info ms-auto d-inline-flex align-items-center gap-1 tdd-toggle-btn"
+                            type="button" data-bs-toggle="collapse"
+                            data-bs-target="#tarif_diff_detail" aria-expanded="false" aria-controls="tarif_diff_detail">
+                            <span class="tdd-label">Voir le détail</span>
+                            <i class="bi bi-chevron-down tdd-chevron" style="transition: transform .2s ease;"></i>
+                        </button>
+                    </div>
+                    <div class="collapse mt-2" id="tarif_diff_detail">
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="small">Consommation min (m³)</th>
+                                        <th class="small">Consommation max (m³)</th>
+                                        <th class="small text-end">Prix par m³ (FCFA)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($tarifs_differencies as $tarif): ?>
                                         <tr>
-                                            <th>Consommation minimale (m³)</th>
-                                            <th>Consommation maximale (m³)</th>
-                                            <th class="text-end">Prix par m³ (FCFA)</th>
+                                            <td class="small"><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
+                                            <td class="small">
+                                                <?php
+                                                if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
+                                                    echo number_format($tarif['max_consommation'], 2, ',', ' ');
+                                                } else {
+                                                    echo '<span class="text-muted">∞ (illimité)</span>';
+                                                }
+                                                ?>
+                                            </td>
+                                            <td class="text-end fw-bold small">
+                                                <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($tarifs_differencies as $tarif): ?>
-                                            <tr>
-                                                <td><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
-                                                <td>
-                                                    <?php 
-                                                    if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
-                                                        echo number_format($tarif['max_consommation'], 2, ',', ' ');
-                                                    } else {
-                                                        echo '<span class="text-muted">∞ (illimité)</span>';
-                                                    }
-                                                    ?>
-                                                </td>
-                                                <td class="text-end fw-bold">
-                                                    <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <small class="text-muted mt-2 d-block">
-                                <i class="bi bi-lightbulb me-1"></i>
-                                <strong>Note :</strong> Le tarif appliqué à chaque abonné dépend de sa consommation mensuelle. 
-                                Le système sélectionne automatiquement le tarif approprié selon les tranches de consommation.
-                            </small>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
                         </div>
+                        <small class="text-muted mt-2 d-block">
+                            <i class="bi bi-lightbulb me-1"></i>
+                            Le tarif appliqué à chaque abonné dépend de sa consommation mensuelle.
+                        </small>
                     </div>
                 </div>
             <?php endif; ?>
@@ -551,56 +553,70 @@ function addDaysAndFormat($string_date, $days = 10)
                                     <div class="card card-body bg-light">
                                         <?php if (isset($constante_reseau_id) && $constante_reseau_id): ?>
                                             <?php if (count($tarifs_differencies_modal) > 0): ?>
-                                                <!-- Affichage du tarif standard de la constante_reseau -->
-                                                <ul class="list-group list-group-flush mb-3">
-                                                    <li class="list-group-item d-flex justify-content-between bg-light">
-                                                        <span class="fw-bold">Prix de l'eau (tarif standard) :</span>
-                                                        <span class="fw-bold"><?php echo isset($prix_metre_cube_eau) ? number_format($prix_metre_cube_eau, 0, ',', ' ') . ' FCFA/m³' : 'N/A'; ?></span>
-                                                    </li>
-                                                </ul>
-                                                
-                                                <!-- Affichage des tarifs différenciés -->
-                                                <div class="alert alert-info mb-3" role="alert">
-                                                    <div class="d-flex align-items-start">
-                                                        <i class="bi bi-info-circle fs-5 me-2 mt-1"></i>
-                                                        <div class="flex-grow-1">
-                                                            <h6 class="alert-heading mb-2">
-                                                                <i class="bi bi-tags me-2"></i>Tarifs différenciés actifs
-                                                            </h6>
-                                                            <p class="mb-2 small">
-                                                                Ce mois utilisera des tarifs différenciés selon la consommation :
-                                                            </p>
-                                                            <div class="table-responsive">
-                                                                <table class="table table-sm table-bordered mb-0">
-                                                                    <thead class="table-light">
-                                                                        <tr>
-                                                                            <th class="small">Consommation min (m³)</th>
-                                                                            <th class="small">Consommation max (m³)</th>
-                                                                            <th class="small text-end">Prix par m³ (FCFA)</th>
-                                                                        </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                        <?php foreach ($tarifs_differencies_modal as $tarif): ?>
-                                                                            <tr>
-                                                                                <td class="small"><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
-                                                                                <td class="small">
-                                                                                    <?php 
-                                                                                    if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
-                                                                                        echo number_format($tarif['max_consommation'], 2, ',', ' ');
-                                                                                    } else {
-                                                                                        echo '<span class="text-muted">∞</span>';
-                                                                                    }
-                                                                                    ?>
-                                                                                </td>
-                                                                                <td class="text-end fw-bold small">
-                                                                                    <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
-                                                                                </td>
-                                                                            </tr>
-                                                                        <?php endforeach; ?>
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
+                                                <div class="alert alert-info py-2 px-3 mb-0" role="alert">
+                                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                        <i class="bi bi-tags-fill"></i>
+                                                        <span class="fw-semibold">Tarif différencié utilisé</span>
+                                                        <span class="badge bg-info-subtle text-info border border-info-subtle">
+                                                            <?php echo (int) count($tarifs_differencies_modal); ?> tranche<?php echo count($tarifs_differencies_modal) > 1 ? 's' : ''; ?>
+                                                        </span>
+                                                        <button class="btn btn-sm btn-outline-info ms-auto d-inline-flex align-items-center gap-1 tdd-toggle-btn"
+                                                            type="button" data-bs-toggle="collapse"
+                                                            data-bs-target="#tarif_diff_detail_modal" aria-expanded="false"
+                                                            aria-controls="tarif_diff_detail_modal">
+                                                            <span class="tdd-label">Voir le détail</span>
+                                                            <i class="bi bi-chevron-down tdd-chevron" style="transition: transform .2s ease;"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="collapse mt-2" id="tarif_diff_detail_modal">
+                                                        <div class="small text-muted mb-2 d-flex justify-content-between">
+                                                            <span>Tarif standard (référence)</span>
+                                                            <span class="fw-semibold text-dark"><?php echo isset($prix_metre_cube_eau) ? number_format($prix_metre_cube_eau, 0, ',', ' ') . ' FCFA/m³' : 'N/A'; ?></span>
                                                         </div>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-sm table-bordered mb-0 bg-white">
+                                                                <thead class="table-light">
+                                                                    <tr>
+                                                                        <th class="small">Consommation min (m³)</th>
+                                                                        <th class="small">Consommation max (m³)</th>
+                                                                        <th class="small text-end">Prix par m³ (FCFA)</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <?php foreach ($tarifs_differencies_modal as $tarif): ?>
+                                                                        <tr>
+                                                                            <td class="small"><?php echo number_format($tarif['min_consommation'], 2, ',', ' '); ?></td>
+                                                                            <td class="small">
+                                                                                <?php
+                                                                                if ($tarif['max_consommation'] !== null && $tarif['max_consommation'] > 0) {
+                                                                                    echo number_format($tarif['max_consommation'], 2, ',', ' ');
+                                                                                } else {
+                                                                                    echo '<span class="text-muted">∞ (illimité)</span>';
+                                                                                }
+                                                                                ?>
+                                                                            </td>
+                                                                            <td class="text-end fw-bold small">
+                                                                                <?php echo number_format($tarif['prix_metre_cube_eau'], 0, ',', ' '); ?>
+                                                                            </td>
+                                                                        </tr>
+                                                                    <?php endforeach; ?>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                        <ul class="list-group list-group-flush small mt-2 mb-0">
+                                                            <li class="list-group-item d-flex justify-content-between px-0 py-1 bg-transparent border-0">
+                                                                <span>Entretien compteur</span>
+                                                                <span><?php echo isset($prix_entretient_compteur) ? number_format($prix_entretient_compteur, 0, ',', ' ') . ' FCFA/mois' : 'N/A'; ?></span>
+                                                            </li>
+                                                            <li class="list-group-item d-flex justify-content-between px-0 py-1 bg-transparent border-0">
+                                                                <span>TVA</span>
+                                                                <span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
+                                                            </li>
+                                                            <li class="list-group-item d-flex justify-content-between px-0 py-1 bg-transparent border-0">
+                                                                <span>Créé le</span>
+                                                                <span><?php echo isset($date_creation) ? $date_creation : 'N/A'; ?></span>
+                                                            </li>
+                                                        </ul>
                                                     </div>
                                                 </div>
                                             <?php else: ?>
@@ -625,24 +641,7 @@ function addDaysAndFormat($string_date, $days = 10)
                                                 </ul>
                                             <?php endif; ?>
                                             
-                                            <!-- Informations communes (entretien, TVA, date) -->
-                                            <?php if (count($tarifs_differencies_modal) > 0): ?>
-                                                <hr class="my-2">
-                                                <ul class="list-group list-group-flush">
-                                                    <li class="list-group-item d-flex justify-content-between"><span>Entretien
-                                                            compteur
-                                                            :</span><span><?php echo isset($prix_entretient_compteur) ? number_format($prix_entretient_compteur, 0, ',', ' ') . ' FCFA/mois' : 'N/A'; ?></span>
-                                                    </li>
-                                                    <li class="list-group-item d-flex justify-content-between">
-                                                        <span>TVA
-                                                            :</span><span><?php echo isset($prix_tva) ? $prix_tva . ' %' : 'N/A'; ?></span>
-                                                    </li>
-                                                    <li class="list-group-item d-flex justify-content-between">
-                                                        <span>Créé le
-                                                            :</span><span><?php echo isset($date_creation) ? $date_creation : 'N/A'; ?></span>
-                                                    </li>
-                                                </ul>
-                                            <?php endif; ?>
+
                                         <?php else: ?>
                                             <div class="text-danger">Aucun tarif actif pour cet AEP. Veuillez activer un
                                                 tarif.
@@ -682,6 +681,26 @@ function addDaysAndFormat($string_date, $days = 10)
 
                     moisInput.addEventListener('change', updateDepotDate, false);
                     moisInput.addEventListener('input', updateDepotDate, false);
+                })();
+            </script>
+            <script>
+                (function () {
+                    document.querySelectorAll('.tdd-toggle-btn').forEach(function (trigger) {
+                        var targetSel = trigger.getAttribute('data-bs-target');
+                        if (!targetSel) return;
+                        var target = document.querySelector(targetSel);
+                        if (!target) return;
+                        var chevron = trigger.querySelector('.tdd-chevron');
+                        var label = trigger.querySelector('.tdd-label');
+                        target.addEventListener('show.bs.collapse', function () {
+                            if (chevron) chevron.style.transform = 'rotate(180deg)';
+                            if (label) label.textContent = 'Masquer le détail';
+                        });
+                        target.addEventListener('hide.bs.collapse', function () {
+                            if (chevron) chevron.style.transform = 'rotate(0deg)';
+                            if (label) label.textContent = 'Voir le détail';
+                        });
+                    });
                 })();
             </script>
             <script>
@@ -826,7 +845,7 @@ function addDaysAndFormat($string_date, $days = 10)
                     var sortDirSelect = document.getElementById('releve_sort_dir');
                     var countEl = document.getElementById('releve_count');
                     var totalEl = document.getElementById('releve_total_count');
-                    var tbody = document.querySelector('#a_imprimer table tbody');
+                    var tbody = document.querySelector('#a_imprimer table.table_searching tbody');
                     if (!tbody) return;
 
                     function getRows() {
@@ -905,13 +924,9 @@ function addDaysAndFormat($string_date, $days = 10)
 
                 // Fonction de tri par colonne
                 function sortTable(columnIndex, dataAttribute) {
-                    var table = document.querySelector('.table tbody');
-                    var rows = Array.from(table.querySelectorAll('tr'));
-
-                    // Supprimer la première ligne (en-tête) si elle est incluse
-                    if (rows[0] && rows[0].querySelector('th')) {
-                        rows.shift();
-                    }
+                    var table = document.querySelector('table.table_searching tbody');
+                    if (!table) return;
+                    var rows = Array.from(table.querySelectorAll('tr.p-0.m-0'));
 
                     var isAscending = true;
                     var currentSort = table.getAttribute('data-sort');
@@ -953,8 +968,7 @@ function addDaysAndFormat($string_date, $days = 10)
                         }
                     });
 
-                    // Vider le tableau et réinsérer les lignes triées
-                    table.innerHTML = '';
+                    // Réinsérer les lignes triées (appendChild déplace les nœuds existants)
                     rows.forEach(function (row) {
                         table.appendChild(row);
                     });

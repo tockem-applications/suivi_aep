@@ -166,10 +166,33 @@ function display_aep_to_select()
                         $badgeProdClass = ($tauxRendementProd >= 85 && $tauxRendementProd <= 115) ? 'bg-success' : (($tauxRendementProd >= 60) ? 'bg-warning' : 'bg-danger');
                     }
                     ?>
+                    <?php
+                    $typeDistribution = isset($aep['type_distribution'])
+                        ? Aep::normaliserTypeDistribution($aep['type_distribution'])
+                        : null;
+                    $typeDistributionLabel = '';
+                    $typeDistributionClass = 'bg-light text-muted border';
+                    if ($typeDistribution === 'RDS') {
+                        $typeDistributionLabel = 'RDS';
+                        $typeDistributionClass = 'bg-primary';
+                    } elseif ($typeDistribution === 'RDC') {
+                        $typeDistributionLabel = 'RDC';
+                        $typeDistributionClass = 'bg-info text-dark';
+                    }
+                    $typeDistributionTitle = $typeDistribution === 'RDS'
+                        ? 'Refoulement Distribution Séparé'
+                        : ($typeDistribution === 'RDC' ? 'Refoulement Distribution Confondu' : 'Type de réseau non défini');
+                    ?>
                     <div class="col-md-6 col-lg-4 mb-4">
                         <div class="card shadow-sm border-0 h-100">
                             <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <strong class="text-primary"><?php echo htmlspecialchars($libele); ?></strong>
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-primary"><?php echo htmlspecialchars($libele); ?></strong>
+                                    <span class="badge <?php echo $typeDistributionClass; ?>"
+                                        title="<?php echo htmlspecialchars($typeDistributionTitle); ?>">
+                                        <?php echo $typeDistributionLabel !== '' ? $typeDistributionLabel : '— type'; ?>
+                                    </span>
+                                </div>
                                 <div class="d-flex flex-wrap gap-1 justify-content-end">
                                     <span class="badge <?php echo $badgeClass; ?>" title="Taux de recouvrement sur le dernier mois de facturation">
                                         <?php echo $lastMoisId > 0 ? $taux . '%' : '—'; ?> financier

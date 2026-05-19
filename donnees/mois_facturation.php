@@ -53,6 +53,50 @@ class MoisFacturation extends Manager
         );
     }
 
+    /**
+     * Statistiques mensuelles réseau / AEP (montants via vue_abones_facturation).
+     */
+    public static function getStatsReseauParMois($mois_debut, $mois_fin, $id_aep, $id_reseau = 0)
+    {
+        if ($mois_debut == '') {
+            $mois_debut = '1900-01';
+        }
+        if ($mois_fin == '') {
+            $mois_fin = '2200-01';
+        }
+        $id_aep = (int) $id_aep;
+        $id_reseau = (int) $id_reseau;
+
+        $sql = "
+            SELECT m.id AS id_mois, m.mois,
+                   COUNT(vaf.id) AS nombre,
+                   COALESCE(SUM(vaf.consommation), 0) AS conso,
+                   COALESCE(SUM(vaf.montant_total), 0) AS montant_facture,
+                   COALESCE(SUM(vaf.montant_verse), 0) AS montant_verse
+            FROM mois_facturation m
+            INNER JOIN constante_reseau cr ON m.id_constante = cr.id
+            LEFT JOIN vue_abones_facturation vaf
+                ON vaf.id_mois = m.id AND vaf.id_aep = ?
+        ";
+        $params = array($id_aep);
+
+        if ($id_reseau > 0) {
+            $sql .= " AND vaf.id_reseau = ?";
+            $params[] = $id_reseau;
+        }
+
+        $sql .= "
+            WHERE m.mois >= ? AND m.mois <= ? AND cr.id_aep = ? AND m.est_mois_base = 0
+            GROUP BY m.id, m.mois
+            ORDER BY m.mois DESC
+        ";
+        $params[] = $mois_debut;
+        $params[] = $mois_fin;
+        $params[] = $id_aep;
+
+        return self::prepare_query($sql, $params);
+    }
+
     public static function mois_exist($mois, $id_aep)
     {
         $res = self::prepare_query("

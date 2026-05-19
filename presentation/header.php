@@ -103,6 +103,10 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                         class="bi bi-file-earmark-text me-2"></i>Compte Rendu Financier</a></li>
                             <li><a class="dropdown-item" href="?page=compte_rendu_tableau"><i
                                         class="bi bi-table me-2"></i>Compte d'Exploitation (Tableau)</a></li>
+                            <li><a class="dropdown-item" href="?page=nouveau_compte_exploitation"><i
+                                        class="bi bi-journal-plus me-2"></i>Nouveau compte d'exploitation</a></li>
+                            <li><a class="dropdown-item" href="?page=synthese_compte_exploitation"><i
+                                        class="bi bi-columns-gap me-2"></i>Synthèse compte d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=analyse_financiere"><i
                                         class="bi bi-graph-up me-2"></i>Analyse Financière</a></li>
                             <li><a class="dropdown-item" href="?page=config_compte_rendu"><i

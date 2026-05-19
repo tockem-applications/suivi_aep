@@ -61,8 +61,13 @@ function display_delete_modal($titre, $body, $traitement, $id_modal = 'deleteMod
 }
 
 
-function genererGraphiques($dataArray)
+function genererGraphiques($dataArray, $options = array())
 {
+    $embed = !empty($options['embed']);
+    $prefix = isset($options['prefix']) ? preg_replace('/[^a-z0-9_]/i', '', $options['prefix']) : 'chart';
+    if ($prefix === '') {
+        $prefix = 'chart';
+    }
     // Initialiser des tableaux pour stocker les données graphiques
     $mois = array();
     $consommation = array();
@@ -77,14 +82,13 @@ function genererGraphiques($dataArray)
         $mois[] = (function_exists('getLetterMonth') && preg_match('/^\d{4}-\d{2}$/', $monthVal))
             ? getLetterMonth($monthVal)
             : $monthVal;
-        // Les données sont déjà numériques (voir afficherStatistiqueReseau ligne 96)
-        $consommation[] = floatval($entry['data']['consommation']);
-        $nombreFactures[] = intval($entry['data']['nombre de factures']);
-        $montantFacture[] = floatval($entry['data']['montant facturé']);
-        $montantRecouvert[] = floatval($entry['data']['montant recouvert']);
-        // Pour le taux de recouvrement, gérer le cas "-" (pas de données)
-        $tauxRecouv = $entry['data']['Taux de recouvrement'];
-        $tauxRecouvrement[] = ($tauxRecouv === '-' || $tauxRecouv === null) ? 0 : floatval($tauxRecouv);
+        $d = isset($entry['data']) && is_array($entry['data']) ? $entry['data'] : array();
+        $consommation[] = floatval(isset($d['consommation']) ? $d['consommation'] : 0);
+        $nombreFactures[] = intval(isset($d['nombre_factures']) ? $d['nombre_factures'] : (isset($d['nombre de factures']) ? $d['nombre de factures'] : 0));
+        $montantFacture[] = floatval(isset($d['montant_facture']) ? $d['montant_facture'] : (isset($d['montant facturé']) ? $d['montant facturé'] : 0));
+        $montantRecouvert[] = floatval(isset($d['montant_recouvert']) ? $d['montant_recouvert'] : (isset($d['montant recouvert']) ? $d['montant recouvert'] : 0));
+        $tauxRecouv = isset($d['taux_recouvrement']) ? $d['taux_recouvrement'] : (isset($d['Taux de recouvrement']) ? $d['Taux de recouvrement'] : null);
+        $tauxRecouvrement[] = ($tauxRecouv === '-' || $tauxRecouv === null || $tauxRecouv === '') ? 0 : floatval($tauxRecouv);
     }
 
     // Convertir les données en JSON pour les utiliser dans JavaScript
@@ -95,218 +99,124 @@ function genererGraphiques($dataArray)
     $montantRecouvertJSON = json_encode($montantRecouvert);
     $tauxRecouvrementJSON = json_encode($tauxRecouvrement);
 
-    echo "
-        <!-- Chart.js -->
-        <script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>
-        
+    $maxTauxVal = 0.0;
+    foreach ($tauxRecouvrement as $t) {
+        if ($t > $maxTauxVal) {
+            $maxTauxVal = $t;
+        }
+    }
+    // Échelle Y : au moins 100 %, ou 15 % au-dessus du max si recouvrement > 100 % (paiements antérieurs, etc.)
+    $tauxYMax = (int) max(100, ceil($maxTauxVal * 1.15));
+    $tauxYScale = "max: {$tauxYMax},\n                                ";
+
+    $c1 = $prefix . '_chart1';
+    $c2 = $prefix . '_chart2';
+    $c3 = $prefix . '_chart3';
+    $c4 = $prefix . '_chart4';
+    $chartHeight = isset($options['chart_height']) ? (int) $options['chart_height'] : ($embed ? 200 : 300);
+    $showLegend = !empty($options['legend']);
+    $deferInit = !empty($options['defer_init']);
+    $includeScript = !isset($options['include_script']) || $options['include_script'];
+    $isModal = !empty($options['modal']);
+    $chartMaintain = ($embed || $isModal) ? 'false' : 'true';
+    $legendDisplay = $showLegend ? 'true' : 'false';
+    $titleSize = $isModal ? 14 : 12;
+
+    if ($includeScript) {
+        echo "<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>\n";
+    }
+
+    if ($embed || $isModal) {
+        $panelClass = $isModal ? 'rs-charts-panel rs-charts-panel-modal' : 'rs-charts-panel';
+        echo "
+<div class=\"{$panelClass}\">
+            <div class=\"rs-charts-grid\">
+<div class=\"rs-chart-cell\"><div class=\"rs-chart-canvas-wrap\" style=\"height:{$chartHeight}px\"><canvas id=\"{$c1}\"></canvas></div></div>
+                <div class=\"rs-chart-cell\"><div class=\"rs-chart-canvas-wrap\" style=\"height:{$chartHeight}px\"><canvas id=\"{$c2}\"></canvas></div></div>
+                <div class=\"rs-chart-cell\"><div class=\"rs-chart-canvas-wrap\" style=\"height:{$chartHeight}px\"><canvas id=\"{$c3}\"></canvas></div></div>
+                <div class=\"rs-chart-cell\">
+<div class=\"rs-chart-canvas-wrap\" style=\"height:{$chartHeight}px\"><canvas id=\"{$c4}\"></canvas></div></div>
+            </div>
+        </div>";
+    } else {
+        echo "
         <div class='card'>
             <h2 class='h2 d-flex justify-content-center mb-4'>Tableau de bord</h2>
             <div class='card-body row'>
-                <div class='mt-3 col-12 col-md-6'>
-                    <canvas id='reseau_chart1' style='max-height: 300px;'></canvas>
-                </div>
-                <div class='mt-3 col-12 col-md-6'>
-                    <canvas id='reseau_chart2' style='max-height: 300px;'></canvas>
-                </div>
-                <div class='mt-3 col-12 col-md-6'>
-                    <canvas id='reseau_chart3' style='max-height: 300px;'></canvas>
-                </div>
-                <div class='mt-3 col-12 col-md-6'>
-                    <canvas id='reseau_chart4' style='max-height: 300px;'></canvas>
-                </div>
+                <div class='mt-3 col-12 col-md-6'><canvas id='{$c1}' style='max-height:300px'></canvas></div>
+                <div class='mt-3 col-12 col-md-6'><canvas id='{$c2}' style='max-height:300px'></canvas></div>
+                <div class='mt-3 col-12 col-md-6'><canvas id='{$c3}' style='max-height:300px'></canvas></div>
+                <div class='mt-3 col-12 col-md-6'><canvas id='{$c4}' style='max-height:300px'></canvas></div>
             </div>
-        </div>
-        <script type='text/javascript'>
-        (function() {
+        </div>";
+    }
+
+    $initBody = "
+            window._rsChartRegistry = window._rsChartRegistry || {};
             var labels = $moisJSON;
-            
-            // Graphique 1: Facturation / Recouvrement (DEUX courbes)
-            var ctx1 = document.getElementById('reseau_chart1');
-            if (ctx1) {
-                new Chart(ctx1.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Montant facturé',
-                                data: $montantFactureJSON,
-                                borderColor: 'rgba(54, 162, 235, 1)', // Bleu
-                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            },
-                            {
-                                label: 'Montant recouvert',
-                                data: $montantRecouvertJSON,
-                                borderColor: 'rgba(255, 99, 132, 1)', // Rouge/Rose
-                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Facturation / Recouvrement'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+            var charts = [];
+            function mk(id, cfg) {
+                var el = document.getElementById(id);
+                if (!el) return null;
+                var existing = Chart.getChart(el);
+                if (existing) existing.destroy();
+                return new Chart(el.getContext('2d'), cfg);
             }
-            
-            // Graphique 2: Taux de recouvrement (UNE courbe)
-            var ctx2 = document.getElementById('reseau_chart2');
-            if (ctx2) {
-                new Chart(ctx2.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Taux de recouvrement (%)',
-                                data: $tauxRecouvrementJSON,
-                                borderColor: 'rgba(255, 99, 132, 1)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                                tension: 0.4,
-                                borderWidth: 2,
-                                fill: true
-                            }
-                        ]
+            var c1 = mk('{$c1}', {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Montant facturé', data: $montantFactureJSON, borderColor: 'rgba(26, 115, 232, 1)', backgroundColor: 'rgba(26, 115, 232, 0.08)', tension: 0.35, borderWidth: 2, pointRadius: 3 },
+                        { label: 'Montant recouvré', data: $montantRecouvertJSON, borderColor: 'rgba(52, 168, 83, 1)', backgroundColor: 'rgba(52, 168, 83, 0.08)', tension: 0.35, borderWidth: 2, pointRadius: 3 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: {$chartMaintain},
+                    plugins: {
+                        title: { display: true, text: 'Facturation / Recouvrement', font: { size: {$titleSize}, weight: '500' } },
+                        legend: { display: {$legendDisplay}, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Taux de recouvrement'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + '%';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Graphique 3: Nombre de factures (UNE courbe)
-            var ctx3 = document.getElementById('reseau_chart3');
-            if (ctx3) {
-                new Chart(ctx3.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Nombre de factures',
-                                data: $nombreFacturesJSON,
-                                borderColor: 'rgba(153, 102, 255, 1)',
-                                backgroundColor: 'rgba(153, 102, 255, 0.1)',
-                                tension: 0.4,
-                                borderWidth: 2,
-                                fill: true
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Nombre de factures'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-            
-            // Graphique 4: Consommation (UNE courbe)
-            var ctx4 = document.getElementById('reseau_chart4');
-            if (ctx4) {
-                new Chart(ctx4.getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Consommation (m³)',
-                                data: $consommationJSON,
-                                borderColor: 'rgba(255, 159, 64, 1)',
-                                backgroundColor: 'rgba(255, 159, 64, 0.1)',
-                                tension: 0.4,
-                                borderWidth: 2,
-                                fill: true
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            title: {
-                                display: true,
-                                text: 'Consommation'
-                            },
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) {
-                                        return value + ' m³';
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            }
-        })();
-        </script>";
+                    scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 45 } } }
+                }
+            });
+            if (c1) charts.push(c1);
+            var c2 = mk('{$c2}', {
+                type: 'line',
+                data: { labels: labels, datasets: [{ label: 'Taux (%)', data: $tauxRecouvrementJSON, borderColor: 'rgba(234, 67, 53, 1)', backgroundColor: 'rgba(234, 67, 53, 0.1)', tension: 0.35, borderWidth: 2, fill: true, pointRadius: 3, clip: false }] },
+                options: {
+                    responsive: true, maintainAspectRatio: {$chartMaintain},
+                    plugins: { title: { display: true, text: 'Taux de recouvrement', font: { size: {$titleSize}, weight: '500' } }, legend: { display: false } },
+                    scales: { y: { beginAtZero: true, {$tauxYScale}ticks: { font: { size: 11 }, callback: function(v) { return v + '%'; } } }, x: { ticks: { font: { size: 11 }, maxRotation: 45 } } }
+                }
+            });
+            if (c2) charts.push(c2);
+            var c3 = mk('{$c3}', {
+                type: 'line',
+                data: { labels: labels, datasets: [{ label: 'Factures', data: $nombreFacturesJSON, borderColor: 'rgba(103, 58, 183, 1)', backgroundColor: 'rgba(103, 58, 183, 0.1)', tension: 0.35, borderWidth: 2, fill: true, pointRadius: 3 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: {$chartMaintain},
+                    plugins: { title: { display: true, text: 'Nombre de factures', font: { size: {$titleSize}, weight: '500' } }, legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 11 }, maxRotation: 45 } } }
+                }
+            });
+            if (c3) charts.push(c3);
+            var c4 = mk('{$c4}', {
+                type: 'line',
+                data: { labels: labels, datasets: [{ label: 'm³', data: $consommationJSON, borderColor: 'rgba(251, 140, 0, 1)', backgroundColor: 'rgba(251, 140, 0, 0.1)', tension: 0.35, borderWidth: 2, fill: true, pointRadius: 3 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: {$chartMaintain},
+                    plugins: { title: { display: true, text: 'Consommation', font: { size: {$titleSize}, weight: '500' } }, legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { font: { size: 11 }, callback: function(v) { return v + ' m³'; } } }, x: { ticks: { font: { size: 11 }, maxRotation: 45 } } }
+                }
+            });
+            if (c4) charts.push(c4);
+            window._rsChartRegistry['{$prefix}'] = charts;
+    ";
 
-
-
+    if ($deferInit) {
+        echo "<script type=\"text/javascript\">window.rsInitCharts_{$prefix} = function() { {$initBody} };</script>";
+    } else {
+        echo "<script type=\"text/javascript\">(function() { {$initBody} })();</script>";
+    }
 }

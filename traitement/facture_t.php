@@ -490,9 +490,11 @@ class Facture_t
                                         <?php echo htmlspecialchars(Facture::formatFinancier((int) $data['impayer_cumule'])); ?>
                                     </td>
                                     <td class="text-end" style="color: #212529;">
-                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTva)); ?></td>
+                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTva)); ?>
+                                    </td>
                                     <td class="text-end" style="color: #212529;">
-                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTotal)); ?></td>
+                                        <?php echo htmlspecialchars(Facture::formatFinancier($montantTotal)); ?>
+                                    </td>
 
                                     <td class="pt-0 pb-0 text-end">
                                         <?php if ($editable): ?>
@@ -1822,10 +1824,8 @@ class Facture_t
                     </table>
 
                     <div class="text-center fs-">
-                        <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 690409882 ou le
-                            695794780</span><br>
-                        <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 656256504 ou le
-                            670905523</span><br>
+                        <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 670 02 90 33</span><br>
+                        <span>Pour vous abonner au service public de l’eau de Bassessa, contactez le 698 19 32 80</span><br>
                         <span class="fw-bold">NB : Les mauvais usages concernent la revente de l’eau au voisinage et les
                             branchements frauduleux.</span>
 

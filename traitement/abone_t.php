@@ -204,24 +204,52 @@ class Abone_t
         return 1;
     }
 
-    public static function afficheInfoAbone($id_abone)
+    /**
+     * @return array<string,mixed>|null
+     */
+    public static function loadAboneContext($id_abone)
     {
+        $id_abone = (int) $id_abone;
         $res = Abones::getAllAboneInfoByid($id_abone);
         if (!$res) {
+            return null;
+        }
+        $rows = $res->fetchAll();
+        if (!count($rows)) {
+            return null;
+        }
+        $data = $rows[0];
+        $idCompteur = (int) $data['id_compteur'];
+        return array(
+            'id_abone' => $id_abone,
+            'data' => $data,
+            'id_compteur' => $idCompteur,
+            'branchement' => BranchementAbonne::getByAboneId($id_abone),
+            'indexes' => self::getIndexesByCompteur($idCompteur),
+        );
+    }
+
+    private static function infoAboneShowSection($section, $name)
+    {
+        return $section === 'all' || $section === $name;
+    }
+
+    public static function afficheInfoAbone($id_abone, $section = 'all')
+    {
+        $ctx = self::loadAboneContext($id_abone);
+        if (!$ctx) {
             echo "<h1>Erreur !</h1>";
             return 0;
         }
-        $res = $res->fetchAll();
-        if (!count($res)) {
-            echo "<h1>Aucun Abone Retrouvé </h1/";
-            return 0;
-        }
-        $data = $res[0];
-        $idCompteur = $data['id_compteur'];
-        $branchement = BranchementAbonne::getByAboneId($id_abone);
+        $data = $ctx['data'];
+        $idCompteur = $ctx['id_compteur'];
+        $branchement = $ctx['branchement'];
+        $indexes = $ctx['indexes'];
+        $id_abone = $ctx['id_abone'];
         //var_dump($data);
         ?>
 
+        <?php if (self::infoAboneShowSection($section, 'header')): ?>
                 <div class="card shadow-sm mb-3">
                     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                         <div class="d-flex align-items-center flex-wrap gap-2">
@@ -239,9 +267,11 @@ class Abone_t
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
+                <?php if (self::infoAboneShowSection($section, 'branchement')): ?>
                 <div class="card mb-3">
                     <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                         <strong>Branchement</strong>
@@ -282,6 +312,10 @@ class Abone_t
                                     <div class="fw-bold"><?php echo htmlspecialchars($branchement['mois']); ?></div>
                                 </div>
                                 <div class="col-md-4">
+                                    <div class="small text-muted">Côté</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars(BranchementAbonne::libelleCote(isset($branchement['cote_reseau']) ? $branchement['cote_reseau'] : null), ENT_QUOTES, 'UTF-8'); ?></div>
+                                </div>
+                                <div class="col-md-4">
                                     <div class="small text-muted">Versement (FCFA)</div>
                                     <div class="fw-bold text-success">
                                         <?php echo number_format((int) $branchement['versement_fcfa'], 0, ',', ' '); ?>
@@ -293,8 +327,10 @@ class Abone_t
                         <?php endif; ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
-                <!-- Section Gestion des Index par Mois -->
+                <?php if (self::infoAboneShowSection($section, 'index')): ?>
+<!-- Section Gestion des Index par Mois -->
                 <div class="card mb-3">
                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                         <strong>Gestion des Index par Mois</strong>
@@ -468,7 +504,9 @@ class Abone_t
                         }
                     });
                 </script>
+                <?php endif; ?>
 
+                <?php if (self::infoAboneShowSection($section, 'fiche')): ?>
                 <table class="table table-bordered">
                     <h1 class="text-center text-dark my-3 h1"><?php echo $data['nom'] ?></h1>
                     <thead class="text-center">
@@ -594,8 +632,10 @@ class Abone_t
                         </tr>
                     </tbody>
                 </table>
+                <?php endif; ?>
 
-                <!-- Modal Créer branchement -->
+                                <?php if (self::infoAboneShowSection($section, 'modals') || self::infoAboneShowSection($section, 'branchement') || self::infoAboneShowSection($section, 'index') || self::infoAboneShowSection($section, 'fiche')): ?>
+<!-- Modal Créer branchement -->
                 <div class="modal fade" id="modalCreateBranchement" tabindex="-1" aria-hidden="true">
                     <div class="modal-dialog">
                         <div class="modal-content">
@@ -614,8 +654,16 @@ class Abone_t
                                             <input type="month" name="mois" class="form-control" required>
                                         </div>
                                         <div class="col-12">
+                                            <label class="form-label">Côté (abonnement au service)</label>
+                                            <select name="cote_reseau" class="form-select">
+                                                <option value="">— Non défini —</option>
+                                                <option value="reseau">Côté réseau (62 500 FCFA)</option>
+                                                <option value="oppose">Côté opposé (70 000 FCFA)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
                                             <label class="form-label">Montant</label>
-                                            <div class="input-group">
+                                                                                        <div class="input-group">
                                                 <input type="number" name="versement_fcfa" class="form-control" min="0"
                                                     step="500" placeholder="0" aria-label="Montant en FCFA">
                                                 <span class="input-group-text">FCFA</span>
@@ -670,6 +718,14 @@ class Abone_t
                                             <label class="form-label">Mois</label>
                                             <input type="month" name="mois" class="form-control"
                                                 value="<?php echo $branchement ? htmlspecialchars($branchement['mois']) : '' ?>">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Côté (abonnement au service)</label>
+                                            <select name="cote_reseau" class="form-select">
+                                                <option value="" <?php echo (!$branchement || empty($branchement['cote_reseau'])) ? 'selected' : ''; ?>>— Non défini —</option>
+                                                <option value="reseau" <?php echo ($branchement && $branchement['cote_reseau'] === 'reseau') ? 'selected' : ''; ?>>Côté réseau (62 500 FCFA)</option>
+                                                <option value="oppose" <?php echo ($branchement && $branchement['cote_reseau'] === 'oppose') ? 'selected' : ''; ?>>Côté opposé (70 000 FCFA)</option>
+                                            </select>
                                         </div>
                                         <div class="col-12">
                                             <label class="form-label">Montant</label>
@@ -832,6 +888,7 @@ class Abone_t
                         });
                     })();
                 </script>
+                <?php endif; ?>
                 <?php
                 return $idCompteur;
     }
@@ -1092,32 +1149,78 @@ class Abone_t
         //        unlink($fileName);
     }
 
-    public static function afficheInputRecouvrementAbone($id_compteur)
+    private static function recouvrementShowSection($section, $name)
     {
-        ob_start();
+        return $section === 'all' || $section === $name;
+    }
+
+    private static function prepareRecouvrementContext($id_compteur)
+    {
         $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
         $resultats = $req->fetchAll(PDO::FETCH_ASSOC);
 
-        // Préparer données pour graphiques
         $labels = array();
         $facturesArr = array();
         $versesArr = array();
-        $restantsArr = array();
-        $resteCumuleArr = array();
         $resteCumule = 0;
         foreach ($resultats as $row) {
-            $libMois = getLetterMonth($row['mois']);
-            $labels[] = $libMois;
+            $labels[] = getLetterMonth($row['mois']);
             $mt = isset($row['montant_total']) ? (float) $row['montant_total'] : 0;
             $mv = isset($row['montant_verse']) ? (float) $row['montant_verse'] : 0;
             $mr = isset($row['montant_restant']) ? (float) $row['montant_restant'] : max(0, $mt - $mv);
             $facturesArr[] = $mt;
             $versesArr[] = $mv;
-            $restantsArr[] = $mr;
             $resteCumule += $mr;
-            $resteCumuleArr[] = $resteCumule;
         }
 
+        include_once("donnees/mois_facturation.php");
+        $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
+        $moisActifData = $moisActif->fetchAll();
+        $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;
+        $moisActifLibelle = count($moisActifData) > 0 ? getLetterMonth($moisActifData[0]['mois']) : 'Aucun mois actif';
+
+        $penaliteActuelle = 0;
+        if ($moisActifId > 0) {
+            $penaliteReq = Manager::prepare_query("
+                SELECT f.penalite 
+                FROM facture f 
+                INNER JOIN indexes i ON f.id_indexes = i.id 
+                WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+            ", array($id_compteur, $moisActifId));
+            $penaliteData = $penaliteReq->fetchAll();
+            if (count($penaliteData) > 0) {
+                $penaliteActuelle = (int) $penaliteData[0]['penalite'];
+            }
+        }
+
+        $idAboneForTools = self::getAboneIdByCompteur($id_compteur);
+
+        return array(
+            'resultats' => $resultats,
+            'labels' => $labels,
+            'facturesArr' => $facturesArr,
+            'versesArr' => $versesArr,
+            'moisActifId' => $moisActifId,
+            'moisActifLibelle' => $moisActifLibelle,
+            'penaliteActuelle' => $penaliteActuelle,
+            'idAboneForTools' => $idAboneForTools,
+            'availableMonthsTools' => $idAboneForTools > 0 ? self::getAvailableMonthsForManualFacture($idAboneForTools) : array(),
+            'existingMonthsTools' => $idAboneForTools > 0 ? self::getExistingMonthsForAbone($idAboneForTools) : array(),
+            'lastKnownIndexTools' => self::getCompteurLastIndex($id_compteur),
+        );
+    }
+
+    public static function afficheInputRecouvrementAbone($id_compteur, $section = 'all')
+    {
+        ob_start();
+        $ctx = self::prepareRecouvrementContext($id_compteur);
+        $resultats = $ctx['resultats'];
+        $labels = $ctx['labels'];
+        $facturesArr = $ctx['facturesArr'];
+        $versesArr = $ctx['versesArr'];
+        $id_compteur = (int) $id_compteur;
+
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
         create_csv_exportation_button(
             $resultats,
             'facturation-abone-' . $_SESSION["libele_aep"] . '.csv',
@@ -1136,28 +1239,12 @@ class Abone_t
             echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
         }
         echo '</div></div>';
-
-        // Section pénalité
-        include_once("donnees/mois_facturation.php");
-        $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
-        $moisActifData = $moisActif->fetchAll();
-        $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;
-        $moisActifLibelle = count($moisActifData) > 0 ? getLetterMonth($moisActifData[0]['mois']) : 'Aucun mois actif';
-
-        // Récupérer la pénalité actuelle pour ce compteur et ce mois
-        $penaliteActuelle = 0;
-        if ($moisActifId > 0) {
-            $penaliteReq = Manager::prepare_query("
-                SELECT f.penalite 
-                FROM facture f 
-                INNER JOIN indexes i ON f.id_indexes = i.id 
-                WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
-            ", array($id_compteur, $moisActifId));
-            $penaliteData = $penaliteReq->fetchAll();
-            if (count($penaliteData) > 0) {
-                $penaliteActuelle = (int) $penaliteData[0]['penalite'];
-            }
         }
+
+        if (self::recouvrementShowSection($section, 'analyse_penalite')) {
+        $moisActifId = $ctx['moisActifId'];
+        $moisActifLibelle = $ctx['moisActifLibelle'];
+        $penaliteActuelle = $ctx['penaliteActuelle'];
 
         echo '<div class="card mb-3">
             <div class="card-header bg-warning text-dark">
@@ -1230,6 +1317,18 @@ class Abone_t
         echo '<script>
 (function(){
     window.addEventListener("load", function(){
+        if (typeof loadPenaltyAnalysis === "function") {
+            loadPenaltyAnalysis(' . $id_compteur . ');
+        }
+    });
+})();
+</script>';
+        }
+
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
+        echo '<script>
+(function(){
+    window.addEventListener("load", function(){
         try {
             if (!window.Chart) {
                 var cont = document.getElementById("abonne_bar_recouvrement");
@@ -1239,8 +1338,7 @@ class Abone_t
                     p.textContent = "Chart.js non chargé.";
                     cont.parentNode.appendChild(p);
                 }
-                return;
-            }
+            } else {
             var labels = ' . json_encode($labels) . ';
             var factures = ' . json_encode($facturesArr) . ';
             var verses = ' . json_encode($versesArr) . ';
@@ -1279,6 +1377,7 @@ class Abone_t
                     options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
                 });
             }
+            }
         } catch (e) {
             console.error(e);
             var root = document.getElementById("abonne_bar_recouvrement' . $id_compteur . '");
@@ -1289,13 +1388,13 @@ class Abone_t
                 root.parentNode.appendChild(p2);
             }
         }
+
     });
 })();
-
-// Charger automatiquement lanalyse de la penalite
-loadPenaltyAnalysis(' . $id_compteur . ');
 </script>';
+        }
 
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
         $sum = 0;
         // Affichage des résultats dans un tableau HTML
         if ($resultats) {
@@ -1358,13 +1457,14 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
             echo '</table>';
         }
+        }
 
-        $idAboneForTools = self::getAboneIdByCompteur($id_compteur);
+        if (self::recouvrementShowSection($section, 'factures')) {
+        $idAboneForTools = $ctx['idAboneForTools'];
+        $availableMonthsTools = $ctx['availableMonthsTools'];
+        $existingMonthsTools = $ctx['existingMonthsTools'];
+        $lastKnownIndexTools = $ctx['lastKnownIndexTools'];
         if ($idAboneForTools > 0) {
-            $availableMonthsTools = self::getAvailableMonthsForManualFacture($idAboneForTools);
-            $existingMonthsTools = self::getExistingMonthsForAbone($idAboneForTools);
-            $lastKnownIndexTools = self::getCompteurLastIndex($id_compteur);
-
             echo '<div class="card mb-3">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
                     <strong>Ajouter une facture manquante</strong>';
@@ -1474,6 +1574,7 @@ loadPenaltyAnalysis(' . $id_compteur . ');
             }
 
             echo '</div></div>';
+        }
         }
 
         return ob_get_clean();
@@ -2201,7 +2302,8 @@ loadPenaltyAnalysis(' . $id_compteur . ');
                 'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
                 'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
                 'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
-                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0,
+                'cote_reseau' => isset($_POST['cote_reseau']) ? $_POST['cote_reseau'] : null
             );
             if ($data['id_abone'] > 0)
                 BranchementAbonne::create($data);
@@ -2216,7 +2318,8 @@ loadPenaltyAnalysis(' . $id_compteur . ');
                 'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
                 'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
                 'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
-                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0,
+                'cote_reseau' => isset($_POST['cote_reseau']) ? $_POST['cote_reseau'] : null
             );
             if ($id_branchement > 0)
                 BranchementAbonne::update($id_branchement, $data);
