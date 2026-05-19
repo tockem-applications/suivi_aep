@@ -1157,8 +1157,12 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
         .container { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         h1 { color: #333; }
         .warning { background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 5px; margin: 20px 0; }
-        .btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px; }
-        .btn:hover { background: #0056b3; }
+        .btn { display: inline-block; padding: 10px 20px; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px; margin-right: 8px; }
+        .btn-primary { background: #007bff; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .actions { margin-top: 16px; }
         pre { background: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
     </style>
 </head>
@@ -1181,7 +1185,10 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
             <li><strong>Type de distribution AEP</strong> - Champ type_distribution dans aep (RDS / RDC) + index</li>
         </ul>
         <p><strong>Note :</strong> Le script est idempotent, vous pouvez l'exécuter plusieurs fois sans risque.</p>
-        <a href='?run_update=1' class='btn'>Lancer la migration</a>
+        <div class='actions'>
+            <a href='../../index.php' class='btn btn-secondary'>← Retour à l'application</a>
+            <a href='?run_update=1' class='btn btn-primary'>Lancer la migration</a>
+        </div>
     </div>
 </body>
 </html>";

@@ -154,6 +154,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                     clefs</a></li>
                             <li><a class="dropdown-item" href="?page=register  "><i
                                         class="bi bi-person-plus me-2"></i>Enregistrement</a></li>
+                            <li><a class="dropdown-item" href="donnees/bd/update_database_9_to_10.php"><i
+                                        class="bi bi-database-up me-2"></i>Migration BDD 9 → 10</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
