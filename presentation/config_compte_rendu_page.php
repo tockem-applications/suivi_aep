@@ -105,7 +105,7 @@ $activite_redevances = isset($configs_by_type['redevances']['activite_associee']
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="text-primary fw-bold">Configuration du Compte Rendu Financier</h2>
         <div>
-            <a href="?page=compte_rendu_tableau" class="btn btn-secondary me-2">
+            <a href="?page=nouveau_compte_exploitation" class="btn btn-secondary me-2">
                 <i class="fas fa-arrow-left me-2"></i>Retour au compte d'exploitation
             </a>
             <a href="?page=compte_rendu_financier" class="btn btn-outline-secondary">

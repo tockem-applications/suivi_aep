@@ -186,38 +186,8 @@ function display_recouvrement_v2()
         }
     }
 
-    $filteredFactures = array();
-    foreach ($factures as $data) {
-        $montantTotal = isset($data['total_cumule']) ? $data['total_cumule'] : 0;
-        $montantRestant = isset($data['restant_cumule']) ? $data['restant_cumule'] : 0;
-
-        $shouldInclude = true;
-        switch ($selectOption) {
-            case 'insolvable':
-                // Insolvables : reste positif ET égal au total (aucun paiement effectué)
-                $shouldInclude = ($montantRestant > 0 && $montantRestant == $montantTotal);
-                break;
-            case 'en_regle':
-                $shouldInclude = ($montantRestant <= 0);
-                break;
-            case 'pas_en_regle':
-                $shouldInclude = ($montantRestant > 0);
-                break;
-            case 'solvable':
-                $shouldInclude = ($montantRestant == 0 && $montantTotal > 0);
-                break;
-            case 'anticipation':
-                $shouldInclude = ($montantRestant < 0);
-                break;
-            case 'paiement_partiel':
-                $shouldInclude = ($montantRestant > 0 && $montantRestant < $montantTotal);
-                break;
-        }
-
-        if ($shouldInclude) {
-            $filteredFactures[] = $data;
-        }
-    }
+    $filteredFactures = Facture_t::filterRecouvrementFacturesForDisplay($factures, $selectOption);
+    $recTotals = Facture_t::computeRecouvrementTotalsFromFactures($filteredFactures);
 
     // Construire le titre dynamique
     $moisData = MoisFacturation::getOneById($idMois)->fetch();
@@ -452,6 +422,7 @@ function display_recouvrement_v2()
                             if (empty($filteredFactures)) {
                                 echo '<tr><td colspan="11" class="text-center text-muted py-4">Aucune facture trouvée</td></tr>';
                             } else {
+                                echo Facture_t::renderRecouvrementTotalsRow($recTotals, 'TOTAL');
                                 foreach ($filteredFactures as $data) {
                                     $consoMois = Facture::calculeConso((float) $data['nouvel_index'], (float) $data['ancien_index']);
                                     $montantVerse = (int) ($data['montant_verse'] + 0.000000001);
@@ -555,6 +526,7 @@ function display_recouvrement_v2()
                                     </tr>
                                     <?php
                                 }
+                                echo Facture_t::renderRecouvrementTotalsRow($recTotals, 'TOTAL');
                             }
                             ?>
                         </tbody>
@@ -627,6 +599,14 @@ function display_recouvrement_v2()
         .table .en-regle {
             background-color: #0dcaf0 !important;
             color: #000 !important;
+        }
+
+        .table tr.recouvrement-totals-row td {
+            background-color: #fff3cd !important;
+            border-top: 2px solid #ffc107;
+            border-bottom: 2px solid #ffc107;
+            font-weight: 700;
+            color: #212529 !important;
         }
     </style>
 

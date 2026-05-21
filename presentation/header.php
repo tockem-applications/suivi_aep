@@ -99,12 +99,12 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                         <ul class="dropdown-menu dropdown-menu-dark shadow-sm" aria-labelledby="navbarDropdownFinances">
                             <li><a class="dropdown-item" href="?page=transaction"><i
                                         class="bi bi-arrow-left-right me-2"></i>Entrée/Sortie</a></li>
-                            <li><a class="dropdown-item" href="?page=compte_rendu_financier"><i
-                                        class="bi bi-file-earmark-text me-2"></i>Compte Rendu Financier</a></li>
-                            <li><a class="dropdown-item" href="?page=compte_rendu_tableau"><i
-                                        class="bi bi-table me-2"></i>Compte d'Exploitation (Tableau)</a></li>
+                            <!-- <li><a class="dropdown-item" href="?page=compte_rendu_financier"><i
+                                        class="bi bi-file-earmark-text me-2"></i>Compte Rendu Financier</a></li> -->
+                            <!-- <li><a class="dropdown-item" href="?page=compte_rendu_tableau"><i
+                                        class="bi bi-table me-2"></i>Compte d'Exploitation (Tableau)</a></li> -->
                             <li><a class="dropdown-item" href="?page=nouveau_compte_exploitation"><i
-                                        class="bi bi-journal-plus me-2"></i>Nouveau compte d'exploitation</a></li>
+                                        class="bi bi-journal-text me-2"></i>Compte d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=synthese_compte_exploitation"><i
                                         class="bi bi-columns-gap me-2"></i>Synthèse compte d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=analyse_financiere"><i
@@ -130,8 +130,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             </li>
                             <li><a class="dropdown-item" href="?page=redevance"><i
                                         class="bi bi-cash-coin me-2"></i>Redevances</a></li>
-                            <li><a class="dropdown-item" href="?page=versement  "><i
-                                        class="bi bi-wallet2 me-2"></i>Versements</a></li>
+                            <!-- <li><a class="dropdown-item" href="?page=versement"><i
+                                        class="bi bi-wallet2 me-2"></i>Versements</a></li> -->
                         </ul>
                     </li>
 

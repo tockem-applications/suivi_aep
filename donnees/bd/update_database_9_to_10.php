@@ -12,6 +12,7 @@
  * 3. Redevances améliorées (champs base_calcul, type_calcul, montant_par_m3, est_sortie)
  * 4. Figer les tarifs différenciés (champ id_tarif_differencie dans indexes)
  * 5. Type de distribution AEP (champ type_distribution RDS/RDC sur aep)
+ * 6. Ordre d'affichage des catégories flux manuels (champ ordre_affichage sur categorie_flux_manuel)
  * 
  * Pour ajouter une nouvelle migration:
  * 1. Ajoutez le code de migration dans une nouvelle section PARTIE X
@@ -815,6 +816,27 @@ class DatabaseUpdater9To10
                 echo "   ✓ Champ activite_associee existe déjà\n";
             }
 
+            if (!self::columnExists('categorie_flux_manuel', 'ordre_affichage')) {
+                echo "   → Ajout du champ ordre_affichage...\n";
+                try {
+                    $bd->exec("
+                        ALTER TABLE `categorie_flux_manuel`
+                        ADD COLUMN `ordre_affichage` INT(11) NOT NULL DEFAULT 0
+                        COMMENT 'Ordre d''affichage dans les comptes d''exploitation'
+                    ");
+                    $bd->exec("
+                        UPDATE categorie_flux_manuel
+                        SET ordre_affichage = id * 10
+                        WHERE ordre_affichage = 0
+                    ");
+                    echo "   ✓ Champ ordre_affichage ajouté\n";
+                } catch (Exception $e) {
+                    echo "   ✗ Erreur ordre_affichage : " . $e->getMessage() . "\n";
+                }
+            } else {
+                echo "   ✓ Champ ordre_affichage existe déjà\n";
+            }
+
             // 8.2. Ajouter code_budgetaire et activite_associee à config_compte_rendu_financier
             echo "\n8.2. Vérification des champs code_budgetaire et activite_associee dans config_compte_rendu_financier...\n";
             if (!self::columnExists('config_compte_rendu_financier', 'code_budgetaire')) {
@@ -1113,7 +1135,7 @@ class DatabaseUpdater9To10
             echo "- Table categorie_flux_manuel créée pour catégoriser les flux manuels\n";
             echo "- Champ id_categorie_flux_manuel ajouté à flux_financier\n";
             echo "- Champ est_mois_base ajouté à mois_facturation\n";
-            echo "- Champs code_budgetaire et activite_associee ajoutés aux catégories\n";
+            echo "- Champs code_budgetaire, activite_associee et ordre_affichage ajoutés aux catégories\n";
             echo "- Vues mises à jour\n";
             echo "- Base de données et tables converties en UTF-8\n";
             echo "- Données mal encodées corrigées\n";
@@ -1183,6 +1205,7 @@ if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_updat
             <li><strong>Hiérarchie des réseaux</strong> - Champ id_reseau_parent et index pour structurer l'arbre des réseaux</li>
             <li><strong>Types de compteurs réseau</strong> - Champ type_compteur dans compteur_reseau (distribution par défaut)</li>
             <li><strong>Type de distribution AEP</strong> - Champ type_distribution dans aep (RDS / RDC) + index</li>
+            <li><strong>Ordre catégories flux</strong> - Champ ordre_affichage sur categorie_flux_manuel (tri compte d'exploitation)</li>
         </ul>
         <p><strong>Note :</strong> Le script est idempotent, vous pouvez l'exécuter plusieurs fois sans risque.</p>
         <div class='actions'>

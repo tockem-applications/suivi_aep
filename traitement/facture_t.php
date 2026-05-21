@@ -345,15 +345,119 @@ class Facture_t
         return ob_get_clean();
     }
 
+    /**
+     * Filtre les factures affichées selon l'option de recouvrement.
+     */
+    public static function filterRecouvrementFacturesForDisplay(array $factures, $selected_option)
+    {
+        $filtered = array();
+        foreach ($factures as $data) {
+            $montantTotal = isset($data['total_cumule']) ? (float) $data['total_cumule'] : 0.0;
+            $montantRestant = isset($data['restant_cumule']) ? (float) $data['restant_cumule'] : 0.0;
+            $include = true;
+
+            if ($selected_option === 'insolvable') {
+                $include = ($montantRestant > 0 && $montantRestant == $montantTotal);
+            } elseif ($selected_option === 'en_regle') {
+                $include = ($montantRestant <= 0);
+            } elseif ($selected_option === 'pas_en_regle') {
+                $include = ($montantRestant > 0);
+            } elseif ($selected_option === 'solvable') {
+                $include = ($montantRestant == 0 && $montantTotal > 0);
+            } elseif ($selected_option === 'anticipation') {
+                $include = ($montantRestant < 0);
+            } elseif ($selected_option === 'paiement_partiel') {
+                $include = ($montantRestant > 0 && $montantRestant < $montantTotal);
+            }
+
+            if ($include) {
+                $filtered[] = $data;
+            }
+        }
+        return $filtered;
+    }
+
+    /**
+     * Sommes des colonnes numériques du tableau recouvrement.
+     */
+    public static function computeRecouvrementTotalsFromFactures(array $factures)
+    {
+        $totals = array(
+            'count' => 0,
+            'conso' => 0.0,
+            'penalite' => 0.0,
+            'impaye' => 0.0,
+            'facture' => 0.0,
+            'total' => 0.0,
+            'versement' => 0.0,
+            'reste' => 0.0,
+        );
+
+        foreach ($factures as $data) {
+            $totals['count']++;
+            $totals['conso'] += Facture::calculeConso((float) $data['nouvel_index'], (float) $data['ancien_index']);
+            $totals['penalite'] += (float) (isset($data['penalite']) ? $data['penalite'] : 0);
+            if (isset($data['impayer_cumule'])) {
+                $totals['impaye'] += (float) $data['impayer_cumule'];
+            } else {
+                $totals['impaye'] += (float) (isset($data['impaye']) ? $data['impaye'] : 0);
+            }
+            if (isset($data['montant_conso_tva'])) {
+                $montantTva = (float) $data['montant_conso_tva'];
+            } else {
+                $montantTva = (float) Facture::calculeMontantConsoTva(
+                    $data['nouvel_index'],
+                    $data['ancien_index'],
+                    $data['prix_tva'],
+                    $data['prix_entretient_compteur'],
+                    $data['prix_metre_cube_eau']
+                );
+            }
+            $totals['facture'] += (int) ($montantTva + 0.000000001);
+            $totals['total'] += (float) (isset($data['total_cumule']) ? $data['total_cumule'] : 0);
+            $totals['versement'] += (int) ((isset($data['montant_verse']) ? $data['montant_verse'] : 0) + 0.000000001);
+            $totals['reste'] += (float) (isset($data['restant_cumule']) ? $data['restant_cumule'] : 0);
+        }
+
+        return $totals;
+    }
+
+    /**
+     * Ligne de totaux (début ou fin de tableau recouvrement).
+     */
+    public static function renderRecouvrementTotalsRow(array $totals, $label = 'TOTAL')
+    {
+        ob_start();
+        ?>
+        <tr class="recouvrement-totals-row table-warning fw-bold">
+            <td colspan="2"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
+                <span class="badge bg-dark ms-1"><?php echo (int) $totals['count']; ?></span>
+            </td>
+            <td class="text-center text-muted">—</td>
+            <td class="text-center"><?php echo number_format($totals['conso'], 2, ',', ' '); ?></td>
+            <td class="text-center text-muted">—</td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['penalite'])); ?></td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['impaye'])); ?></td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['facture'])); ?></td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['total'])); ?></td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['versement'])); ?></td>
+            <td class="text-end"><?php echo htmlspecialchars(Facture::formatFinancier((int) $totals['reste'])); ?></td>
+        </tr>
+        <?php
+        return ob_get_clean();
+    }
+
     private static function generateTableHtml2($factures, $idReseau, $editable, $selected_option)
     {
-        //        var_dump($bon_payeurs, $avanceur, $insolvable);
+        $filteredFactures = self::filterRecouvrementFacturesForDisplay($factures, $selected_option);
+        $recTotals = self::computeRecouvrementTotalsFromFactures($filteredFactures);
+
         ob_start();
         ?>
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h4 class="mb-0"><i class="bi bi-people"></i> Recouvrent
-                    <span class="badge bg-light text-dark ms-2"><?php echo count($factures); ?></span>
+                    <span class="badge bg-light text-dark ms-2"><?php echo count($filteredFactures); ?></span>
                 </h4>
             </div>
             <div class="card-body p-0">
@@ -375,19 +479,11 @@ class Facture_t
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($factures as $data) {
-                                $insolvable = $selected_option == 'insolvable';
-                                $partiel = $selected_option == 'paiement_partiel';
-                                $solvable = $selected_option == 'solvable';
-                                $anticipation = $selected_option == 'anticipation';
-                                $en_regle = $selected_option == 'en_regle';
-                                $pas_en_regle = $selected_option == 'pas_en_regle';
-
-                                //                            if ($idReseau !== 0 && $data['id_reseau'] !== $idReseau) {
-////                                var_dump("cherie");
-//                                continue;
-//                            }
-                    
+                            <?php
+                            if (!empty($filteredFactures)) {
+                                echo self::renderRecouvrementTotalsRow($recTotals, 'TOTAL');
+                            }
+                            foreach ($filteredFactures as $data) {
                                 $consoMois = Facture::calculeConso((float) $data['nouvel_index'], (float) $data['ancien_index']);
                                 $montantConso = $data['consommation'];
                                 $montantVerse = (int) ($data['montant_verse'] + 0.000000001);
@@ -399,45 +495,16 @@ class Facture_t
 
 
                                 $categorie_payeur = '';
-                                if ($montantRestant < 0)
+                                if ($montantRestant < 0) {
                                     $categorie_payeur = 'anticipation';
-                                elseif ($montantRestant > 0 && $montantRestant < $montantTotal)
+                                } elseif ($montantRestant > 0 && $montantRestant < $montantTotal) {
                                     $categorie_payeur = 'paiement-partiel';
-                                elseif ($montantRestant == $montantTotal && $montantRestant != 0)
+                                } elseif ($montantRestant == $montantTotal && $montantRestant != 0) {
                                     $categorie_payeur = 'insolvables';
-                                elseif ($montantRestant == 0)
+                                } elseif ($montantRestant == 0) {
                                     $categorie_payeur = 'solvables';
-                                //                    if($montantRestant == 0)
-//                        $categorie_payeur = '';
-                    
+                                }
 
-                                //                             var_dump(1);
-//                             echo "<tr> bobobo</tr>";
-                                if ($insolvable && $montantRestant != $montantTotal) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                if ($en_regle && $montantRestant > 0) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                if ($pas_en_regle && $montantRestant <= 0) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                if ($solvable && $montantRestant != 0) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                if ($anticipation && $montantRestant >= 0) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                if ($partiel && !($montantRestant > 0 && $montantRestant < $montantTotal)) {
-                                    continue;
-                                }
-                                //                             var_dump(1);
-                                //                    $disabled = ($montantFacture === $montantVerse || (int)$data['impaye'] > 0) ? 'disabled' : '';
                                 $disabled = '';
                                 //                    $placeholder = (int)$data['impaye'] > 0 || false ? 'Veuillez verser les impayés' : '';
                                 $placeholder = '';
@@ -521,7 +588,12 @@ class Facture_t
                                     </td>
                                     <!--                        <td><a href="#" class="btn btn-info mb-0">Valider</a></td>-->
                                 </tr>
-                            <?php } ?>
+                            <?php
+                            }
+                            if (!empty($filteredFactures)) {
+                                echo self::renderRecouvrementTotalsRow($recTotals, 'TOTAL');
+                            }
+                            ?>
                         </tbody>
                     </table>
                 </div>
@@ -590,6 +662,13 @@ class Facture_t
 
             .table_searching .text-muted {
                 color: #6c757d !important;
+            }
+
+            .table_searching tr.recouvrement-totals-row td {
+                background-color: #fff3cd !important;
+                border-top: 2px solid #ffc107;
+                border-bottom: 2px solid #ffc107;
+                font-weight: 700;
             }
         </style>
 
