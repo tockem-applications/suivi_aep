@@ -453,4 +453,251 @@ class CategorieFluxManuel extends Manager
         }
         return true;
     }
+
+    /**
+     * Détail catégorie : vérifie le périmètre AEP session.
+     *
+     * @return array|null
+     */
+    public static function getDetail($id_categorie, $id_aep_session)
+    {
+        $id_categorie = (int) $id_categorie;
+        $id_aep_session = (int) $id_aep_session;
+        if ($id_categorie <= 0) {
+            return null;
+        }
+        $cat = self::getById($id_categorie);
+        if (!$cat) {
+            return null;
+        }
+        if ($id_aep_session > 0) {
+            if (!empty($cat['id_aep']) && (int) $cat['id_aep'] !== $id_aep_session) {
+                return null;
+            }
+        } else {
+            if (!empty($cat['id_aep'])) {
+                return null;
+            }
+        }
+
+        $code = isset($cat['code_budgetaire']) ? $cat['code_budgetaire'] : '';
+        $type = isset($cat['type_flux']) ? $cat['type_flux'] : '';
+
+        return array(
+            'categorie' => $cat,
+            'bilan' => self::getBilanFinancier($id_categorie),
+            'transactions' => self::getTransactionsByCategorie($id_categorie),
+            'duplicate_aeps' => self::getAepsPourDuplication($id_categorie),
+            'nb_meme_code' => self::countByCodeBudgetaire($code, $type),
+        );
+    }
+
+    /**
+     * Bilan des flux rattachés à la catégorie.
+     */
+    public static function getBilanFinancier($id_categorie)
+    {
+        $id_categorie = (int) $id_categorie;
+        $totaux = self::prepare_query(
+            "SELECT
+                COALESCE(SUM(CASE WHEN type = 'entree' THEN prix ELSE 0 END), 0) AS total_entrees,
+                COALESCE(SUM(CASE WHEN type = 'sortie' THEN prix ELSE 0 END), 0) AS total_sorties,
+                COUNT(*) AS nb_operations
+             FROM flux_financier
+             WHERE id_categorie_flux_manuel = ?",
+            array($id_categorie)
+        )->fetch(PDO::FETCH_ASSOC);
+
+        $par_mois = self::prepare_query(
+            "SELECT mois,
+                COALESCE(SUM(CASE WHEN type = 'entree' THEN prix ELSE 0 END), 0) AS entrees,
+                COALESCE(SUM(CASE WHEN type = 'sortie' THEN prix ELSE 0 END), 0) AS sorties,
+                COUNT(*) AS nb
+             FROM flux_financier
+             WHERE id_categorie_flux_manuel = ?
+             GROUP BY mois
+             ORDER BY mois DESC
+             LIMIT 36",
+            array($id_categorie)
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $entrees = isset($totaux['total_entrees']) ? (float) $totaux['total_entrees'] : 0.0;
+        $sorties = isset($totaux['total_sorties']) ? (float) $totaux['total_sorties'] : 0.0;
+
+        return array(
+            'total_entrees' => $entrees,
+            'total_sorties' => $sorties,
+            'solde' => $entrees - $sorties,
+            'nb_operations' => isset($totaux['nb_operations']) ? (int) $totaux['nb_operations'] : 0,
+            'par_mois' => $par_mois,
+        );
+    }
+
+    /**
+     * Transactions flux_financier liées à la catégorie.
+     */
+    public static function getTransactionsByCategorie($id_categorie, $limit = 300)
+    {
+        $id_categorie = (int) $id_categorie;
+        $limit = (int) $limit;
+        if ($limit <= 0) {
+            $limit = 300;
+        }
+        return self::prepare_query(
+            "SELECT id, date, mois, libele, prix, type, description
+             FROM flux_financier
+             WHERE id_categorie_flux_manuel = ?
+             ORDER BY date DESC, id DESC
+             LIMIT " . $limit,
+            array($id_categorie)
+        )->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Nombre de catégories (tous AEP) avec même code + type.
+     */
+    public static function countByCodeBudgetaire($code_budgetaire, $type_flux)
+    {
+        if ($code_budgetaire === null || $code_budgetaire === '') {
+            return 0;
+        }
+        $row = self::prepare_query(
+            "SELECT COUNT(*) AS n FROM categorie_flux_manuel
+             WHERE code_budgetaire = ? AND type_flux = ?",
+            array($code_budgetaire, $type_flux)
+        )->fetch(PDO::FETCH_ASSOC);
+        return $row ? (int) $row['n'] : 0;
+    }
+
+    /**
+     * Liste des AEP pour duplication (case grisée si code déjà présent).
+     */
+    public static function getAepsPourDuplication($id_categorie_source)
+    {
+        $src = self::getById((int) $id_categorie_source);
+        if (!$src || empty($src['code_budgetaire'])) {
+            return array();
+        }
+        $code = $src['code_budgetaire'];
+        $type = $src['type_flux'];
+        $source_aep = isset($src['id_aep']) ? (int) $src['id_aep'] : 0;
+
+        $aeps = self::prepare_query(
+            "SELECT id, libele FROM aep ORDER BY libele ASC",
+            array()
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $out = array();
+        foreach ($aeps as $aep) {
+            $aid = (int) $aep['id'];
+            $deja = self::existsOnAep($aid, $code, $type);
+            if ($aid === $source_aep) {
+                $deja = true;
+            }
+            $out[] = array(
+                'id' => $aid,
+                'libele' => $aep['libele'],
+                'deja_presente' => $deja,
+            );
+        }
+        return $out;
+    }
+
+    /**
+     * Duplique une catégorie vers plusieurs AEP cibles.
+     *
+     * @return array{created: int, skipped: int, errors: int}
+     */
+    public static function duplicateCategoryToAeps($id_categorie_source, array $target_aep_ids)
+    {
+        $src = self::getById((int) $id_categorie_source);
+        $created = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        if (!$src || empty($src['code_budgetaire'])) {
+            return array('created' => 0, 'skipped' => 0, 'errors' => 1);
+        }
+
+        $source_aep = isset($src['id_aep']) ? (int) $src['id_aep'] : 0;
+
+        foreach ($target_aep_ids as $raw) {
+            $id_aep = (int) $raw;
+            if ($id_aep <= 0) {
+                continue;
+            }
+            if ($id_aep === $source_aep) {
+                $skipped++;
+                continue;
+            }
+            if (self::existsOnAep($id_aep, $src['code_budgetaire'], $src['type_flux'])) {
+                $skipped++;
+                continue;
+            }
+
+            $categorie = new CategorieFluxManuel();
+            $categorie->code_budgetaire = $src['code_budgetaire'];
+            $categorie->nom = $src['nom'];
+            $categorie->type_flux = $src['type_flux'];
+            $categorie->description = isset($src['description']) ? $src['description'] : '';
+            $categorie->est_actif = isset($src['est_actif']) ? (int) $src['est_actif'] : 1;
+            $categorie->activite_associee = isset($src['activite_associee']) ? $src['activite_associee'] : 'autre';
+            $categorie->ordre_affichage = self::getProchainOrdreAffichage($id_aep, $src['type_flux']);
+            $categorie->id_aep = $id_aep;
+            $categorie->ajouter();
+            $created++;
+        }
+
+        return array('created' => $created, 'skipped' => $skipped, 'errors' => $errors);
+    }
+
+    /**
+     * Applique les champs d'une catégorie (déjà enregistrée) à toutes les lignes même code + type (tous AEP).
+     *
+     * @param string|null $old_code_budgetaire Code avant modification (si renommé)
+     * @param string|null $old_type_flux Type avant modification
+     * @return array{updated: int}
+     */
+    public static function updateAllAepsWithSameCode($id_source, $old_code_budgetaire = null, $old_type_flux = null)
+    {
+        $src = self::getById((int) $id_source);
+        if (!$src || empty($src['code_budgetaire'])) {
+            return array('updated' => 0);
+        }
+
+        $code_key = ($old_code_budgetaire !== null && $old_code_budgetaire !== '')
+            ? $old_code_budgetaire
+            : $src['code_budgetaire'];
+        $type_key = ($old_type_flux !== null && $old_type_flux !== '')
+            ? $old_type_flux
+            : $src['type_flux'];
+
+        $categorie = new CategorieFluxManuel();
+        $categorie->nom = $src['nom'];
+        $categorie->type_flux = $src['type_flux'];
+        $categorie->code_budgetaire = $src['code_budgetaire'];
+        $categorie->description = isset($src['description']) ? $src['description'] : '';
+        $categorie->est_actif = isset($src['est_actif']) ? (int) $src['est_actif'] : 1;
+        $categorie->activite_associee = isset($src['activite_associee']) ? $src['activite_associee'] : 'autre';
+
+        $rows = self::prepare_query(
+            "SELECT id FROM categorie_flux_manuel
+             WHERE code_budgetaire = ? AND type_flux = ?",
+            array($code_key, $type_key)
+        )->fetchAll(PDO::FETCH_ASSOC);
+
+        $updated = 0;
+        foreach ($rows as $row) {
+            $categorie->id = (int) $row['id'];
+            $categorie->code_budgetaire = $src['code_budgetaire'];
+            $ex = self::getById($categorie->id);
+            $categorie->ordre_affichage = $ex && isset($ex['ordre_affichage'])
+                ? (int) $ex['ordre_affichage'] : 0;
+            $categorie->id_aep = $ex && isset($ex['id_aep']) ? $ex['id_aep'] : null;
+            $categorie->update();
+            $updated++;
+        }
+
+        return array('updated' => $updated);
+    }
 }

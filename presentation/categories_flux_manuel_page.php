@@ -4,142 +4,188 @@
 
 CategorieFluxManuel::ensureOrdreAffichageColumn();
 
-// Gérer les actions CRUD
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        $action = $_POST['action'];
-        $id_aep = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
-        
-        if ($action === 'create') {
-            $categorie = new CategorieFluxManuel();
-            $categorie->code_budgetaire = isset($_POST['code_budgetaire']) && !empty($_POST['code_budgetaire']) ? $_POST['code_budgetaire'] : null;
-            if (empty($categorie->code_budgetaire)) {
-                header('Location: ?page=categories_flux_manuel&error=code_obligatoire');
-                exit;
-            }
-            $categorie->nom = $_POST['nom'];
-            $categorie->type_flux = $_POST['type_flux'];
-            $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
-            $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
-            $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
-            $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
-            $categorie->ordre_affichage = CategorieFluxManuel::resolveOrdreAffichagePourCreation(
-                $ordre_post,
-                $id_aep,
-                $categorie->type_flux
-            );
-            $categorie->id_aep = $id_aep; // NULL pour global
-            $categorie->ajouter();
-            header('Location: ?page=categories_flux_manuel&success=1');
-            exit;
-        } elseif ($action === 'update') {
-            $categorie = new CategorieFluxManuel();
-            $categorie->id = $_POST['id'];
-            $categorie->code_budgetaire = isset($_POST['code_budgetaire']) && !empty($_POST['code_budgetaire']) ? $_POST['code_budgetaire'] : null;
-            if (empty($categorie->code_budgetaire)) {
-                header('Location: ?page=categories_flux_manuel&error=code_obligatoire');
-                exit;
-            }
-            $categorie->nom = $_POST['nom'];
-            $categorie->type_flux = $_POST['type_flux'];
-            $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
-            $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
-            $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
-            $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
-            if ($ordre_post !== '' && (int) $ordre_post > 0) {
-                $categorie->ordre_affichage = (int) $ordre_post;
-            } else {
-                $existant = CategorieFluxManuel::getById($categorie->id);
-                $categorie->ordre_affichage = $existant && isset($existant['ordre_affichage'])
-                    ? (int) $existant['ordre_affichage'] : 0;
-            }
-            $categorie->id_aep = $id_aep;
-            $categorie->update();
-            header('Location: ?page=categories_flux_manuel&success=1');
-            exit;
-        } elseif ($action === 'delete') {
-            $categorie = new CategorieFluxManuel();
-            $categorie->delete($_POST['id']);
-            header('Location: ?page=categories_flux_manuel&success=1');
-            exit;
-        } elseif ($action === 'duplicate') {
-            $ids = isset($_POST['categorie_ids']) && is_array($_POST['categorie_ids'])
-                ? $_POST['categorie_ids'] : array();
-            if ($id_aep <= 0) {
-                header('Location: index.php?page=categories_flux_manuel&error=no_aep');
-                exit;
-            }
-            if (empty($ids)) {
-                header('Location: index.php?page=categories_flux_manuel&error=duplicate_vide');
-                exit;
-            }
-            $dup = CategorieFluxManuel::duplicateCategoriesToAep($ids, $id_aep);
-            header(
-                'Location: index.php?page=categories_flux_manuel&success=duplicate'
-                . '&created=' . (int) $dup['created']
-                . '&skipped=' . (int) $dup['skipped']
-                . '&errors=' . (int) $dup['errors']
-            );
-            exit;
-        } elseif ($action === 'reorder_ordre') {
-            $type_flux = isset($_POST['type_flux']) ? $_POST['type_flux'] : '';
-            $ids = isset($_POST['categorie_ids']) && is_array($_POST['categorie_ids'])
-                ? $_POST['categorie_ids'] : array();
-            $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
-                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-            $ok = CategorieFluxManuel::reorderOrdreAffichage($ids, $type_flux, $id_aep);
-            if ($is_ajax) {
-                header('Content-Type: application/json; charset=utf-8');
-                $ordres = array();
-                if ($ok) {
-                    $ordre = 10;
-                    foreach ($ids as $raw_id) {
-                        $ordres[(int) $raw_id] = $ordre;
-                        $ordre += 10;
-                    }
+$id_aep = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
+$libele_aep = isset($_SESSION['libele_aep']) ? $_SESSION['libele_aep'] : '';
+$cfm_form_action = 'index.php?page=categories_flux_manuel';
+$cfm_ajax_reorder_url = 'traitement/categorie_flux_ordre_t.php';
+
+function cfm_redirect($query = array())
+{
+    $base = array('page' => 'categories_flux_manuel');
+    $q = array_merge($base, $query);
+    $parts = array();
+    foreach ($q as $k => $v) {
+        if ($v === null || $v === '') {
+            continue;
+        }
+        $parts[] = rawurlencode($k) . '=' . rawurlencode($v);
+    }
+    header('Location: index.php?' . implode('&', $parts));
+    exit;
+}
+
+function cfm_activite_short($activite)
+{
+    if ($activite === 'vente_eau') {
+        return 'VE';
+    }
+    if ($activite === 'branchements') {
+        return 'AS';
+    }
+    return '—';
+}
+
+function cfm_fmt_fcfa($n)
+{
+    return number_format((float) $n, 0, ',', ' ');
+}
+
+// POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    $action = $_POST['action'];
+    $redirect_cat = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+
+    if ($action === 'create') {
+        $categorie = new CategorieFluxManuel();
+        $categorie->code_budgetaire = isset($_POST['code_budgetaire']) && !empty($_POST['code_budgetaire']) ? $_POST['code_budgetaire'] : null;
+        if (empty($categorie->code_budgetaire)) {
+            cfm_redirect(array('error' => 'code_obligatoire'));
+        }
+        $categorie->nom = $_POST['nom'];
+        $categorie->type_flux = $_POST['type_flux'];
+        $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
+        $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
+        $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
+        $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
+        $categorie->ordre_affichage = CategorieFluxManuel::resolveOrdreAffichagePourCreation(
+            $ordre_post,
+            $id_aep,
+            $categorie->type_flux
+        );
+        $categorie->id_aep = $id_aep;
+        $categorie->ajouter();
+        $new_id = (int) $categorie->id;
+        cfm_redirect(array('success' => '1', 'cat' => $new_id > 0 ? $new_id : null));
+    }
+
+    if ($action === 'update' || $action === 'update_all_aep') {
+        $categorie = new CategorieFluxManuel();
+        $categorie->id = (int) $_POST['id'];
+        $existant = CategorieFluxManuel::getById($categorie->id);
+        $old_code = $existant && isset($existant['code_budgetaire']) ? $existant['code_budgetaire'] : '';
+        $old_type = $existant && isset($existant['type_flux']) ? $existant['type_flux'] : '';
+
+        $categorie->code_budgetaire = isset($_POST['code_budgetaire']) && !empty($_POST['code_budgetaire']) ? $_POST['code_budgetaire'] : null;
+        if (empty($categorie->code_budgetaire)) {
+            cfm_redirect(array('error' => 'code_obligatoire', 'cat' => $categorie->id));
+        }
+        $categorie->nom = $_POST['nom'];
+        $categorie->type_flux = $_POST['type_flux'];
+        $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
+        $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
+        $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
+        $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
+        if ($ordre_post !== '' && (int) $ordre_post > 0) {
+            $categorie->ordre_affichage = (int) $ordre_post;
+        } else {
+            $categorie->ordre_affichage = $existant && isset($existant['ordre_affichage'])
+                ? (int) $existant['ordre_affichage'] : 0;
+        }
+        $categorie->id_aep = $id_aep;
+        $categorie->update();
+
+        if ($action === 'update_all_aep') {
+            $sync = CategorieFluxManuel::updateAllAepsWithSameCode($categorie->id, $old_code, $old_type);
+            cfm_redirect(array(
+                'success' => 'update_all',
+                'cat' => $categorie->id,
+                'updated' => (int) $sync['updated'],
+            ));
+        }
+        cfm_redirect(array('success' => '1', 'cat' => $categorie->id));
+    }
+
+    if ($action === 'delete') {
+        $del_id = (int) $_POST['id'];
+        $categorie = new CategorieFluxManuel();
+        $categorie->delete($del_id);
+        cfm_redirect(array('success' => '1'));
+    }
+
+    if ($action === 'duplicate') {
+        $ids = isset($_POST['categorie_ids']) && is_array($_POST['categorie_ids'])
+            ? $_POST['categorie_ids'] : array();
+        if ($id_aep <= 0) {
+            cfm_redirect(array('error' => 'no_aep'));
+        }
+        if (empty($ids)) {
+            cfm_redirect(array('error' => 'duplicate_vide'));
+        }
+        $dup = CategorieFluxManuel::duplicateCategoriesToAep($ids, $id_aep);
+        $q = array(
+            'success' => 'duplicate_import',
+            'created' => (int) $dup['created'],
+            'skipped' => (int) $dup['skipped'],
+        );
+        $redirect_cat = isset($_POST['redirect_cat']) ? (int) $_POST['redirect_cat'] : 0;
+        if ($redirect_cat > 0) {
+            $q['cat'] = $redirect_cat;
+        }
+        cfm_redirect($q);
+    }
+
+    if ($action === 'duplicate_to_aeps') {
+        $src_id = isset($_POST['categorie_id']) ? (int) $_POST['categorie_id'] : 0;
+        $aep_ids = isset($_POST['aep_ids']) && is_array($_POST['aep_ids']) ? $_POST['aep_ids'] : array();
+        if ($src_id <= 0) {
+            cfm_redirect(array('error' => 'duplicate_vide'));
+        }
+        $dup = CategorieFluxManuel::duplicateCategoryToAeps($src_id, $aep_ids);
+        cfm_redirect(array(
+            'success' => 'duplicate',
+            'cat' => $src_id,
+            'created' => (int) $dup['created'],
+            'skipped' => (int) $dup['skipped'],
+        ));
+    }
+
+    if ($action === 'reorder_ordre') {
+        $type_flux = isset($_POST['type_flux']) ? $_POST['type_flux'] : '';
+        $ids = isset($_POST['categorie_ids']) && is_array($_POST['categorie_ids']) ? $_POST['categorie_ids'] : array();
+        $is_ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+            && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $ok = CategorieFluxManuel::reorderOrdreAffichage($ids, $type_flux, $id_aep);
+        if ($is_ajax) {
+            header('Content-Type: application/json; charset=utf-8');
+            $ordres = array();
+            if ($ok) {
+                $ordre = 10;
+                foreach ($ids as $raw_id) {
+                    $ordres[(int) $raw_id] = $ordre;
+                    $ordre += 10;
                 }
-                echo json_encode(array('ok' => $ok, 'ordres' => $ordres));
-                exit;
             }
-            header(
-                'Location: index.php?page=categories_flux_manuel&'
-                . ($ok ? 'success=move' : 'error=move_invalid')
-            );
+            echo json_encode(array('ok' => $ok, 'ordres' => $ordres));
             exit;
         }
+        if ($ok) {
+            cfm_redirect(array('success' => 'move'));
+        }
+        cfm_redirect(array('error' => 'move_invalid'));
     }
 }
 
-// Récupérer toutes les catégories
-$id_aep = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
-$libele_aep = isset($_SESSION['libele_aep']) ? $_SESSION['libele_aep'] : '';
 $res = CategorieFluxManuel::getAll(null, $id_aep ? $id_aep : null);
 $categories = $res->fetchAll(PDO::FETCH_ASSOC);
 
-$codes_existants = array();
-foreach ($categories as $cat) {
-    if (!empty($cat['code_budgetaire'])) {
-        $codes_existants[$cat['type_flux'] . '|' . $cat['code_budgetaire']] = true;
-    }
-}
-
-$autres_aeps = array();
-$categories_par_aep = array();
-if ($id_aep > 0) {
-    $autres_aeps = CategorieFluxManuel::getAutresAeps($id_aep);
-    foreach ($autres_aeps as $aep_row) {
-        $categories_par_aep[(int) $aep_row['id']] = CategorieFluxManuel::getByAepStrict((int) $aep_row['id']);
-    }
-}
-
-$activite_labels = array(
-    'branchements' => 'Branchements',
-    'vente_eau' => 'Vente d\'eau',
-    'autre' => 'Autre',
-);
 $type_flux_labels = array(
     'recette' => 'Recette',
     'charge' => 'Dépense',
+);
+$activite_labels = array(
+    'branchements' => 'Branchements (AS)',
+    'vente_eau' => 'Vente d\'eau (VE)',
+    'autre' => 'Autre',
 );
 
 $categories_by_type = array('charge' => array(), 'recette' => array());
@@ -160,149 +206,347 @@ foreach ($categories_by_type as $t => $list) {
         return strcmp($a['nom'], $b['nom']);
     });
 }
+
 $cfm_sort_groups = array(
     'charge' => array('label' => 'Dépenses', 'badge' => 'bg-danger'),
     'recette' => array('label' => 'Recettes', 'badge' => 'bg-success'),
 );
 
-$cfm_form_action = 'index.php?page=categories_flux_manuel';
-$cfm_ajax_reorder_url = 'traitement/categorie_flux_ordre_t.php';
+$codes_existants = array();
+foreach ($categories as $cat) {
+    if (!empty($cat['code_budgetaire'])) {
+        $codes_existants[$cat['type_flux'] . '|' . $cat['code_budgetaire']] = true;
+    }
+}
 
-function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
+$autres_aeps = array();
+$categories_par_aep = array();
+if ($id_aep > 0) {
+    $autres_aeps = CategorieFluxManuel::getAutresAeps($id_aep);
+    foreach ($autres_aeps as $aep_row) {
+        $categories_par_aep[(int) $aep_row['id']] = CategorieFluxManuel::getByAepStrict((int) $aep_row['id']);
+    }
+}
+
+$selected_id = isset($_GET['cat']) ? (int) $_GET['cat'] : 0;
+$cfm_can_import = ($id_aep > 0 && !empty($autres_aeps));
+$detail = null;
+if ($selected_id > 0) {
+    $detail = CategorieFluxManuel::getDetail($selected_id, $id_aep);
+    if (!$detail) {
+        $selected_id = 0;
+    }
+}
+
+function cfm_render_sidebar_row($cat, $selected_id, $activite_labels)
 {
     $cat_id = (int) $cat['id'];
     $ordre = (int) (isset($cat['ordre_affichage']) ? $cat['ordre_affichage'] : 0);
     $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+    $active = ($selected_id === $cat_id) ? ' cfm-nav-active' : '';
+    $href = 'index.php?page=categories_flux_manuel&cat=' . $cat_id;
     ?>
-    <tr class="cfm-sort-row" data-id="<?php echo $cat_id; ?>">
+    <tr class="cfm-sort-row<?php echo $active; ?>" data-id="<?php echo $cat_id; ?>">
         <td class="cfm-col-drag text-center">
-            <span class="cfm-drag-handle" title="Glisser pour réordonner" aria-label="Glisser pour réordonner">
+            <span class="cfm-drag-handle" title="Glisser pour réordonner" onclick="event.preventDefault(); event.stopPropagation();">
                 <i class="bi bi-grip-vertical"></i>
             </span>
         </td>
-        <td class="text-center cfm-col-ordre">
+        <td class="text-center text-muted small cfm-col-ordre">
             <span class="cfm-ordre-num"><?php echo $ordre; ?></span>
         </td>
-        <td><?php echo htmlspecialchars($cat['nom']); ?></td>
-        <td>
-            <span class="badge <?php echo $cat['type_flux'] === 'recette' ? 'bg-success' : 'bg-danger'; ?>">
-                <?php echo htmlspecialchars(isset($type_flux_labels[$cat['type_flux']]) ? $type_flux_labels[$cat['type_flux']] : $cat['type_flux']); ?>
-            </span>
+        <td class="cfm-nav-link-cell">
+            <a href="<?php echo htmlspecialchars($href, ENT_QUOTES, 'UTF-8'); ?>" class="cfm-nav-link stretched-link">
+                <?php echo htmlspecialchars($cat['nom'], ENT_QUOTES, 'UTF-8'); ?>
+            </a>
         </td>
-        <td>
+        <td class="text-center">
             <?php if (!empty($cat['code_budgetaire'])): ?>
-                <span class="badge bg-info"><?php echo htmlspecialchars($cat['code_budgetaire']); ?></span>
+                <code class="small"><?php echo htmlspecialchars($cat['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></code>
             <?php else: ?>
-                <span class="text-muted">-</span>
+                <span class="text-muted">—</span>
             <?php endif; ?>
         </td>
-        <td>
-            <span class="badge bg-secondary"><?php echo htmlspecialchars(isset($activite_labels[$activite]) ? $activite_labels[$activite] : $activite); ?></span>
-        </td>
-        <td><?php echo htmlspecialchars(isset($cat['description']) ? $cat['description'] : ''); ?></td>
-        <td>
-            <span class="badge <?php echo $cat['est_actif'] ? 'bg-success' : 'bg-secondary'; ?>"
-                data-bs-toggle="tooltip" data-bs-placement="top"
-                title="<?php echo $cat['est_actif'] ? 'Cette catégorie est active et peut être utilisée' : 'Cette catégorie est inactive et ne sera pas proposée lors de la création de flux'; ?>">
-                <?php echo $cat['est_actif'] ? 'Actif' : 'Inactif'; ?>
+        <td class="text-center">
+            <span class="badge <?php echo $cat['type_flux'] === 'recette' ? 'bg-success' : 'bg-danger'; ?> cfm-badge-type">
+                <?php echo $cat['type_flux'] === 'recette' ? 'R' : 'D'; ?>
             </span>
         </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-warning me-2"
-                onclick="editCategorie(<?php echo htmlspecialchars(json_encode($cat)); ?>)"
-                data-bs-toggle="tooltip" data-bs-placement="top" title="Modifier">
-                <i class="fas fa-edit me-1"></i>Modifier
-            </button>
-            <button type="button" class="btn btn-sm btn-danger"
-                onclick="confirmDelete(<?php echo $cat['id']; ?>, '<?php echo htmlspecialchars(addslashes($cat['nom'])); ?>')"
-                data-bs-toggle="tooltip" data-bs-placement="top" title="Supprimer">
-                <i class="fas fa-trash me-1"></i>Supprimer
-            </button>
+        <td class="text-center">
+            <span class="badge bg-light text-dark border cfm-badge-act" title="<?php echo htmlspecialchars(isset($activite_labels[$activite]) ? $activite_labels[$activite] : $activite, ENT_QUOTES, 'UTF-8'); ?>">
+                <?php echo htmlspecialchars(cfm_activite_short($activite), ENT_QUOTES, 'UTF-8'); ?>
+            </span>
         </td>
     </tr>
+    <?php
+}
+
+function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep)
+{
+    $cat = $detail['categorie'];
+    $bilan = $detail['bilan'];
+    $transactions = $detail['transactions'];
+    $nb_meme_code = (int) $detail['nb_meme_code'];
+    $cat_id = (int) $cat['id'];
+    $activite = isset($cat['activite_associee']) ? $cat['activite_associee'] : 'autre';
+    $cat_json = htmlspecialchars(json_encode($cat), ENT_QUOTES, 'UTF-8');
+    ?>
+    <div class="cfm-detail">
+        <div class="cfm-detail-header d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    <h2 class="h4 mb-0"><?php echo htmlspecialchars($cat['nom'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                    <span class="badge <?php echo $cat['type_flux'] === 'recette' ? 'bg-success' : 'bg-danger'; ?>">
+                        <?php echo htmlspecialchars(isset($type_flux_labels[$cat['type_flux']]) ? $type_flux_labels[$cat['type_flux']] : $cat['type_flux'], ENT_QUOTES, 'UTF-8'); ?>
+                    </span>
+                    <?php if ($cat['est_actif']): ?>
+                        <span class="badge bg-light text-primary border">Actif</span>
+                    <?php else: ?>
+                        <span class="badge bg-secondary">Inactif</span>
+                    <?php endif; ?>
+                </div>
+                <p class="text-muted small mb-0">
+                    Code <strong><?php echo htmlspecialchars($cat['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                    · Ordre <?php echo (int) (isset($cat['ordre_affichage']) ? $cat['ordre_affichage'] : 0); ?>
+                    · <?php echo htmlspecialchars(isset($activite_labels[$activite]) ? $activite_labels[$activite] : $activite, ENT_QUOTES, 'UTF-8'); ?>
+                </p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="editCategorie(<?php echo $cat_json; ?>)">
+                    <i class="fas fa-edit me-1"></i>Modifier
+                </button>
+                <?php if ($id_aep > 0): ?>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#duplicateAepModal">
+                        <i class="fas fa-copy me-1"></i>Dupliquer
+                    </button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-outline-danger btn-sm"
+                    onclick="confirmDelete(<?php echo $cat_id; ?>, '<?php echo htmlspecialchars(addslashes($cat['nom']), ENT_QUOTES, 'UTF-8'); ?>')">
+                    <i class="fas fa-trash me-1"></i>Supprimer
+                </button>
+            </div>
+        </div>
+
+        <?php if (!empty($cat['description'])): ?>
+            <div class="cfm-detail-card mb-3">
+                <p class="mb-0 text-muted"><?php echo nl2br(htmlspecialchars($cat['description'], ENT_QUOTES, 'UTF-8')); ?></p>
+            </div>
+        <?php endif; ?>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="cfm-stat-card cfm-stat-entree">
+                    <div class="cfm-stat-label">Entrées</div>
+                    <div class="cfm-stat-value"><?php echo cfm_fmt_fcfa($bilan['total_entrees']); ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="cfm-stat-card cfm-stat-sortie">
+                    <div class="cfm-stat-label">Sorties</div>
+                    <div class="cfm-stat-value"><?php echo cfm_fmt_fcfa($bilan['total_sorties']); ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="cfm-stat-card cfm-stat-solde">
+                    <div class="cfm-stat-label">Solde</div>
+                    <div class="cfm-stat-value"><?php echo cfm_fmt_fcfa($bilan['solde']); ?></div>
+                    <div class="cfm-stat-meta"><?php echo (int) $bilan['nb_operations']; ?> opération(s)</div>
+                </div>
+            </div>
+        </div>
+
+        <?php if (!empty($bilan['par_mois'])): ?>
+            <div class="cfm-detail-card mb-4">
+                <h3 class="h6 mb-3">Bilan par mois</h3>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Mois</th>
+                                <th class="text-end">Entrées</th>
+                                <th class="text-end">Sorties</th>
+                                <th class="text-end">Solde</th>
+                                <th class="text-center">Nb</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bilan['par_mois'] as $pm): ?>
+                                <?php
+                                $e = (float) $pm['entrees'];
+                                $s = (float) $pm['sorties'];
+                                ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($pm['mois'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td class="text-end text-success"><?php echo cfm_fmt_fcfa($e); ?></td>
+                                    <td class="text-end text-danger"><?php echo cfm_fmt_fcfa($s); ?></td>
+                                    <td class="text-end fw-semibold"><?php echo cfm_fmt_fcfa($e - $s); ?></td>
+                                    <td class="text-center text-muted"><?php echo (int) $pm['nb']; ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <div class="cfm-detail-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="h6 mb-0">Transactions rattachées</h3>
+                <a href="index.php?page=transaction" class="btn btn-sm btn-link">Voir toutes les transactions</a>
+            </div>
+            <?php if (empty($transactions)): ?>
+                <p class="text-muted small mb-0">Aucune transaction pour cette catégorie.</p>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Mois</th>
+                                <th>Libellé</th>
+                                <th>Type</th>
+                                <th class="text-end">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($transactions as $tx): ?>
+                                <tr>
+                                    <td class="text-nowrap small"><?php echo htmlspecialchars($tx['date'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td class="small text-muted"><?php echo htmlspecialchars($tx['mois'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td><?php echo htmlspecialchars($tx['libele'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                    <td>
+                                        <?php if ($tx['type'] === 'entree'): ?>
+                                            <span class="badge bg-success">Entrée</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">Sortie</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="text-end fw-semibold"><?php echo cfm_fmt_fcfa($tx['prix']); ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
     <?php
 }
 ?>
 
 <style>
-    .cfm-page { max-width: 1200px; }
-    .cfm-page .cfm-card {
-        border: 1px solid #e8eaed;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
+    .cfm-app {
+        display: flex;
+        gap: 0;
+        min-height: calc(100vh - 120px);
+        margin: -0.5rem -0.75rem 0;
+        background: #f1f3f4;
     }
-    .cfm-page .cfm-card .table thead th {
-        font-size: 0.75rem;
+    .cfm-sidebar {
+        width: 380px;
+        min-width: 300px;
+        max-width: 42vw;
+        background: #fff;
+        border-right: 1px solid #e0e0e0;
+        display: flex;
+        flex-direction: column;
+        flex-shrink: 0;
+    }
+    .cfm-sidebar-head {
+        padding: 1rem 1rem 0.75rem;
+        border-bottom: 1px solid #e8eaed;
+    }
+    .cfm-sidebar-scroll {
+        flex: 1;
+        overflow-y: auto;
+        padding: 0.5rem 0;
+    }
+    .cfm-sidebar table {
+        font-size: 0.78rem;
+        margin-bottom: 0;
+    }
+    .cfm-sidebar thead th {
+        font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 0.04em;
         font-weight: 600;
+        color: #5f6368;
+        border-bottom: 1px solid #e8eaed;
+        background: #fafafa;
+        position: sticky;
+        top: 0;
+        z-index: 2;
     }
-    .cfm-page .cfm-card .table td.cfm-col-ordre {
-        padding-top: 0.35rem;
-        padding-bottom: 0.35rem;
+    .cfm-nav-link-cell { position: relative; max-width: 9rem; }
+    .cfm-nav-link {
+        color: #202124;
+        text-decoration: none;
+        font-weight: 500;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .cfm-ordre-num {
-        font-size: 0.75rem;
-        color: #5f6368;
-    }
-    .cfm-page .cfm-card .table td.cfm-col-drag {
-        padding: 0.35rem 0.25rem;
-        width: 1.75rem;
-    }
+    tr.cfm-sort-row.cfm-nav-active,
+    tr.cfm-sort-row:hover { background: #e8f0fe; }
+    tr.cfm-sort-row.cfm-nav-active .cfm-nav-link { color: #1a73e8; }
+    .cfm-col-drag { width: 1.5rem; padding: 0.25rem !important; }
+    .cfm-col-ordre { width: 2.25rem; }
+    .cfm-badge-type, .cfm-badge-act { font-size: 0.65rem; }
     .cfm-drag-handle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
         color: #9aa0a6;
         cursor: grab;
-        font-size: 1rem;
-        padding: 0.15rem;
-        border-radius: 3px;
-        user-select: none;
-        -webkit-user-select: none;
+        font-size: 0.95rem;
     }
-    .cfm-drag-handle:hover {
-        color: #1a73e8;
-        background: #e8f0fe;
+    .cfm-drag-handle:hover { color: #1a73e8; }
+    tr.cfm-sort-row.cfm-row-dragging { opacity: 0.55; background: #e8f0fe !important; }
+    tr.cfm-sort-row.cfm-row-drag-over td { border-top: 2px solid #1a73e8; }
+    .cfm-sort-group-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.5rem 1rem 0.25rem;
+        color: #5f6368;
     }
-    .cfm-drag-handle:active {
-        cursor: grabbing;
-    }
-    tr.cfm-sort-row.cfm-row-dragging {
-        opacity: 0.55;
-        background: #e8f0fe !important;
-    }
-    tr.cfm-sort-row.cfm-row-drag-over td {
-        border-top: 2px solid #1a73e8;
-    }
-    tr.cfm-sort-group-header td {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.75rem;
-        background: #f8f9fa;
-        border-bottom: 1px solid #dee2e6;
-    }
-    .cfm-sort-saving {
-        font-size: 0.75rem;
-        color: #1a73e8;
-        margin-left: 0.5rem;
-        display: none;
-    }
-    .cfm-sort-saving.is-visible {
-        display: inline;
-    }
-    #duplicateModal .modal-dialog.cfm-dup-dialog {
-        max-width: 920px;
-        width: calc(100% - 2rem);
-    }
-    #duplicateModal.modal .modal-body.cfm-dup-scroll {
-        max-height: min(58vh, 520px);
+    .cfm-main {
+        flex: 1;
         overflow-y: auto;
+        padding: 1.5rem 2rem;
+        min-width: 0;
     }
-    #duplicateModal .modal-footer {
-        background: #f8f9fa;
-        border-top: 1px solid #dee2e6;
+    .cfm-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 320px;
+        color: #5f6368;
+        text-align: center;
     }
+    .cfm-empty i { font-size: 3rem; opacity: 0.35; margin-bottom: 1rem; }
+    .cfm-detail-card {
+        background: #fff;
+        border: 1px solid #e8eaed;
+        border-radius: 12px;
+        padding: 1.25rem;
+        box-shadow: 0 1px 2px rgba(60, 64, 67, 0.06);
+    }
+    .cfm-stat-card {
+        background: #fff;
+        border: 1px solid #e8eaed;
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        height: 100%;
+    }
+    .cfm-stat-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: #5f6368; }
+    .cfm-stat-value { font-size: 1.35rem; font-weight: 700; margin-top: 0.25rem; }
+    .cfm-stat-meta { font-size: 0.75rem; color: #80868b; margin-top: 0.25rem; }
+    .cfm-stat-entree .cfm-stat-value { color: #137333; }
+    .cfm-stat-sortie .cfm-stat-value { color: #c5221f; }
+    .cfm-stat-solde .cfm-stat-value { color: #1a73e8; }
+    .cfm-sort-saving { font-size: 0.7rem; color: #1a73e8; display: none; }
+    .cfm-sort-saving.is-visible { display: inline; }
     #categorieModal .modal-content {
         border: none;
         border-radius: 14px;
@@ -315,14 +559,8 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
         padding: 1.25rem 1.5rem;
         border: none;
     }
-    #categorieModal .cfm-modal-header .btn-close {
-        filter: brightness(0) invert(1);
-        opacity: 0.85;
-    }
-    #categorieModal .cfm-modal-body {
-        padding: 1.5rem;
-        background: #f8fafc;
-    }
+    #categorieModal .cfm-modal-header .btn-close { filter: brightness(0) invert(1); opacity: 0.85; }
+    #categorieModal .cfm-modal-body { padding: 1.5rem; background: #f8fafc; }
     #categorieModal .cfm-field-card {
         background: #fff;
         border: 1px solid #e2e8f0;
@@ -338,268 +576,270 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
         margin-bottom: 0.75rem;
         font-weight: 600;
     }
-    #categorieModal .form-label {
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #334155;
+    #duplicateAepModal .dup-aep-row.disabled { opacity: 0.55; background: #f8f9fa; }
+    #categorieModal .modal-dialog.cfm-dup-dialog {
+        max-width: 920px;
+        width: calc(100% - 2rem);
     }
-    #categorieModal .form-control,
-    #categorieModal .form-select {
-        border-radius: 8px;
-        border-color: #cbd5e1;
+    #categorieModal .cfm-dup-scroll {
+        max-height: min(58vh, 520px);
+        overflow-y: auto;
     }
-    #categorieModal .form-control:focus,
-    #categorieModal .form-select:focus {
-        border-color: #1a73e8;
-        box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15);
-    }
-    #categorieModal .cfm-type-pills .btn {
-        border-radius: 8px;
-        font-weight: 500;
-    }
-    #categorieModal .cfm-modal-footer {
+    .cfm-choice-card {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.35rem;
+        width: 100%;
+        padding: 1.25rem 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
         background: #fff;
-        border-top: 1px solid #e2e8f0;
-        padding: 1rem 1.5rem;
+        text-align: left;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .cfm-choice-card:hover {
+        border-color: #1a73e8;
+        box-shadow: 0 4px 12px rgba(26, 115, 232, 0.12);
+    }
+    .cfm-choice-card i { font-size: 1.5rem; color: #1a73e8; }
+    .cfm-choice-card.cfm-choice-dup i { color: #5f6368; }
+    .cfm-choice-card.cfm-choice-dup:hover { border-color: #5f6368; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    @media (max-width: 991px) {
+        .cfm-app { flex-direction: column; min-height: auto; }
+        .cfm-sidebar { width: 100%; max-width: none; max-height: 45vh; border-right: none; border-bottom: 1px solid #e0e0e0; }
     }
 </style>
 
-<div class="container mt-4 cfm-page">
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
-        <div>
-            <h2 class="text-primary fw-bold mb-0">Gestion des Catégories de Flux Manuels</h2>
+<div class="cfm-app">
+    <aside class="cfm-sidebar">
+        <div class="cfm-sidebar-head">
+            <h1 class="h6 fw-bold text-primary mb-1">Catégories flux</h1>
             <?php if ($id_aep > 0 && $libele_aep !== ''): ?>
-                <p class="text-muted small mb-0">AEP : <strong><?php echo htmlspecialchars($libele_aep, ENT_QUOTES, 'UTF-8'); ?></strong></p>
+                <p class="text-muted mb-2" style="font-size:0.75rem"><?php echo htmlspecialchars($libele_aep, ENT_QUOTES, 'UTF-8'); ?></p>
             <?php endif; ?>
-        </div>
-        <div class="d-flex flex-wrap gap-2">
-            <?php if ($id_aep > 0 && !empty($autres_aeps)): ?>
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#duplicateModal">
-                    <i class="fas fa-copy me-2"></i>Dupliquer depuis d'autres AEP
-                </button>
-            <?php endif; ?>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categorieModal">
-                <i class="fas fa-plus me-2"></i>Nouvelle catégorie
+            <button type="button" class="btn btn-primary btn-sm w-100" id="btnNouvelleCategorie">
+                <i class="fas fa-plus me-1"></i>Nouvelle catégorie
             </button>
         </div>
-    </div>
-
-    <?php if (isset($_GET['success'])): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Opération effectuée avec succès !
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-    
-    <?php if (isset($_GET['error']) && $_GET['error'] === 'code_obligatoire'): ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            Le code budgétaire est obligatoire !
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_GET['error']) && $_GET['error'] === 'no_aep'): ?>
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            Sélectionnez un AEP avant de dupliquer des catégories.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_GET['error']) && $_GET['error'] === 'duplicate_vide'): ?>
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            Aucune catégorie sélectionnée pour la duplication.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_GET['success']) && $_GET['success'] === 'move'): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Ordre d'affichage mis à jour.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_GET['error']) && $_GET['error'] === 'move_limite'): ?>
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            Déplacement impossible : la catégorie est déjà en première ou dernière position pour son type.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_GET['success']) && $_GET['success'] === 'duplicate'): ?>
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            Duplication terminée :
-            <strong><?php echo (int) (isset($_GET['created']) ? $_GET['created'] : 0); ?></strong> catégorie(s) ajoutée(s),
-            <strong><?php echo (int) (isset($_GET['skipped']) ? $_GET['skipped'] : 0); ?></strong> ignorée(s) (déjà présentes ou source invalide).
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <?php endif; ?>
-
-    <div class="card cfm-card">
-        <div class="card-body">
-            <p class="small text-muted mb-3">
-                <i class="bi bi-sort-numeric-down me-1"></i>
-                L'<strong>ordre d'affichage</strong> définit la position dans les comptes d'exploitation.
-                Utilisez la poignée <i class="bi bi-grip-vertical"></i> pour glisser-déposer les lignes (dépenses puis recettes).
-            </p>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-dark">
+        <div class="cfm-sidebar-scroll">
+            <?php foreach ($cfm_sort_groups as $type_key => $group_info):
+                $group_cats = isset($categories_by_type[$type_key]) ? $categories_by_type[$type_key] : array();
+                if (empty($group_cats)) {
+                    continue;
+                }
+                ?>
+                <div class="cfm-sort-group-label">
+                    <span class="badge <?php echo htmlspecialchars($group_info['badge'], ENT_QUOTES, 'UTF-8'); ?> me-1">
+                        <?php echo htmlspecialchars($group_info['label'], ENT_QUOTES, 'UTF-8'); ?>
+                    </span>
+                    <span class="cfm-sort-saving" id="cfm-sort-saving-<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>">
+                        <span class="spinner-border spinner-border-sm"></span>
+                    </span>
+                </div>
+                <table class="table table-borderless table-sm mb-2">
+                    <thead>
                         <tr>
-                            <th class="text-center" style="width:1.75rem" title="Glisser-déposer"></th>
-                            <th class="text-center" style="width:3rem">Ordre</th>
+                            <th></th>
+                            <th class="text-center">#</th>
                             <th>Nom</th>
-                            <th>Type</th>
-                            <th>Code budgétaire</th>
-                            <th>Activité associée</th>
-                            <th>Description</th>
-                            <th>Statut</th>
-                            <th>Actions</th>
+                            <th class="text-center">Code</th>
+                            <th class="text-center">T</th>
+                            <th class="text-center" title="VE = vente eau, AS = abonnement service">Act.</th>
                         </tr>
                     </thead>
-                    <?php foreach ($cfm_sort_groups as $type_key => $group_info):
-                        $group_cats = isset($categories_by_type[$type_key]) ? $categories_by_type[$type_key] : array();
-                        if (empty($group_cats)) {
-                            continue;
-                        }
-                        ?>
-                        <tbody class="cfm-sort-group" id="cfm-sort-<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>"
-                            data-type-flux="<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>">
-                            <tr class="cfm-sort-group-header">
-                                <td colspan="9">
-                                    <span class="badge <?php echo htmlspecialchars($group_info['badge'], ENT_QUOTES, 'UTF-8'); ?> me-2">
-                                        <?php echo htmlspecialchars($group_info['label'], ENT_QUOTES, 'UTF-8'); ?>
-                                    </span>
-                                    Glisser les lignes pour réordonner
-                                    <span class="cfm-sort-saving" id="cfm-sort-saving-<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>">
-                                        <span class="spinner-border spinner-border-sm me-1" role="status"></span>Enregistrement…
-                                    </span>
-                                </td>
-                            </tr>
-                            <?php foreach ($group_cats as $cat):
-                                cfm_render_category_row($cat, $type_flux_labels, $activite_labels);
-                            endforeach; ?>
-                        </tbody>
-                    <?php endforeach; ?>
+                    <tbody class="cfm-sort-group" id="cfm-sort-<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>"
+                        data-type-flux="<?php echo htmlspecialchars($type_key, ENT_QUOTES, 'UTF-8'); ?>">
+                        <?php foreach ($group_cats as $cat):
+                            cfm_render_sidebar_row($cat, $selected_id, $activite_labels);
+                        endforeach; ?>
+                    </tbody>
                 </table>
-            </div>
+            <?php endforeach; ?>
+            <?php if (empty($categories)): ?>
+                <p class="text-muted small px-3">Aucune catégorie. Créez-en une.</p>
+            <?php endif; ?>
         </div>
-    </div>
+    </aside>
+
+    <main class="cfm-main">
+        <?php if (isset($_GET['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show py-2" role="alert">
+                <?php
+                if ($_GET['success'] === 'duplicate_import') {
+                    echo 'Import depuis d\'autres AEP : <strong>' . (int) (isset($_GET['created']) ? $_GET['created'] : 0) . '</strong> catégorie(s) ajoutée(s), '
+                        . (int) (isset($_GET['skipped']) ? $_GET['skipped'] : 0) . ' ignorée(s) (déjà présentes).';
+                } elseif ($_GET['success'] === 'duplicate') {
+                    echo 'Duplication vers d\'autres AEP : <strong>' . (int) (isset($_GET['created']) ? $_GET['created'] : 0) . '</strong> créée(s), '
+                        . (int) (isset($_GET['skipped']) ? $_GET['skipped'] : 0) . ' ignorée(s).';
+                } elseif ($_GET['success'] === 'update_all') {
+                    echo 'Modification appliquée sur <strong>' . (int) (isset($_GET['updated']) ? $_GET['updated'] : 0) . '</strong> catégorie(s) (même code budgétaire).';
+                } elseif ($_GET['success'] === 'move') {
+                    echo 'Ordre d\'affichage mis à jour.';
+                } else {
+                    echo 'Opération effectuée avec succès.';
+                }
+                ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'code_obligatoire'): ?>
+            <div class="alert alert-danger alert-dismissible fade show py-2">Le code budgétaire est obligatoire.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'no_aep'): ?>
+            <div class="alert alert-warning alert-dismissible fade show py-2">Sélectionnez un AEP en session pour importer des catégories.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'duplicate_vide'): ?>
+            <div class="alert alert-warning alert-dismissible fade show py-2">Aucune catégorie ou AEP sélectionné(e).<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
+
+        <?php if ($detail): ?>
+            <?php cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep); ?>
+        <?php else: ?>
+            <div class="cfm-empty">
+                <i class="bi bi-folder2-open"></i>
+                <p class="mb-1 fw-semibold">Sélectionnez une catégorie</p>
+                <p class="small mb-0">Choisissez une ligne dans le menu à gauche pour afficher le détail,<br>le bilan financier et les transactions.</p>
+            </div>
+        <?php endif; ?>
+    </main>
 </div>
 
-<!-- Modal pour créer/modifier une catégorie -->
+<!-- Modal nouvelle catégorie : choix créer / dupliquer, ou modification -->
 <div class="modal fade" id="categorieModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered" id="categorieModalDialog">
         <div class="modal-content">
-            <form method="post" action="" id="categorieForm">
-                <div class="modal-header cfm-modal-header">
-                    <div>
-                        <h5 class="modal-title mb-0" id="modalTitle">Nouvelle catégorie</h5>
-                        <p class="small mb-0 opacity-75">Flux manuel · compte d'exploitation</p>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            <div class="modal-header cfm-modal-header">
+                <div>
+                    <h5 class="modal-title mb-0" id="modalTitle">Nouvelle catégorie</h5>
+                    <p class="small mb-0 opacity-75" id="modalSubtitle">Que souhaitez-vous faire ?</p>
                 </div>
-                <div class="modal-body cfm-modal-body">
-                    <input type="hidden" name="action" id="formAction" value="create">
-                    <input type="hidden" name="id" id="formId">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
+            <?php if ($cfm_can_import): ?>
+            <!-- Étape choix -->
+            <div id="cfmPaneChoice" class="modal-body cfm-modal-body">
+                <p class="text-muted small mb-3">Créez une catégorie vide ou importez des catégories depuis les autres réseaux AEP.</p>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <button type="button" class="cfm-choice-card" id="cfmBtnChooseCreate">
+                            <i class="bi bi-plus-circle"></i>
+                            <strong>Créer une catégorie</strong>
+                            <span class="small text-muted">Saisie manuelle du nom, code, type…</span>
+                        </button>
+                    </div>
+                    <div class="col-sm-6">
+                        <button type="button" class="cfm-choice-card cfm-choice-dup" id="cfmBtnChooseDuplicate">
+                            <i class="bi bi-copy"></i>
+                            <strong>Dupliquer depuis d'autres AEP</strong>
+                            <span class="small text-muted">Copier des catégories existantes vers <?php echo $libele_aep !== '' ? htmlspecialchars($libele_aep, ENT_QUOTES, 'UTF-8') : 'cet AEP'; ?></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <!-- Étape création / modification -->
+            <div id="cfmPaneCreate" class="d-none">
+                <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="categorieForm">
+                    <div class="modal-body cfm-modal-body">
+                        <button type="button" class="btn btn-link btn-sm text-secondary px-0 mb-2" id="cfmBackToChoice">
+                            <i class="bi bi-arrow-left me-1"></i>Retour
+                        </button>
+                        <input type="hidden" name="action" id="formAction" value="create">
+                        <input type="hidden" name="id" id="formId">
                     <div class="cfm-field-card">
-                        <h6><i class="bi bi-tag me-1"></i> Identification</h6>
+                        <h6>Identification</h6>
                         <div class="row g-3">
                             <div class="col-md-8">
                                 <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="nom" name="nom" required
-                                    placeholder="Ex. Maintenance réseau">
+                                <input type="text" class="form-control" id="nom" name="nom" required>
                             </div>
                             <div class="col-md-4">
                                 <label for="code_budgetaire" class="form-label">Code budgétaire <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="code_budgetaire" name="code_budgetaire"
-                                    maxlength="10" placeholder="A001" required>
+                                <input type="text" class="form-control" id="code_budgetaire" name="code_budgetaire" maxlength="10" required>
                             </div>
                         </div>
                     </div>
-
                     <div class="cfm-field-card">
-                        <h6><i class="bi bi-sliders me-1"></i> Paramètres</h6>
+                        <h6>Paramètres</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label for="type_flux" class="form-label">Type <span class="text-danger">*</span></label>
                                 <select class="form-select" id="type_flux" name="type_flux" required>
-                                    <option value="charge" selected>Dépense</option>
+                                    <option value="charge">Dépense</option>
                                     <option value="recette">Recette</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label for="ordre_affichage" class="form-label">Ordre d'affichage</label>
-                                <input type="number" class="form-control" id="ordre_affichage" name="ordre_affichage"
-                                    min="1" step="1" placeholder="Vide = dernière position">
+                                <label for="ordre_affichage" class="form-label">Ordre</label>
+                                <input type="number" class="form-control" id="ordre_affichage" name="ordre_affichage" min="1" placeholder="Auto">
                             </div>
                             <div class="col-md-4">
                                 <label for="activite_associee" class="form-label">Activité</label>
                                 <select class="form-select" id="activite_associee" name="activite_associee" required>
-                                    <option value="branchements">Branchements</option>
-                                    <option value="vente_eau">Vente d'eau</option>
+                                    <option value="branchements">AS — Abonnement service</option>
+                                    <option value="vente_eau">VE — Vente d'eau</option>
                                     <option value="autre">Autre</option>
                                 </select>
                             </div>
                         </div>
                         <div class="form-check form-switch mt-3">
                             <input type="checkbox" class="form-check-input" id="est_actif" name="est_actif" value="1" checked>
-                            <label class="form-check-label" for="est_actif">Catégorie active (proposée à la saisie des flux)</label>
+                            <label class="form-check-label" for="est_actif">Catégorie active</label>
                         </div>
                     </div>
-
                     <div class="cfm-field-card mb-0">
-                        <h6><i class="bi bi-card-text me-1"></i> Description</h6>
-                        <textarea class="form-control" id="description" name="description" rows="3"
-                            placeholder="Optionnel — précision pour les utilisateurs"></textarea>
+                        <h6>Description</h6>
+                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                     </div>
-                </div>
-                <div class="modal-footer cfm-modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary px-4">
-                        <i class="bi bi-check-lg me-1"></i>Enregistrer
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Modal duplication depuis d'autres AEP -->
-<div class="modal fade" id="duplicateModal" tabindex="-1" aria-labelledby="duplicateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable cfm-dup-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-light border-bottom">
-                <h5 class="modal-title" id="duplicateModalLabel">
-                    <i class="fas fa-copy me-2"></i>Dupliquer des catégories vers
-                    <?php echo $libele_aep !== '' ? htmlspecialchars($libele_aep, ENT_QUOTES, 'UTF-8') : 'cet AEP'; ?>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-footer bg-white border-top">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-outline-primary px-3" id="btnUpdateAllAep" name="submit_mode" value="all" style="display:none;">
+                            <i class="bi bi-globe2 me-1"></i>Modifier dans tous les AEP
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4" id="btnSaveCategorie">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
             </div>
-            <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="duplicateForm">
-                <input type="hidden" name="action" value="duplicate">
-                <div class="modal-body cfm-dup-scroll">
+
+            <?php if ($cfm_can_import): ?>
+            <!-- Étape duplication depuis autres AEP -->
+            <div id="cfmPaneDuplicate" class="d-none">
+                <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="duplicateFromForm">
+                    <input type="hidden" name="action" value="duplicate">
+                    <?php if ($selected_id > 0): ?>
+                        <input type="hidden" name="redirect_cat" value="<?php echo (int) $selected_id; ?>">
+                    <?php endif; ?>
+                    <div class="modal-body cfm-modal-body cfm-dup-scroll">
+                        <button type="button" class="btn btn-link btn-sm text-secondary px-0 mb-2" id="cfmBackFromDuplicate">
+                            <i class="bi bi-arrow-left me-1"></i>Retour
+                        </button>
                     <p class="text-muted small">
-                        Cochez les catégories à copier depuis les autres AEP. Les doublons (même code budgétaire et type)
-                        déjà présents sur votre AEP sont désactivés.
+                        Cochez les catégories à copier depuis les autres AEP.
+                        Les doublons (même code budgétaire et type) déjà présents sur votre AEP sont grisés.
                     </p>
                     <div class="d-flex flex-wrap gap-2 mb-3">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupSelectAll">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupFromSelectAll">
                             Tout cocher (disponibles)
                         </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupSelectNone">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupFromSelectNone">
                             Tout décocher
                         </button>
                     </div>
-                    <div class="accordion" id="dupAepAccordion">
+                    <div class="accordion" id="dupFromAepAccordion">
                         <?php
                         $acc_idx = 0;
                         foreach ($autres_aeps as $aep_row):
                             $aid = (int) $aep_row['id'];
                             $cats_aep = isset($categories_par_aep[$aid]) ? $categories_par_aep[$aid] : array();
                             $acc_idx++;
-                            $acc_id = 'dupAep' . $aid;
+                            $acc_id = 'dupFromAep' . $aid;
                             ?>
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="heading<?php echo $acc_id; ?>">
@@ -612,18 +852,18 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
                                 </h2>
                                 <div id="collapse<?php echo $acc_id; ?>"
                                     class="accordion-collapse collapse <?php echo $acc_idx === 1 ? 'show' : ''; ?>"
-                                    data-bs-parent="#dupAepAccordion">
+                                    data-bs-parent="#dupFromAepAccordion">
                                     <div class="accordion-body p-0">
                                         <?php if (empty($cats_aep)): ?>
-                                            <p class="text-muted small p-3 mb-0">Aucune catégorie propre à cet AEP.</p>
+                                            <p class="text-muted small p-3 mb-0">Aucune catégorie sur cet AEP.</p>
                                         <?php else: ?>
+                                            <?php $collapse_id = 'collapse' . $acc_id; ?>
                                             <div class="d-flex flex-wrap gap-2 p-2 border-bottom bg-light">
-                                                <?php $collapse_id = 'collapse' . $acc_id; ?>
-                                                <button type="button" class="btn btn-sm btn-outline-primary dup-select-aep-all"
+                                                <button type="button" class="btn btn-sm btn-outline-primary dup-from-select-aep-all"
                                                     data-dup-group="<?php echo htmlspecialchars($collapse_id, ENT_QUOTES, 'UTF-8'); ?>">
                                                     <i class="bi bi-check2-square me-1"></i>Tout sélectionner
                                                 </button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary dup-deselect-aep-all"
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dup-from-deselect-aep-all"
                                                     data-dup-group="<?php echo htmlspecialchars($collapse_id, ENT_QUOTES, 'UTF-8'); ?>">
                                                     Tout décocher
                                                 </button>
@@ -633,22 +873,22 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
                                                     <thead class="table-light">
                                                         <tr>
                                                             <th style="width:2.5rem"></th>
-                                                            <th class="text-center">Ordre</th>
+                                                            <th class="text-center">#</th>
                                                             <th>Nom</th>
                                                             <th>Type</th>
                                                             <th>Code</th>
-                                                            <th>Activité</th>
-                                                            <th>Statut</th>
+                                                            <th>Act.</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <?php foreach ($cats_aep as $src_cat):
                                                             $dup_key = $src_cat['type_flux'] . '|' . $src_cat['code_budgetaire'];
                                                             $deja_presente = isset($codes_existants[$dup_key]);
+                                                            $act = isset($src_cat['activite_associee']) ? $src_cat['activite_associee'] : 'autre';
                                                             ?>
                                                             <tr class="<?php echo $deja_presente ? 'table-secondary' : ''; ?>">
                                                                 <td>
-                                                                    <input type="checkbox" class="form-check-input dup-cat-cb"
+                                                                    <input type="checkbox" class="form-check-input dup-from-cat-cb"
                                                                         name="categorie_ids[]"
                                                                         value="<?php echo (int) $src_cat['id']; ?>"
                                                                         <?php echo $deja_presente ? 'disabled' : ''; ?>>
@@ -659,30 +899,12 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
                                                                 <td><?php echo htmlspecialchars($src_cat['nom'], ENT_QUOTES, 'UTF-8'); ?></td>
                                                                 <td>
                                                                     <span class="badge <?php echo $src_cat['type_flux'] === 'recette' ? 'bg-success' : 'bg-danger'; ?>">
-                                                                        <?php
-                                                                        echo htmlspecialchars(
-                                                                            isset($type_flux_labels[$src_cat['type_flux']]) ? $type_flux_labels[$src_cat['type_flux']] : $src_cat['type_flux'],
-                                                                            ENT_QUOTES,
-                                                                            'UTF-8'
-                                                                        );
-                                                                        ?>
+                                                                        <?php echo $src_cat['type_flux'] === 'recette' ? 'R' : 'D'; ?>
                                                                     </span>
                                                                 </td>
-                                                                <td><code><?php echo htmlspecialchars($src_cat['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></code></td>
-                                                                <td class="small">
-                                                                    <?php
-                                                                    $act = isset($src_cat['activite_associee']) ? $src_cat['activite_associee'] : 'autre';
-                                                                    echo htmlspecialchars(isset($activite_labels[$act]) ? $activite_labels[$act] : $act, ENT_QUOTES, 'UTF-8');
-                                                                    ?>
-                                                                </td>
-                                                                <td>
-                                                                    <?php if ($deja_presente): ?>
-                                                                        <span class="badge bg-warning text-dark">Déjà sur cet AEP</span>
-                                                                    <?php elseif ($src_cat['est_actif']): ?>
-                                                                        <span class="badge bg-success">Actif</span>
-                                                                    <?php else: ?>
-                                                                        <span class="badge bg-secondary">Inactif</span>
-                                                                    <?php endif; ?>
+                                                                <td><code class="small"><?php echo htmlspecialchars($src_cat['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></code></td>
+                                                                <td class="text-center">
+                                                                    <span class="badge bg-light text-dark border"><?php echo htmlspecialchars(cfm_activite_short($act), ENT_QUOTES, 'UTF-8'); ?></span>
                                                                 </td>
                                                             </tr>
                                                         <?php endforeach; ?>
@@ -695,45 +917,90 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
                             </div>
                         <?php endforeach; ?>
                     </div>
-                </div>
-            </form>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-primary" id="dupSubmitBtn" form="duplicateForm">
-                    <i class="fas fa-copy me-1"></i>Dupliquer la sélection
-                </button>
+                    </div>
+                    <div class="modal-footer bg-white border-top">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary" id="dupFromSubmitBtn">
+                            <i class="fas fa-copy me-1"></i>Dupliquer la sélection
+                        </button>
+                    </div>
+                </form>
             </div>
+            <?php endif; ?>
+
+            <?php if ($cfm_can_import): ?>
+            <div id="cfmFooterChoice" class="modal-footer bg-white border-top">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
 
-<!-- Modal de suppression -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+<?php if ($detail && $id_aep > 0): ?>
+<div class="modal fade" id="duplicateAepModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-copy me-2"></i>Dupliquer vers d'autres AEP</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="duplicateAepForm">
+                <input type="hidden" name="action" value="duplicate_to_aeps">
+                <input type="hidden" name="categorie_id" value="<?php echo (int) $detail['categorie']['id']; ?>">
+                <div class="modal-body">
+                    <p class="text-muted small">
+                        Cochez les AEP qui recevront une copie de cette catégorie.
+                        Les AEP qui ont déjà le code <strong><?php echo htmlspecialchars($detail['categorie']['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></strong>
+                        sont grisés.
+                    </p>
+                    <div class="d-flex gap-2 mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupAepSelectAll">Tout cocher</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="dupAepSelectNone">Tout décocher</button>
+                    </div>
+                    <div class="list-group list-group-flush border rounded">
+                        <?php foreach ($detail['duplicate_aeps'] as $aep_row): ?>
+                            <label class="list-group-item dup-aep-row d-flex align-items-center gap-2 mb-0 <?php echo $aep_row['deja_presente'] ? 'disabled' : ''; ?>">
+                                <input type="checkbox" class="form-check-input dup-aep-cb" name="aep_ids[]"
+                                    value="<?php echo (int) $aep_row['id']; ?>"
+                                    <?php echo $aep_row['deja_presente'] ? 'disabled' : ''; ?>>
+                                <span class="flex-grow-1"><?php echo htmlspecialchars($aep_row['libele'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php if ($aep_row['deja_presente']): ?>
+                                    <span class="badge bg-secondary">Code déjà présent</span>
+                                <?php endif; ?>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary" id="dupAepSubmitBtn">
+                        <i class="fas fa-copy me-1"></i>Dupliquer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="deleteModalLabel">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer la catégorie <strong id="deleteCategorieNom"></strong> ?</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Attention :</strong> Cette action est irréversible. Les flux financiers associés à cette catégorie ne seront pas supprimés, mais perdront leur catégorie.
-                </div>
+                <p>Supprimer la catégorie <strong id="deleteCategorieNom"></strong> ?</p>
+                <p class="small text-muted mb-0">Les flux associés ne seront pas supprimés mais perdront leur catégorie.</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Annuler
-                </button>
-                <form method="post" action="" id="deleteForm" style="display: inline;">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="deleteForm" class="d-inline">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" id="deleteCategorieId">
-                    <button type="submit" class="btn btn-danger">
-                        <i class="fas fa-trash me-2"></i>Supprimer
-                    </button>
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
                 </form>
             </div>
         </div>
@@ -741,155 +1008,157 @@ function cfm_render_category_row($cat, $type_flux_labels, $activite_labels)
 </div>
 
 <script>
-var cfmFormAction = <?php echo json_encode($cfm_form_action); ?>;
 var cfmAjaxReorderUrl = <?php echo json_encode($cfm_ajax_reorder_url); ?>;
+var cfmNbMemeCode = <?php echo $detail ? (int) $detail['nb_meme_code'] : 0; ?>;
+var cfmCanImport = <?php echo $cfm_can_import ? 'true' : 'false'; ?>;
+var cfmModalMode = 'new';
+
+function cfmShowPane(pane) {
+    var choice = document.getElementById('cfmPaneChoice');
+    var create = document.getElementById('cfmPaneCreate');
+    var dup = document.getElementById('cfmPaneDuplicate');
+    var footerChoice = document.getElementById('cfmFooterChoice');
+    var dialog = document.getElementById('categorieModalDialog');
+    var backCreate = document.getElementById('cfmBackToChoice');
+    var backDup = document.getElementById('cfmBackFromDuplicate');
+
+    if (choice) choice.classList.add('d-none');
+    if (create) create.classList.add('d-none');
+    if (dup) dup.classList.add('d-none');
+    if (footerChoice) footerChoice.classList.add('d-none');
+
+    if (pane === 'choice' && choice) {
+        choice.classList.remove('d-none');
+        if (footerChoice) footerChoice.classList.remove('d-none');
+        document.getElementById('modalTitle').textContent = 'Nouvelle catégorie';
+        document.getElementById('modalSubtitle').textContent = 'Que souhaitez-vous faire ?';
+        if (dialog) {
+            dialog.classList.remove('cfm-dup-dialog', 'modal-dialog-scrollable');
+            dialog.classList.add('modal-lg', 'modal-dialog-centered');
+        }
+    } else if (pane === 'create' && create) {
+        create.classList.remove('d-none');
+        if (cfmModalMode === 'edit') {
+            document.getElementById('modalTitle').textContent = 'Modifier la catégorie';
+            document.getElementById('modalSubtitle').textContent = 'Flux manuel · compte d\'exploitation';
+            if (backCreate) backCreate.style.display = 'none';
+        } else {
+            document.getElementById('modalTitle').textContent = 'Créer une catégorie';
+            document.getElementById('modalSubtitle').textContent = 'Saisie manuelle';
+            if (backCreate) backCreate.style.display = cfmCanImport ? '' : 'none';
+        }
+        if (dialog) {
+            dialog.classList.remove('cfm-dup-dialog', 'modal-dialog-scrollable');
+            dialog.classList.add('modal-lg', 'modal-dialog-centered');
+        }
+    } else if (pane === 'duplicate' && dup) {
+        dup.classList.remove('d-none');
+        document.getElementById('modalTitle').textContent = 'Dupliquer depuis d\'autres AEP';
+        document.getElementById('modalSubtitle').textContent = 'Vers votre réseau actuel';
+        if (dialog) {
+            dialog.classList.add('cfm-dup-dialog', 'modal-dialog-scrollable');
+            dialog.classList.remove('modal-lg');
+        }
+    }
+}
+
+function cfmResetCreateForm() {
+    document.getElementById('modalTitle').textContent = 'Nouvelle catégorie';
+    document.getElementById('formAction').value = 'create';
+    document.getElementById('formId').value = '';
+    document.getElementById('btnUpdateAllAep').style.display = 'none';
+    ['code_budgetaire', 'nom', 'description', 'ordre_affichage'].forEach(function (id) {
+        document.getElementById(id).value = '';
+    });
+    document.getElementById('type_flux').value = 'charge';
+    document.getElementById('activite_associee').value = 'autre';
+    document.getElementById('est_actif').checked = true;
+}
+
+function cfmOpenNewModal() {
+    cfmModalMode = 'new';
+    cfmResetCreateForm();
+    if (cfmCanImport) {
+        cfmShowPane('choice');
+    } else {
+        cfmShowPane('create');
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('categorieModal')).show();
+}
 
 function cfmGetSortRows(tbody) {
     return [].slice.call(tbody.querySelectorAll('tr.cfm-sort-row'));
 }
 
 function cfmUpdateOrdreUi(tbody, ordres) {
-    var rows = cfmGetSortRows(tbody);
-    rows.forEach(function (row, idx) {
+    cfmGetSortRows(tbody).forEach(function (row, idx) {
         var id = row.getAttribute('data-id');
         var numEl = row.querySelector('.cfm-ordre-num');
         if (numEl) {
-            if (ordres && ordres[id] !== undefined) {
-                numEl.textContent = ordres[id];
-            } else {
-                numEl.textContent = (idx + 1) * 10;
-            }
+            numEl.textContent = (ordres && ordres[id] !== undefined) ? ordres[id] : (idx + 1) * 10;
         }
     });
 }
 
 function cfmSaveSortOrder(tbody, typeFlux, savingEl) {
     var ids = [];
-    cfmGetSortRows(tbody).forEach(function (row) {
-        ids.push(row.getAttribute('data-id'));
-    });
-    if (savingEl) {
-        savingEl.classList.add('is-visible');
-    }
-
+    cfmGetSortRows(tbody).forEach(function (row) { ids.push(row.getAttribute('data-id')); });
+    if (savingEl) savingEl.classList.add('is-visible');
     var formData = new FormData();
     formData.append('action', 'reorder_ordre');
     formData.append('type_flux', typeFlux);
-    ids.forEach(function (id) {
-        formData.append('categorie_ids[]', id);
-    });
-
-    fetch(cfmAjaxReorderUrl, {
-        method: 'POST',
-        body: formData,
-        credentials: 'same-origin'
-    })
-        .then(function (response) {
-            return response.text().then(function (text) {
-                return { okHttp: response.ok, text: text };
-            });
-        })
-        .then(function (res) {
-            if (savingEl) {
-                savingEl.classList.remove('is-visible');
-            }
+    ids.forEach(function (id) { formData.append('categorie_ids[]', id); });
+    fetch(cfmAjaxReorderUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+        .then(function (r) { return r.text(); })
+        .then(function (text) {
+            if (savingEl) savingEl.classList.remove('is-visible');
             var data = null;
-            try {
-                data = JSON.parse(res.text);
-            } catch (e) {
-                var match = res.text.match(/\{[\s\S]*\}/);
-                if (match) {
-                    try {
-                        data = JSON.parse(match[0]);
-                    } catch (e2) {
-                        data = null;
-                    }
-                }
+            try { data = JSON.parse(text); } catch (e) {
+                var m = text.match(/\{[\s\S]*\}/);
+                if (m) try { data = JSON.parse(m[0]); } catch (e2) {}
             }
-            if (data && data.ok) {
-                cfmUpdateOrdreUi(tbody, data.ordres || null);
-            } else if (res.okHttp) {
-                cfmUpdateOrdreUi(tbody, null);
-            } else {
-                alert('Impossible d\'enregistrer le nouvel ordre.');
-            }
+            if (data && data.ok) cfmUpdateOrdreUi(tbody, data.ordres);
+            else cfmUpdateOrdreUi(tbody, null);
         })
         .catch(function () {
-            if (savingEl) {
-                savingEl.classList.remove('is-visible');
-            }
-            cfmUpdateOrdreUi(tbody, null);
+            if (savingEl) savingEl.classList.remove('is-visible');
         });
 }
 
 function initCfmDragDrop() {
     var draggedRow = null;
-
     [].slice.call(document.querySelectorAll('.cfm-sort-group')).forEach(function (tbody) {
         var typeFlux = tbody.getAttribute('data-type-flux');
         var savingEl = document.getElementById('cfm-sort-saving-' + typeFlux);
-
-        cfmUpdateOrdreUi(tbody, null);
-
         cfmGetSortRows(tbody).forEach(function (row) {
             var handle = row.querySelector('.cfm-drag-handle');
-            if (!handle) {
-                return;
-            }
-
+            if (!handle) return;
             handle.setAttribute('draggable', 'true');
-
             handle.addEventListener('dragstart', function (e) {
                 draggedRow = row;
                 row.classList.add('cfm-row-dragging');
                 e.dataTransfer.effectAllowed = 'move';
-                e.dataTransfer.setData('text/plain', row.getAttribute('data-id'));
             });
-
             row.addEventListener('dragend', function () {
                 row.classList.remove('cfm-row-dragging');
-                cfmGetSortRows(tbody).forEach(function (r) {
-                    r.classList.remove('cfm-row-drag-over');
-                });
+                cfmGetSortRows(tbody).forEach(function (r) { r.classList.remove('cfm-row-drag-over'); });
                 draggedRow = null;
             });
-
             row.addEventListener('dragover', function (e) {
                 e.preventDefault();
-                if (!draggedRow || draggedRow === row) {
-                    return;
-                }
-                e.dataTransfer.dropEffect = 'move';
-                cfmGetSortRows(tbody).forEach(function (r) {
-                    r.classList.remove('cfm-row-drag-over');
-                });
+                if (!draggedRow || draggedRow === row) return;
+                cfmGetSortRows(tbody).forEach(function (r) { r.classList.remove('cfm-row-drag-over'); });
                 row.classList.add('cfm-row-drag-over');
             });
-
-            row.addEventListener('dragleave', function () {
-                row.classList.remove('cfm-row-drag-over');
-            });
-
             row.addEventListener('drop', function (e) {
                 e.preventDefault();
                 row.classList.remove('cfm-row-drag-over');
-                if (!draggedRow || draggedRow === row) {
-                    return;
-                }
-
+                if (!draggedRow || draggedRow === row) return;
                 var all = cfmGetSortRows(tbody);
                 var fromIdx = all.indexOf(draggedRow);
                 var toIdx = all.indexOf(row);
-                if (fromIdx < 0 || toIdx < 0) {
-                    return;
-                }
-
-                if (fromIdx < toIdx) {
-                    row.parentNode.insertBefore(draggedRow, row.nextSibling);
-                } else {
-                    row.parentNode.insertBefore(draggedRow, row);
-                }
-
+                if (fromIdx < toIdx) row.parentNode.insertBefore(draggedRow, row.nextSibling);
+                else row.parentNode.insertBefore(draggedRow, row);
                 cfmUpdateOrdreUi(tbody, null);
                 cfmSaveSortOrder(tbody, typeFlux, savingEl);
             });
@@ -898,7 +1167,7 @@ function initCfmDragDrop() {
 }
 
 function editCategorie(categorie) {
-    document.getElementById('modalTitle').textContent = 'Modifier la catégorie';
+    cfmModalMode = 'edit';
     document.getElementById('formAction').value = 'update';
     document.getElementById('formId').value = categorie.id;
     document.getElementById('code_budgetaire').value = categorie.code_budgetaire || '';
@@ -906,95 +1175,141 @@ function editCategorie(categorie) {
     document.getElementById('activite_associee').value = categorie.activite_associee || 'autre';
     document.getElementById('nom').value = categorie.nom;
     document.getElementById('description').value = categorie.description || '';
-    document.getElementById('ordre_affichage').value = categorie.ordre_affichage !== undefined ? categorie.ordre_affichage : 0;
+    document.getElementById('ordre_affichage').value = categorie.ordre_affichage !== undefined ? categorie.ordre_affichage : '';
     document.getElementById('est_actif').checked = (categorie.est_actif == 1 || categorie.est_actif == '1');
-
-    var modal = new bootstrap.Modal(document.getElementById('categorieModal'));
-    modal.show();
+    var btnAll = document.getElementById('btnUpdateAllAep');
+    if (btnAll) {
+        btnAll.style.display = (cfmNbMemeCode > 1) ? 'inline-block' : 'none';
+    }
+    cfmShowPane('create');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('categorieModal')).show();
 }
 
-document.getElementById('categorieModal').addEventListener('hidden.bs.modal', function () {
-    document.getElementById('modalTitle').textContent = 'Nouvelle catégorie';
-    document.getElementById('formAction').value = 'create';
-    document.getElementById('formId').value = '';
-    document.getElementById('code_budgetaire').value = '';
-    document.getElementById('type_flux').value = 'charge';
-    document.getElementById('activite_associee').value = 'autre';
-    document.getElementById('nom').value = '';
-    document.getElementById('description').value = '';
-    document.getElementById('est_actif').checked = true;
-    document.getElementById('ordre_affichage').value = '';
+document.getElementById('categorieForm').addEventListener('submit', function (e) {
+    var submitter = e.submitter;
+    if (submitter && submitter.id === 'btnUpdateAllAep') {
+        document.getElementById('formAction').value = 'update_all_aep';
+        if (!confirm('Appliquer ces modifications à toutes les catégories ayant le même code budgétaire sur tous les AEP ?')) {
+            e.preventDefault();
+            document.getElementById('formAction').value = 'update';
+        }
+    }
 });
 
-// Fonction pour confirmer la suppression
+document.getElementById('categorieModal').addEventListener('hidden.bs.modal', function () {
+    cfmModalMode = 'new';
+    cfmResetCreateForm();
+    if (cfmCanImport) {
+        cfmShowPane('choice');
+    } else {
+        cfmShowPane('create');
+    }
+});
+
 function confirmDelete(id, nom) {
     document.getElementById('deleteCategorieId').value = id;
     document.getElementById('deleteCategorieNom').textContent = nom;
-    var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
-// Initialiser les tooltips Bootstrap
-document.addEventListener('DOMContentLoaded', function() {
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-
+document.addEventListener('DOMContentLoaded', function () {
     initCfmDragDrop();
 
-    var dupSelectAll = document.getElementById('dupSelectAll');
-    var dupSelectNone = document.getElementById('dupSelectNone');
-    var dupForm = document.getElementById('duplicateForm');
-
-    function getDupCheckboxes() {
-        return document.querySelectorAll('#duplicateModal .dup-cat-cb:not(:disabled)');
+    var btnNew = document.getElementById('btnNouvelleCategorie');
+    if (btnNew) {
+        btnNew.addEventListener('click', cfmOpenNewModal);
+    }
+    var btnChooseCreate = document.getElementById('cfmBtnChooseCreate');
+    if (btnChooseCreate) {
+        btnChooseCreate.addEventListener('click', function () {
+            cfmResetCreateForm();
+            cfmShowPane('create');
+        });
+    }
+    var btnChooseDup = document.getElementById('cfmBtnChooseDuplicate');
+    if (btnChooseDup) {
+        btnChooseDup.addEventListener('click', function () {
+            cfmShowPane('duplicate');
+        });
+    }
+    var backCreate = document.getElementById('cfmBackToChoice');
+    if (backCreate) {
+        backCreate.addEventListener('click', function () {
+            cfmShowPane('choice');
+        });
+    }
+    var backDup = document.getElementById('cfmBackFromDuplicate');
+    if (backDup) {
+        backDup.addEventListener('click', function () {
+            cfmShowPane('choice');
+        });
     }
 
+    var dupSelectAll = document.getElementById('dupFromSelectAll');
     if (dupSelectAll) {
         dupSelectAll.addEventListener('click', function () {
-            getDupCheckboxes().forEach(function (cb) { cb.checked = true; });
+            document.querySelectorAll('#cfmPaneDuplicate .dup-from-cat-cb:not(:disabled)').forEach(function (cb) {
+                cb.checked = true;
+            });
         });
     }
+    var dupSelectNone = document.getElementById('dupFromSelectNone');
     if (dupSelectNone) {
         dupSelectNone.addEventListener('click', function () {
-            document.querySelectorAll('#duplicateModal .dup-cat-cb').forEach(function (cb) { cb.checked = false; });
+            document.querySelectorAll('#cfmPaneDuplicate .dup-from-cat-cb').forEach(function (cb) {
+                cb.checked = false;
+            });
         });
     }
-
-    var dupModal = document.getElementById('duplicateModal');
-    if (dupModal) {
-        dupModal.addEventListener('click', function (e) {
-            var btnAll = e.target.closest('.dup-select-aep-all');
-            var btnNone = e.target.closest('.dup-deselect-aep-all');
-            if (!btnAll && !btnNone) {
-                return;
-            }
+    var catModal = document.getElementById('categorieModal');
+    if (catModal) {
+        catModal.addEventListener('click', function (e) {
+            var btnAll = e.target.closest('.dup-from-select-aep-all');
+            var btnNone = e.target.closest('.dup-from-deselect-aep-all');
+            if (!btnAll && !btnNone) return;
             var groupId = (btnAll || btnNone).getAttribute('data-dup-group');
             var panel = groupId ? document.getElementById(groupId) : null;
-            if (!panel) {
-                return;
-            }
-            panel.querySelectorAll('.dup-cat-cb').forEach(function (cb) {
-                if (cb.disabled) {
-                    return;
-                }
+            if (!panel) return;
+            panel.querySelectorAll('.dup-from-cat-cb').forEach(function (cb) {
+                if (cb.disabled) return;
                 cb.checked = !!btnAll;
             });
         });
     }
-    if (dupForm) {
-        dupForm.addEventListener('submit', function (e) {
-            var checked = document.querySelectorAll('#duplicateModal .dup-cat-cb:checked:not(:disabled)');
-            if (checked.length === 0) {
+    var dupFromForm = document.getElementById('duplicateFromForm');
+    if (dupFromForm) {
+        dupFromForm.addEventListener('submit', function (e) {
+            if (!document.querySelectorAll('#cfmPaneDuplicate .dup-from-cat-cb:checked:not(:disabled)').length) {
                 e.preventDefault();
                 alert('Veuillez cocher au moins une catégorie à dupliquer.');
                 return false;
             }
-            var btn = document.getElementById('dupSubmitBtn');
+            var btn = document.getElementById('dupFromSubmitBtn');
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Duplication…';
+            }
+        });
+    }
+
+    if (cfmCanImport) {
+        cfmShowPane('choice');
+    } else {
+        cfmShowPane('create');
+    }
+
+    var dupForm = document.getElementById('duplicateAepForm');
+    if (dupForm) {
+        document.getElementById('dupAepSelectAll').addEventListener('click', function () {
+            document.querySelectorAll('.dup-aep-cb:not(:disabled)').forEach(function (cb) { cb.checked = true; });
+        });
+        document.getElementById('dupAepSelectNone').addEventListener('click', function () {
+            document.querySelectorAll('.dup-aep-cb').forEach(function (cb) { cb.checked = false; });
+        });
+        dupForm.addEventListener('submit', function (e) {
+            if (!document.querySelectorAll('.dup-aep-cb:checked:not(:disabled)').length) {
+                e.preventDefault();
+                alert('Cochez au moins un AEP.');
             }
         });
     }
