@@ -195,14 +195,14 @@ $is_aep_selected = Aep_t::isAepIdInSession();
         color: #e0e0e0 !important;
     }
 
-    .nav-link {
+    .navbar .nav-link {
         color: #ffffff !important;
         padding: 0.75rem 1.25rem !important;
         border-radius: 5px;
         transition: background-color 0.3s ease, color 0.3s ease;
     }
 
-    .nav-link:hover {
+    .navbar .nav-link:hover {
         background-color: rgba(255, 255, 255, 0.1);
         color: #e0e0e0 !important;
     }
@@ -251,7 +251,7 @@ $is_aep_selected = Aep_t::isAepIdInSession();
             margin-top: 0.5rem;
         }
 
-        .nav-link {
+        .navbar .nav-link {
             padding: 0.5rem 1rem !important;
         }
 

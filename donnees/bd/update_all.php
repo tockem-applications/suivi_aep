@@ -96,6 +96,15 @@ class DatabaseUpdaterAll
                 'method' => 'updateDatabase',
                 'version' => '1.3.0',
                 'date' => '2024'
+            ),
+            array(
+                'name' => 'Migration version 9 → 10',
+                'description' => 'Compte rendu, catégories flux, codes budgétaires, réseaux, RDS/RDC, UTF-8, données synthèse',
+                'file' => __DIR__ . DIRECTORY_SEPARATOR . 'update_database_9_to_10.php',
+                'class' => 'DatabaseUpdater9To10',
+                'method' => 'updateDatabase',
+                'version' => '10.0.0',
+                'date' => '2025'
             )
             // Ajouter ici les futures mises à jour dans l'ordre chronologique
             // Exemple:

@@ -66,6 +66,9 @@ composer.lock
 # Dumps SQL dans backups/exports (garder schémas à la racine)
 /backups/**/*.sql
 /donnees/exports/**/*.sql
+# Configuration locale / setup applicatif
+/app-setup/
+
 # Divers
 *.swp
 *.swo

@@ -4,8 +4,32 @@
 @include_once("donnees/manager.php");
 @include_once("donnees/reseau.php");
 @include_once("donnees/compteur.php");
+@include_once("donnees/aep.php");
+@include_once("donnees/reseau_rendement.php");
 @include_once("presentation/reseau_component.php");
 @include_once("presentation/reseau_modals_component.php");
+@include_once("presentation/reseau_rendement_component.php");
+
+/**
+ * Options du select type de compteur selon RDS/RDC.
+ */
+function renderCompteurTypeOptionsDetail($selected, $allowProduction, $allowReservoir)
+{
+    $selected = isset($selected) ? $selected : 'distribution';
+    ?>
+    <option value="distribution" <?php echo ($selected === 'distribution') ? 'selected' : ''; ?>>Distribution</option>
+    <?php if ($allowProduction): ?>
+        <option value="production" <?php echo ($selected === 'production') ? 'selected' : ''; ?>>Production</option>
+    <?php elseif ($selected === 'production'): ?>
+        <option value="production" selected disabled>Production (non autorisé en RDC)</option>
+    <?php endif; ?>
+    <?php if ($allowReservoir): ?>
+        <option value="reservoir" <?php echo ($selected === 'reservoir') ? 'selected' : ''; ?>>Réservoir</option>
+    <?php elseif ($selected === 'reservoir'): ?>
+        <option value="reservoir" selected disabled>Réservoir (non autorisé en RDC)</option>
+    <?php endif; ?>
+    <?php
+}
 
 function ensureCompteurTypeColumnForDetailPage()
 {
@@ -99,162 +123,12 @@ $compteurs = Manager::prepare_query(
 // Compteur de compteurs
 $nbCompteurs = count($compteurs);
 
-// Données pour le graphique Chart.js: consommation réseau vs abonnés par mois
-// Consommation des compteurs réseau par mois
-// Construire requête avec filtres (réseau)
-$queryReseau = 'SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS conso
-     FROM indexes i
-     INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
-     INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
-     WHERE cr.id_reseau = ? AND cr.type_compteur = \'distribution\'';
-$paramsReseau = array($reseauId);
-if (!empty($moisDebut)) {
-    $queryReseau .= ' AND mf.mois >= ?';
-    $paramsReseau[] = $moisDebut;
-}
-if (!empty($moisFin)) {
-    $queryReseau .= ' AND mf.mois <= ?';
-    $paramsReseau[] = $moisFin;
-}
-$queryReseau .= ' GROUP BY mf.mois ORDER BY mf.mois';
-$rowsReseau = Manager::prepare_query($queryReseau, $paramsReseau)->fetchAll();
-
-// Volumes des compteurs reseau par type (production, reservoir, distribution)
-$queryTypes = 'SELECT mf.mois, cr.type_compteur, SUM(i.nouvel_index - i.ancien_index) AS conso
-     FROM indexes i
-     INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
-     INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
-     WHERE cr.id_reseau = ?';
-$paramsTypes = array($reseauId);
-if (!empty($moisDebut)) {
-    $queryTypes .= ' AND mf.mois >= ?';
-    $paramsTypes[] = $moisDebut;
-}
-if (!empty($moisFin)) {
-    $queryTypes .= ' AND mf.mois <= ?';
-    $paramsTypes[] = $moisFin;
-}
-$queryTypes .= ' GROUP BY mf.mois, cr.type_compteur ORDER BY mf.mois';
-$rowsTypes = Manager::prepare_query($queryTypes, $paramsTypes)->fetchAll();
-
-// Consommation des compteurs abonnés par mois (abonnés rattachés à ce réseau)
-// Construire requête avec filtres (abonnés)
-$queryAbonnes = 'SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS conso
-     FROM indexes i
-     INNER JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
-     INNER JOIN abone a ON a.id = ca.id_abone
-     INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
-     WHERE a.id_reseau = ?';
-$paramsAbonnes = array($reseauId);
-if (!empty($moisDebut)) {
-    $queryAbonnes .= ' AND mf.mois >= ?';
-    $paramsAbonnes[] = $moisDebut;
-}
-if (!empty($moisFin)) {
-    $queryAbonnes .= ' AND mf.mois <= ?';
-    $paramsAbonnes[] = $moisFin;
-}
-$queryAbonnes .= ' GROUP BY mf.mois ORDER BY mf.mois';
-$rowsAbonnes = Manager::prepare_query($queryAbonnes, $paramsAbonnes)->fetchAll();
-
-// Consommation des compteurs des reseaux fils directs par mois
-$queryReseauxFils = 'SELECT mf.mois, SUM(i.nouvel_index - i.ancien_index) AS conso
-     FROM indexes i
-     INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur
-     INNER JOIN reseau rf ON rf.id = cr.id_reseau
-     INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
-     WHERE rf.id_reseau_parent = ? AND rf.id_aep = ? AND cr.type_compteur = \'distribution\'';
-$paramsReseauxFils = array($reseauId, $aepId);
-if (!empty($moisDebut)) {
-    $queryReseauxFils .= ' AND mf.mois >= ?';
-    $paramsReseauxFils[] = $moisDebut;
-}
-if (!empty($moisFin)) {
-    $queryReseauxFils .= ' AND mf.mois <= ?';
-    $paramsReseauxFils[] = $moisFin;
-}
-$queryReseauxFils .= ' GROUP BY mf.mois ORDER BY mf.mois';
-$rowsReseauxFils = Manager::prepare_query($queryReseauxFils, $paramsReseauxFils)->fetchAll();
-
-// Fusion des mois et alignement des séries
-$mapReseau = array();
-foreach ($rowsReseau as $r) {
-    $mapReseau[$r['mois']] = (float) $r['conso'];
-}
-$mapProd = array();
-$mapReservoir = array();
-$mapDistrib = array();
-foreach ($rowsTypes as $r) {
-    $moisType = $r['mois'];
-    $typeCompteur = isset($r['type_compteur']) ? $r['type_compteur'] : 'distribution';
-    $consoType = isset($r['conso']) ? (float) $r['conso'] : 0.0;
-    if ($typeCompteur === 'production') {
-        $mapProd[$moisType] = $consoType;
-    } elseif ($typeCompteur === 'reservoir') {
-        $mapReservoir[$moisType] = $consoType;
-    } else {
-        $mapDistrib[$moisType] = $consoType;
-    }
-}
-$mapAbonnes = array();
-foreach ($rowsAbonnes as $r) {
-    $mapAbonnes[$r['mois']] = (float) $r['conso'];
-}
-foreach ($rowsReseauxFils as $r) {
-    $m = $r['mois'];
-    $mapAbonnes[$m] = (isset($mapAbonnes[$m]) ? $mapAbonnes[$m] : 0.0) + (float) $r['conso'];
-}
-
-$allMonths = array();
-foreach ($mapReseau as $m => $v) {
-    $allMonths[$m] = true;
-}
-foreach ($mapAbonnes as $m => $v) {
-    $allMonths[$m] = true;
-}
-$labels = array_keys($allMonths);
-sort($labels);
-
-$dataReseau = array();
-$dataAbonnes = array();
-$dataRendement = array();
-$dataTauxProduction = array();
-$dataTauxReservoir = array();
-$dataTauxDistribution = array();
-$tableauRendement = array();
-for ($i = 0; $i < count($labels); $i++) {
-    $m = $labels[$i];
-    $vr = isset($mapReseau[$m]) ? $mapReseau[$m] : 0.0;
-    $va = isset($mapAbonnes[$m]) ? $mapAbonnes[$m] : 0.0;
-    $volumeProduction = isset($mapProd[$m]) ? (float) $mapProd[$m] : 0.0;
-    $volumeReservoir = isset($mapReservoir[$m]) ? (float) $mapReservoir[$m] : 0.0;
-    $volumeDistribution = isset($mapDistrib[$m]) ? (float) $mapDistrib[$m] : (float) $vr;
-
-    $tauxProduction = $volumeProduction > 0 ? round(($volumeReservoir / $volumeProduction) * 100, 2) : 0.0;
-    $tauxReservoir = $volumeReservoir > 0 ? round(($volumeDistribution / $volumeReservoir) * 100, 2) : 0.0;
-    $tauxDistribution = $volumeDistribution > 0 ? round(($va / $volumeDistribution) * 100, 2) : 0.0;
-
-    $dataReseau[] = $vr;
-    $dataAbonnes[] = $va;
-    $dataRendement[] = $tauxDistribution;
-    $dataTauxProduction[] = $tauxProduction;
-    $dataTauxReservoir[] = $tauxReservoir;
-    $dataTauxDistribution[] = $tauxDistribution;
-    $tableauRendement[] = array(
-        'mois' => $m,
-        'volume_production' => $volumeProduction,
-        'volume_reservoir' => $volumeReservoir,
-        'volume_distribution' => $volumeDistribution,
-        'volume_reseau' => $vr,
-        'volume_abonnes_fils' => $va,
-        'taux_production' => $tauxProduction,
-        'taux_reservoir' => $tauxReservoir,
-        'taux_distribution' => $tauxDistribution
-    );
-}
-usort($tableauRendement, function ($a, $b) {
-    return strcmp($b['mois'], $a['mois']);
-});
+$rendementReseau = ReseauRendement::calculer($reseauId, $aepId, $moisDebut, $moisFin);
+$typeDistributionAep = isset($rendementReseau['type_distribution']) ? $rendementReseau['type_distribution'] : null;
+$isRdsAep = !empty($rendementReseau['is_rds']);
+$isRdcAep = !empty($rendementReseau['is_rdc']);
+$allowCompteurProduction = $isRdsAep;
+$allowCompteurReservoir = $isRdsAep;
 ?>
 
 <style>
@@ -279,35 +153,6 @@ usort($tableauRendement, function ($a, $b) {
         z-index: 1000;
     }
 
-    .table-rendement-recap thead .th-unit-m3,
-    .table-rendement-recap thead .th-col-volume {
-        background-color: #198754 !important;
-        color: #fff !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }
-
-    .table-rendement-recap thead .th-unit-percent,
-    .table-rendement-recap thead .th-col-percent {
-        background-color: #0d6efd !important;
-        color: #fff !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
-    }
-
-    .table-rendement-recap tbody td.td-volume-col {
-        background-color: rgba(25, 135, 84, 0.14) !important;
-    }
-
-    .table-rendement-recap tbody td.td-percent-col {
-        background-color: rgba(13, 110, 253, 0.12) !important;
-    }
-
-    .table-rendement-recap.table-hover tbody tr:hover td.td-volume-col {
-        background-color: rgba(25, 135, 84, 0.22) !important;
-    }
-
-    .table-rendement-recap.table-hover tbody tr:hover td.td-percent-col {
-        background-color: rgba(13, 110, 253, 0.18) !important;
-    }
 </style>
 
 <div class="container-fluid mt-5">
@@ -316,7 +161,13 @@ usort($tableauRendement, function ($a, $b) {
             <h2 class="mb-1">Réseau: <?php echo htmlspecialchars($reseau['nom']); ?>
                 <?php echo $reseau['abreviation'] ? '(' . htmlspecialchars($reseau['abreviation']) . ')' : ''; ?>
             </h2>
-            <small class="text-muted">Créé le <?php echo htmlspecialchars($reseau['date_creation']); ?></small>
+            <small class="text-muted d-block">Créé le <?php echo htmlspecialchars($reseau['date_creation']); ?></small>
+            <?php if ($typeDistributionAep): ?>
+                <span class="badge mt-1 bg-<?php echo $isRdsAep ? 'primary' : 'info'; ?>">
+                    <?php echo htmlspecialchars($typeDistributionAep); ?>
+                    — <?php echo $isRdsAep ? 'Production → Réservoir → Distribution' : 'Distribution et abonnés'; ?>
+                </span>
+            <?php endif; ?>
         </div>
         <div class="btn-group">
             <a href="?page=reseaux" class="btn btn-outline-secondary">Retour</a>
@@ -378,8 +229,8 @@ usort($tableauRendement, function ($a, $b) {
 
     <div class="row g-3">
 
-        <div class="col-md-6">
-            <div class="card h-100">
+        <div class="col-12">
+            <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <div>
                         <strong>Compteurs Réseau</strong>
@@ -509,10 +360,15 @@ usort($tableauRendement, function ($a, $b) {
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Type de compteur *</label>
                                                                     <select name="type_compteur" class="form-select" required>
-                                                                        <option value="distribution" <?php echo (!isset($c['type_compteur']) || $c['type_compteur'] === 'distribution') ? 'selected' : ''; ?>>Distribution</option>
-                                                                        <option value="production" <?php echo (isset($c['type_compteur']) && $c['type_compteur'] === 'production') ? 'selected' : ''; ?>>Production</option>
-                                                                        <option value="reservoir" <?php echo (isset($c['type_compteur']) && $c['type_compteur'] === 'reservoir') ? 'selected' : ''; ?>>Reservoir</option>
+                                                                        <?php renderCompteurTypeOptionsDetail(
+                                                                            isset($c['type_compteur']) ? $c['type_compteur'] : 'distribution',
+                                                                            $allowCompteurProduction,
+                                                                            $allowCompteurReservoir
+                                                                        ); ?>
                                                                     </select>
+                                                                    <?php if ($isRdcAep && isset($c['type_compteur']) && $c['type_compteur'] !== 'distribution'): ?>
+                                                                        <div class="form-text text-warning">En RDC, seul le type Distribution est autorisé.</div>
+                                                                    <?php endif; ?>
                                                                 </div>
                                                                 <div class="col-md-6">
                                                                     <label class="form-label">Longitude</label>
@@ -661,94 +517,13 @@ usort($tableauRendement, function ($a, $b) {
             </div>
         </div>
 
-        <div class="col-md-6 d-flex flex-column gap-3">
-            <div class="card">
-                <div class="card-header bg-light">Statistiques mensuelles (Rendement distribution)</div>
-                <div class="card-body">
-                    <div class="alert alert-info py-2 small">
-                        Formule: Rendement = (Volume compteurs abonnes + Volume compteurs reseaux fils directs) / Volume
-                        compteurs reseau.
-                    </div>
-                    <canvas id="reseauRendementChart"></canvas>
-                </div>
-            </div>
-            <!-- <div class="card">
-                <div class="card-header bg-light">Rendements (%)</div>
-                <div class="card-body">
-                    <div class="alert alert-info py-2 small mb-2">
-                        Production = réservoir / production · Réservoir = distribution / réservoir · Distribution = abonnés + fils / distribution
-                    </div>
-                    <canvas id="reseauRendementsPercentChart"></canvas>
-                </div>
-            </div> -->
-        </div>
-
         <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-light">
-                    <strong>Tableau récapitulatif du rendement de distribution</strong>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info py-2 small">
-                        <strong>Formules utilisées :</strong><br>
-                        Rendement production = Volume reservoir / Volume production<br>
-                        Rendement reservoir = Volume distribution / Volume reservoir<br>
-                        Rendement distribution = Volume abonnés + fils / Volume distribution
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 table-rendement-recap">
-                            <thead>
-                                <tr>
-                                    <th rowspan="2" class="align-middle table-secondary">Mois</th>
-                                    <th colspan="4" class="text-center th-unit-m3">Volume (m3)</th>
-                                    <th colspan="3" class="text-center th-unit-percent">Rendement (%)</th>
-                                </tr>
-                                <tr>
-                                    <th class="text-end th-col-volume">Production</th>
-                                    <th class="text-end th-col-volume">Reservoir</th>
-                                    <th class="text-end th-col-volume">Distribution</th>
-                                    <th class="text-end th-col-volume">Abonnés + fils</th>
-                                    <th class="text-end th-col-percent">Production</th>
-                                    <th class="text-end th-col-percent">Reservoir</th>
-                                    <th class="text-end th-col-percent">Distribution</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php if (!empty($tableauRendement)): ?>
-                                    <?php foreach ($tableauRendement as $row): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars(getLetterMonth($row['mois'])); ?></td>
-                                            <td class="text-end td-volume-col">
-                                                <?php echo number_format((float) $row['volume_production'], 2, ',', ' '); ?>
-                                            </td>
-                                            <td class="text-end td-volume-col">
-                                                <?php echo number_format((float) $row['volume_reservoir'], 2, ',', ' '); ?></td>
-                                            <td class="text-end td-volume-col">
-                                                <?php echo number_format((float) $row['volume_distribution'], 2, ',', ' '); ?>
-                                            </td>
-                                            <td class="text-end td-volume-col">
-                                                <?php echo number_format((float) $row['volume_abonnes_fils'], 2, ',', ' '); ?>
-                                            </td>
-                                            <td class="text-end td-percent-col">
-                                                <?php echo number_format((float) $row['taux_production'], 2, ',', ' '); ?>%</td>
-                                            <td class="text-end td-percent-col">
-                                                <?php echo number_format((float) $row['taux_reservoir'], 2, ',', ' '); ?>%</td>
-                                            <td class="text-end td-percent-col fw-bold">
-                                                <?php echo number_format((float) $row['taux_distribution'], 2, ',', ' '); ?>%
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <tr>
-                                        <td colspan="8" class="text-center text-muted">Aucune donnée de rendement
-                                            disponible.</td>
-                                    </tr>
-                                <?php endif; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+            <?php
+            renderReseauRendementSection($rendementReseau, array(
+                'reseau_nom' => isset($reseau['nom']) ? $reseau['nom'] : '',
+                'reseau_id' => $reseauId,
+            ));
+            ?>
         </div>
 
         <!-- Modal ajout compteur -->
@@ -775,10 +550,13 @@ usort($tableauRendement, function ($a, $b) {
                                 <div class="col-md-6">
                                     <label class="form-label">Type de compteur *</label>
                                     <select class="form-select" name="type_compteur" required>
-                                        <option value="distribution" selected>Distribution</option>
-                                        <option value="production">Production</option>
-                                        <option value="reservoir">Reservoir</option>
+                                        <?php renderCompteurTypeOptionsDetail('distribution', $allowCompteurProduction, $allowCompteurReservoir); ?>
                                     </select>
+                                    <?php if ($isRdcAep): ?>
+                                        <div class="form-text">En RDC, seuls les compteurs de distribution sont autorisés.</div>
+                                    <?php elseif ($isRdsAep): ?>
+                                        <div class="form-text">RDS : chaîne Production → Réservoir → Distribution.</div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">Longitude</label>
@@ -926,129 +704,5 @@ usort($tableauRendement, function ($a, $b) {
                 });
             }
 
-            var labels = <?php echo json_encode($labels); ?>;
-            var dataReseau = <?php echo json_encode($dataReseau); ?>;
-            var dataAbonnes = <?php echo json_encode($dataAbonnes); ?>;
-            var dataRendement = <?php echo json_encode($dataRendement); ?>;
-            var dataTauxProduction = <?php echo json_encode($dataTauxProduction); ?>;
-            var dataTauxReservoir = <?php echo json_encode($dataTauxReservoir); ?>;
-            var dataTauxDistribution = <?php echo json_encode($dataTauxDistribution); ?>;
-
-            var el = document.getElementById('reseauRendementChart');
-            if (el) {
-                var ctx = el.getContext('2d');
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Conso Compteurs Réseau (Distribution) (m³)',
-                                data: dataReseau,
-                                backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                                borderColor: 'rgba(54, 162, 235, 1)',
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Conso Abonnés + Fils directs (Distribution) (m³)',
-                                data: dataAbonnes,
-                                backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            },
-                            {
-                                type: 'line',
-                                label: 'Rendement (%)',
-                                data: dataRendement,
-                                yAxisID: 'y1',
-                                borderColor: 'rgba(255, 99, 132, 1)',
-                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                                tension: 0.2,
-                                borderWidth: 2,
-                                pointRadius: 3
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: { mode: 'index', intersect: false },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: 'm³' }
-                            },
-                            y1: {
-                                beginAtZero: true,
-                                position: 'right',
-                                title: { display: true, text: '%' },
-                                grid: { drawOnChartArea: false },
-                                suggestedMax: 120
-                            }
-                        },
-                        plugins: {
-                            tooltip: { enabled: true },
-                            legend: { position: 'top' }
-                        }
-                    }
-                });
-            }
-
-            var elPct = document.getElementById('reseauRendementsPercentChart');
-            if (elPct) {
-                var ctxPct = elPct.getContext('2d');
-                new Chart(ctxPct, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Rendement production (%)',
-                                data: dataTauxProduction,
-                                borderColor: 'rgba(25, 135, 84, 1)',
-                                backgroundColor: 'rgba(25, 135, 84, 0.12)',
-                                tension: 0.2,
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                fill: false
-                            },
-                            {
-                                label: 'Rendement réservoir (%)',
-                                data: dataTauxReservoir,
-                                borderColor: 'rgba(13, 202, 240, 1)',
-                                backgroundColor: 'rgba(13, 202, 240, 0.12)',
-                                tension: 0.2,
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                fill: false
-                            },
-                            {
-                                label: 'Rendement distribution (%)',
-                                data: dataTauxDistribution,
-                                borderColor: 'rgba(13, 110, 253, 1)',
-                                backgroundColor: 'rgba(13, 110, 253, 0.12)',
-                                tension: 0.2,
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                fill: false
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        interaction: { mode: 'index', intersect: false },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                title: { display: true, text: '%' },
-                                suggestedMax: 120
-                            }
-                        },
-                        plugins: {
-                            tooltip: { enabled: true },
-                            legend: { position: 'top' }
-                        }
-                    }
-                });
-            }
         })();
     </script>

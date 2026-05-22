@@ -1120,6 +1120,11 @@ class DatabaseUpdater9To10
                 echo "   ⚠ " . $e->getMessage() . "\n";
             }
 
+            // ============================================================
+            // PARTIE 14: DONNÉES SYNTHÈSE COMPTE D'EXPLOITATION
+            // ============================================================
+            self::postMigrationSyntheseCompteExploitation($bd);
+
             echo "\n╔═══════════════════════════════════════════════════════════════╗\n";
             echo "║     MIGRATION TERMINÉE AVEC SUCCÈS                            ║\n";
             echo "╚═══════════════════════════════════════════════════════════════╝\n";
@@ -1143,11 +1148,114 @@ class DatabaseUpdater9To10
             echo "- Types de compteurs réseau activés (production/distribution/reservoir)\n";
             echo "- Type de distribution AEP activé (RDS / RDC) — champ aep.type_distribution\n";
             echo "- Côté réseau/opposé sur branchements (cote_reseau)\n";
+            echo "- Données synthèse : codes budgétaires par défaut + rapport de cohérence\n";
 
         } catch (Exception $e) {
             echo "\n✗ Erreur lors de la migration : " . $e->getMessage() . "\n";
             echo "Trace: " . $e->getTraceAsString() . "\n";
             throw $e;
+        }
+    }
+
+    /**
+     * Relance uniquement la partie 14 (données synthèse) — utile après restore d'une vieille base déjà migrée en structure.
+     */
+    public static function runPostMigrationSyntheseOnly()
+    {
+        $bd = self::connect();
+        self::postMigrationSyntheseCompteExploitation($bd);
+    }
+
+    /**
+     * Post-migration : codes budgétaires manquants + diagnostic multi-libellés (synthèse multi-AEP).
+     */
+    private static function postMigrationSyntheseCompteExploitation($bd)
+    {
+        echo "\n═══════════════════════════════════════════════════════════════\n";
+        echo "PARTIE 14: DONNÉES SYNTHÈSE COMPTE D'EXPLOITATION\n";
+        echo "═══════════════════════════════════════════════════════════════\n\n";
+
+        if (!self::tableExists('categorie_flux_manuel')) {
+            echo "   ⚠ Table categorie_flux_manuel absente — étape ignorée.\n";
+            return;
+        }
+
+        if (!self::columnExists('categorie_flux_manuel', 'code_budgetaire')) {
+            echo "   ⚠ Colonne code_budgetaire absente — étape ignorée.\n";
+            return;
+        }
+
+        echo "14.1. Attribution de codes budgétaires provisoires (catégories actives sans code)...\n";
+        try {
+            $n = $bd->exec(
+                "UPDATE categorie_flux_manuel
+                 SET code_budgetaire = CONCAT('CAT', id)
+                 WHERE est_actif = 1
+                   AND (code_budgetaire IS NULL OR TRIM(code_budgetaire) = '')"
+            );
+            echo "   ✓ " . (int) $n . " catégorie(s) reçoivent un code CAT{id}\n";
+            echo "   → Vous pouvez renommer ces codes dans l'écran Catégories flux manuels.\n";
+        } catch (Exception $e) {
+            echo "   ✗ " . $e->getMessage() . "\n";
+        }
+
+        if (self::columnExists('categorie_flux_manuel', 'ordre_affichage')) {
+            echo "\n14.2. Vérification ordre_affichage...\n";
+            try {
+                $n2 = $bd->exec(
+                    "UPDATE categorie_flux_manuel
+                     SET ordre_affichage = id * 10
+                     WHERE est_actif = 1 AND (ordre_affichage IS NULL OR ordre_affichage = 0)"
+                );
+                echo "   ✓ ordre_affichage initialisé pour " . (int) $n2 . " catégorie(s)\n";
+            } catch (Exception $e) {
+                echo "   ⚠ " . $e->getMessage() . "\n";
+            }
+        }
+
+        echo "\n14.3. Diagnostic — même code budgétaire, libellés différents (fusion en synthèse)...\n";
+        try {
+            $stmt = $bd->query(
+                "SELECT code_budgetaire,
+                        COUNT(DISTINCT nom) AS nb_noms,
+                        GROUP_CONCAT(DISTINCT nom ORDER BY nom SEPARATOR ' | ') AS libelles
+                 FROM categorie_flux_manuel
+                 WHERE est_actif = 1
+                   AND code_budgetaire IS NOT NULL
+                   AND TRIM(code_budgetaire) != ''
+                 GROUP BY code_budgetaire
+                 HAVING nb_noms > 1
+                 ORDER BY code_budgetaire
+                 LIMIT 50"
+            );
+            $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : array();
+            if (empty($rows)) {
+                echo "   ✓ Aucun code partagé avec des libellés différents.\n";
+            } else {
+                echo "   ⚠ " . count($rows) . " code(s) à harmoniser (affichage max 50) :\n";
+                foreach ($rows as $r) {
+                    echo "      - [" . $r['code_budgetaire'] . "] " . $r['libelles'] . "\n";
+                }
+                echo "   → Harmonisez les noms ou attribuez des codes distincts par AEP.\n";
+            }
+        } catch (Exception $e) {
+            echo "   ⚠ Diagnostic non exécuté : " . $e->getMessage() . "\n";
+        }
+
+        if (self::tableExists('flux_financier') && self::columnExists('flux_financier', 'id_categorie_flux_manuel')) {
+            echo "\n14.4. Flux financiers sans catégorie...\n";
+            try {
+                $stmt = $bd->query("SELECT COUNT(*) AS c FROM flux_financier WHERE id_categorie_flux_manuel IS NULL");
+                $row = $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : null;
+                $c = $row ? (int) $row['c'] : 0;
+                if ($c === 0) {
+                    echo "   ✓ Tous les flux sont catégorisés.\n";
+                } else {
+                    echo "   ⚠ $c flux sans catégorie — à rattacher pour une synthèse complète.\n";
+                }
+            } catch (Exception $e) {
+                echo "   ⚠ " . $e->getMessage() . "\n";
+            }
         }
     }
 
@@ -1165,10 +1273,12 @@ class DatabaseUpdater9To10
     }
 }
 
-// Exécuter la migration si le script est appelé directement
-if (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_update'] === '1')) {
+// Exécuter uniquement si ce fichier est le script principal (pas via update_all.php)
+$isMainScript = !empty($_SERVER['SCRIPT_FILENAME'])
+    && basename($_SERVER['SCRIPT_FILENAME']) === basename(__FILE__);
+if ($isMainScript && (php_sapi_name() === 'cli' || (isset($_GET['run_update']) && $_GET['run_update'] === '1'))) {
     DatabaseUpdater9To10::updateDatabase();
-} else {
+} elseif ($isMainScript) {
     echo "<!DOCTYPE html>
 <html>
 <head>
