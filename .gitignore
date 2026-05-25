@@ -59,6 +59,8 @@ Thumbs.db
 # Fichiers d'environnement
 .env
 .env.*
+!/.env.example
+donnees/config.local.php
 
 # Composer (si présent)
 composer.lock

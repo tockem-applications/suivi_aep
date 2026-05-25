@@ -1,16 +1,14 @@
 <?php
 @include_once '../donnees/manager.php';
 @include_once 'donnees/manager.php';
-const DB_HOST = 'localhost';
-const DB_USER = 'root'; // Remplacez par votre utilisateur MySQL
-const DB_PASS = ''; // Remplacez par votre mot de passe MySQL
-const DB_NAME = 'suivi_aep_fokoue';
+require_once __DIR__ . '/db_config.php';
 
 function getDbConnection()
 {
+    $cfg = db_config_array();
     try {
-        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8';
-        $conn = new PDO($dsn, DB_USER, DB_PASS, array(PDO::ATTR_PERSISTENT => true));
+        $dsn = 'mysql:host=' . $cfg['db_host'] . ';dbname=' . $cfg['db_name'] . ';charset=utf8';
+        $conn = new PDO($dsn, $cfg['db_user'], $cfg['db_password'], array(PDO::ATTR_PERSISTENT => true));
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $conn;

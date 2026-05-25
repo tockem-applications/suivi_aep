@@ -79,10 +79,12 @@ class Backup_t
     {
         $success = 'ok';
         try {
-            $host = 'localhost';
-            $db = 'suivi_aep_fokoue';
-            $user = 'root';
-            $pass = '';
+            require_once __DIR__ . '/../donnees/db_config.php';
+            $cfg = db_config_array();
+            $host = $cfg['db_host'];
+            $db = $cfg['db_name'];
+            $user = $cfg['db_user'];
+            $pass = $cfg['db_password'];
 
             // Récupérer le nom personnalisé de la backup
             $backupName = isset($_POST['backup_name']) ? trim($_POST['backup_name']) : '';
@@ -186,10 +188,12 @@ class Backup_t
         }
 
         // Re-implémentation locale sans redirection (mini export)
-        $host = 'localhost';
-        $db = 'suivi_aep_fokoue';
-        $user = 'root';
-        $pass = '';
+        require_once __DIR__ . '/../donnees/db_config.php';
+        $cfg = db_config_array();
+        $host = $cfg['db_host'];
+        $db = $cfg['db_name'];
+        $user = $cfg['db_user'];
+        $pass = $cfg['db_password'];
         $timestamp = date('Ymd_His');
         $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
         if (!is_dir($backupDir)) {

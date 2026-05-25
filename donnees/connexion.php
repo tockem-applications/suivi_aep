@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/db_config.php';
+
+$dbDefaults = db_config_array();
 
 function connexion()
 {
@@ -15,13 +18,25 @@ function connexion()
 
 class Connexion
 {
-    static public $db_name = 'suivi_aep_fokoue';
-    static public $db_user = 'root';
-    static public $db_host = 'localhost';
-    static public $db_password = '';
+    static public $db_name;
+    static public $db_user;
+    static public $db_host;
+    static public $db_password;
+
+    public static function initConfig()
+    {
+        global $dbDefaults;
+        if (self::$db_host === null) {
+            self::$db_host     = $dbDefaults['db_host'];
+            self::$db_name     = $dbDefaults['db_name'];
+            self::$db_user     = $dbDefaults['db_user'];
+            self::$db_password = $dbDefaults['db_password'];
+        }
+    }
     static private $bdd = null;
     public static function connect()
     {
+        self::initConfig();
         if (self::$bdd != null)
             return self::$bdd;
         try {
@@ -58,5 +73,4 @@ class Connexion
     }
 }
 
-
-Connexion::connect();
+Connexion::initConfig();

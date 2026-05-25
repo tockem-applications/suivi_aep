@@ -1,0 +1,11 @@
+<?php
+/**
+ * Copiez ce fichier en config.local.php pour surcharger la connexion MySQL (WAMP).
+ * Ne versionnez pas config.local.php (contient vos identifiants locaux).
+ */
+return array(
+    'db_host'     => 'localhost',
+    'db_name'     => 'suivi_aep_fokoue',
+    'db_user'     => 'root',
+    'db_password' => '',
+);
