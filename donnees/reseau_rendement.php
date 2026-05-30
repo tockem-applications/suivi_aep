@@ -116,15 +116,22 @@ class ReseauRendement
                 $vDistBr = isset($br['vol_dist'][$mois]) ? (float) $br['vol_dist'][$mois] : 0.0;
                 $vAbBr = isset($br['vol_abonnes_branche'][$mois]) ? (float) $br['vol_abonnes_branche'][$mois] : 0.0;
                 $vDistEnfBr = isset($br['vol_dist_enfants'][$mois]) ? (float) $br['vol_dist_enfants'][$mois] : 0.0;
-                $avalBr = $vAbBr + $vDistEnfBr;
+                // Distribution des autres fils directs (hors cette branche)
+                $vDistAutresFils = max(0.0, $vDistEnf - $vDistBr);
+                // Aval = BP/BF branche + (BP/BF directs père − dist. des autres fils)
+                $avalBranche = $vAbBr + $vAbDir - $vDistAutresFils;
                 $branchesMois[] = array(
                     'id' => $br['id'],
                     'nom' => $br['nom'],
+                    'vol_dist_pere' => $vDist,
                     'vol_dist' => $vDistBr,
                     'vol_abonnes' => $vAbBr,
                     'vol_dist_enfants' => $vDistEnfBr,
-                    'aval' => $avalBr,
-                    'pct' => self::pct($avalBr, $vDistBr),
+                    'vol_dist_autres_fils' => $vDistAutresFils,
+                    'amont_net_pere' => $amontNet,
+                    'vol_abonnes_pere_direct' => $vAbDir,
+                    'aval' => $avalBranche,
+                    'pct' => self::pct($avalBranche, $vDist),
                 );
             }
 

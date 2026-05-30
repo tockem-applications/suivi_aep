@@ -61,6 +61,8 @@ Thumbs.db
 .env.*
 !/.env.example
 donnees/config.local.php
+donnees/licence.json
+donnees/licence/active.lic
 
 # Composer (si présent)
 composer.lock

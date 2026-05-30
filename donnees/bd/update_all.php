@@ -99,7 +99,7 @@ class DatabaseUpdaterAll
             ),
             array(
                 'name' => 'Migration version 9 → 10',
-                'description' => 'Compte rendu, catégories flux, codes budgétaires, réseaux, RDS/RDC, UTF-8, données synthèse',
+                'description' => 'Compte rendu, catégories flux, codes budgétaires, réseaux, RDS/RDC, données synthèse',
                 'file' => __DIR__ . DIRECTORY_SEPARATOR . 'update_database_9_to_10.php',
                 'class' => 'DatabaseUpdater9To10',
                 'method' => 'updateDatabase',

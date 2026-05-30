@@ -1,0 +1,27 @@
+{
+  "numero_licence": "SPE-2026-001",
+  "type_licence": "production",
+  "date_debut": "2026-01-01",
+  "date_expiration": "2027-12-31",
+  "editeur": {
+    "nom": "Tockem — Suivi AEP",
+    "contact": "Erick Tsafack",
+    "email": "ericktsafack2017@gmail.com",
+    "telephone": "+237 654 19 05 14",
+    "adresse": "Entré Bafou chefferie — Direction Tockem"
+  },
+  "client": {
+    "organisme": "Commune de Fokoue",
+    "service": "Service de l'eau potable",
+    "contact": "Nom du responsable",
+    "email": "contact@example.cm",
+    "telephone": "+237 000 00 00 00",
+    "adresse": "Fokoue, Cameroun"
+  },
+  "logiciel": {
+    "nom": "Suivi réseau AEP",
+    "version": "1.0",
+    "reference": "SPE"
+  },
+  "notes": "Copiez ce fichier en licence.json et adaptez les champs client pour chaque déploiement."
+}

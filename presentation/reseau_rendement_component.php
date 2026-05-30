@@ -337,8 +337,9 @@ function renderReseauRendementSection($rendu, $options = array())
 
             <div class="tab-pane fade" id="rrd-tab-branches" role="tabpanel">
                 <p class="small text-muted mb-3">
-                    Un rendement par <strong>branche</strong> (chaque réseau fils direct) : entrée = compteur distribution du fils ;
-                    aval = abonnés de la branche + distribution des petits-enfants.
+                    Par branche (fils direct) :
+                    <strong>Rendement</strong> = (BP/BF de la branche + BP/BF directs du père − dist. des <em>autres</em> fils)
+                    ÷ dist. du père.
                 </p>
                 <?php
                 rrd_render_export_btn(
@@ -635,6 +636,10 @@ function rrd_build_csv_branches_all($lignes, $enfantsDirects)
                     'Distribution_branche_m3' => rrd_csv_num($br['vol_dist']),
                     'Abonnes_branche_m3' => rrd_csv_num($br['vol_abonnes']),
                     'Distribution_petits_fils_m3' => rrd_csv_num($br['vol_dist_enfants']),
+                    'Distribution_pere_m3' => rrd_csv_num(isset($br['vol_dist_pere']) ? $br['vol_dist_pere'] : null),
+                    'BP_BF_branche_m3' => rrd_csv_num($br['vol_abonnes']),
+                    'BP_BF_pere_direct_m3' => rrd_csv_num(isset($br['vol_abonnes_pere_direct']) ? $br['vol_abonnes_pere_direct'] : null),
+                    'Distribution_autres_fils_m3' => rrd_csv_num(isset($br['vol_dist_autres_fils']) ? $br['vol_dist_autres_fils'] : null),
                     'Aval_m3' => rrd_csv_num($br['aval']),
                     'Rendement_pct' => rrd_csv_pct($br['pct']),
                 );
@@ -656,8 +661,11 @@ function rrd_build_csv_branch_one($lignes, $enfantId, $enfantNom)
             $out[] = array(
                 'Branche' => $enfantNom,
                 'Mois' => rrd_csv_mois($row['mois']),
+                'Distribution_pere_m3' => rrd_csv_num(isset($br['vol_dist_pere']) ? $br['vol_dist_pere'] : null),
+                'BP_BF_branche_m3' => rrd_csv_num($br['vol_abonnes']),
+                'BP_BF_pere_direct_m3' => rrd_csv_num(isset($br['vol_abonnes_pere_direct']) ? $br['vol_abonnes_pere_direct'] : null),
+                'Distribution_autres_fils_m3' => rrd_csv_num(isset($br['vol_dist_autres_fils']) ? $br['vol_dist_autres_fils'] : null),
                 'Distribution_branche_m3' => rrd_csv_num($br['vol_dist']),
-                'Abonnes_branche_m3' => rrd_csv_num($br['vol_abonnes']),
                 'Distribution_petits_fils_m3' => rrd_csv_num($br['vol_dist_enfants']),
                 'Aval_m3' => rrd_csv_num($br['aval']),
                 'Rendement_pct' => rrd_csv_pct($br['pct']),
@@ -817,11 +825,14 @@ function rrd_render_branches($lignes, $enfantsDirects, $exportSlug = 'reseau')
                             <tr>
                                 <?php
                                 rrd_th('Mois', 'Mois de facturation.');
-                                rrd_th('Dist. branche', 'Entrée de branche : compteur de distribution du réseau fils direct concerné.', 'text-end');
-                                rrd_th('Abonnés branche', 'Consommation BP/BF sur ce fils et toute sa descendance (arborescence sous la branche).', 'text-end');
-                                rrd_th('Dist. petits-fils', 'Volume des compteurs de distribution des petits-enfants (réseaux sous le fils direct).', 'text-end');
-                                rrd_th('Aval', 'Aval de branche = Abonnés branche + Dist. petits-fils.', 'text-end');
-                                rrd_th('Rendement', 'Rendement de branche = Aval ÷ Dist. branche × 100.', 'text-end');
+                                rrd_th('Dist. père', 'Compteur(s) de distribution du réseau père (dénominateur du rendement).', 'text-end');
+                                rrd_th('BP/BF branche', 'Consommation BP/BF sur le fils et toute sa descendance.', 'text-end');
+                                rrd_th('BP/BF père direct', 'Consommation BP/BF directement sur le réseau père (tronçon net).', 'text-end');
+                                rrd_th('− Dist. autres fils', 'Distribution des autres fils directs du père (hors cette branche), soustraite dans l\'aval.', 'text-end');
+                                rrd_th('Dist. branche', 'Compteur de distribution du fils direct (information).', 'text-end');
+                                rrd_th('Dist. petits-fils', 'Distribution des petits-enfants sous ce fils (information).', 'text-end');
+                                rrd_th('Aval', 'Aval = BP/BF branche + BP/BF père direct − dist. autres fils.', 'text-end');
+                                rrd_th('Rendement', 'Rendement branche = Aval ÷ dist. père × 100.', 'text-end');
                                 ?>
                             </tr>
                         </thead>
@@ -837,9 +848,12 @@ function rrd_render_branches($lignes, $enfantsDirects, $exportSlug = 'reseau')
                                     ?>
                                     <tr>
                                         <td><?php echo rrd_mois_label($row['mois']); ?></td>
-                                        <td class="text-end"><?php echo rrd_fmt_vol($br['vol_dist']); ?></td>
+                                        <td class="text-end"><?php echo rrd_fmt_vol(isset($br['vol_dist_pere']) ? $br['vol_dist_pere'] : null); ?></td>
                                         <td class="text-end"><?php echo rrd_fmt_vol($br['vol_abonnes']); ?></td>
-                                        <td class="text-end"><?php echo rrd_fmt_vol($br['vol_dist_enfants']); ?></td>
+                                        <td class="text-end"><?php echo rrd_fmt_vol(isset($br['vol_abonnes_pere_direct']) ? $br['vol_abonnes_pere_direct'] : null); ?></td>
+                                        <td class="text-end text-muted"><?php echo rrd_fmt_vol(isset($br['vol_dist_autres_fils']) ? $br['vol_dist_autres_fils'] : null); ?></td>
+                                        <td class="text-end text-muted"><?php echo rrd_fmt_vol($br['vol_dist']); ?></td>
+                                        <td class="text-end text-muted"><?php echo rrd_fmt_vol($br['vol_dist_enfants']); ?></td>
                                         <td class="text-end"><?php echo rrd_fmt_vol($br['aval']); ?></td>
                                         <td class="text-end fw-semibold <?php echo rrd_pct_class($br['pct']); ?>"><?php echo rrd_fmt_pct($br['pct']); ?></td>
                                     </tr>
@@ -847,7 +861,7 @@ function rrd_render_branches($lignes, $enfantsDirects, $exportSlug = 'reseau')
                                 }
                             }
                             if (!$has) {
-                                echo '<tr><td colspan="6" class="text-muted text-center">Aucune donnée</td></tr>';
+                                echo '<tr><td colspan="9" class="text-muted text-center">Aucune donnée</td></tr>';
                             }
                             ?>
                         </tbody>

@@ -372,6 +372,10 @@ if (isset($_GET['list'])) {
         AuthManager::logout();
     } else if ($_GET['page'] == 'backup') {
         include("presentation/backup_page.php");
+    } else if ($_GET['page'] == 'licence') {
+        require_once 'presentation/licence_page.php';
+    } else if ($_GET['page'] == 'a_propos') {
+        require_once 'presentation/a_propos_page.php';
     } else if ($_GET['page'] == 'fokoue_data') {
         include("presentation/import_fokoue_data.php");
     } else if ($_GET['page'] == 'download_index') {

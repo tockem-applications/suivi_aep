@@ -161,6 +161,10 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             </li>
                             <li><a class="dropdown-item" href="?page=backup"><i
                                         class="bi bi-cloud-arrow-down me-2"></i>Sauvegarde & Restauration</a></li>
+                            <li><a class="dropdown-item" href="?page=licence"><i
+                                        class="bi bi-shield-lock me-2"></i>Licence</a></li>
+                            <li><a class="dropdown-item" href="?page=a_propos"><i
+                                        class="bi bi-info-circle me-2"></i>À propos</a></li>
                         </ul>
                     </li>
                 </ul>
@@ -179,6 +183,22 @@ $is_aep_selected = Aep_t::isAepIdInSession();
         <?php endif; ?>
     </div>
 </nav>
+<?php
+if (isset($_SESSION['user_id'])) {
+    $licBanner = app_licence();
+    $licStatut = $licBanner->getStatut();
+    if ($licStatut === 'expire' || $licStatut === 'expire_bientot') {
+        $licCls = $licStatut === 'expire_bientot' ? 'alert-warning' : 'alert-danger';
+        ?>
+        <div class="alert <?php echo $licCls; ?> py-2 px-3 mb-0 rounded-0 text-center small" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?php echo htmlspecialchars($licBanner->getStatutLibelle(), ENT_QUOTES, 'UTF-8'); ?>.
+            <a href="?page=a_propos" class="alert-link">Voir la licence</a>
+        </div>
+        <?php
+    }
+}
+?>
 
 <style>
     /* Styles personnalisés pour le header */

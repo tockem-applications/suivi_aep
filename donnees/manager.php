@@ -162,6 +162,10 @@ function create_csv_exportation_button($data, $filename, $tooltip_message, $btn_
 //session_
 @include_once("../donnees/connexion.php");
 @include_once("donnees/connexion.php");
+@include_once("../donnees/licence_crypto.php");
+@include_once("donnees/licence_crypto.php");
+@include_once("../donnees/app_licence.php");
+@include_once("donnees/app_licence.php");
 
 
 

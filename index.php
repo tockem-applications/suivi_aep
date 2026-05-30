@@ -1,6 +1,42 @@
 <?php
-header('Content-Type: text/html; charset=UTF-8');
+ob_start();
 include_once("donnees/manager.php");
+@include_once("traitement/licence_t.php");
+
+$pageLicence = isset($_GET['page']) && $_GET['page'] === 'licence';
+$licenceAcces = app_licence()->isAccesAutorise();
+
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST'
+    && isset($_POST['action'])
+    && $_POST['action'] === 'import_licence'
+) {
+    $importResult = LicenceT::handleImportUpload();
+    if (!empty($importResult['success'])) {
+        ob_end_clean();
+        header('Location: index.php?page=home');
+        exit;
+    }
+    $_SESSION['LICENCE_IMPORT_ERROR'] = isset($importResult['message']) ? $importResult['message'] : 'Import impossible.';
+    ob_end_clean();
+    header('Location: index.php?page=licence');
+    exit;
+}
+
+if (!$licenceAcces && !$pageLicence) {
+    ob_end_clean();
+    header('Location: index.php?page=licence');
+    exit;
+}
+
+if (!$licenceAcces && $pageLicence) {
+    ob_end_clean();
+    include_once('presentation/licence_import_page.php');
+    exit;
+}
+
+ob_end_flush();
+header('Content-Type: text/html; charset=UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -357,11 +393,20 @@ include_once("donnees/manager.php");
 
             include_once("donnees/page.php");
             include_once("traitement/role_t.php");
+
+            $currentPage = isset($_GET['page']) ? trim((string) $_GET['page']) : '';
+            if ($currentPage === '') {
+                ob_get_clean();
+                header('Location: index.php?page=home');
+                exit;
+            }
+
             $request = explode('?', $_SERVER['REQUEST_URI']);
-            $present_request = explode("&", $request[1]);
+            $queryString = isset($request[1]) ? $request[1] : ('page=' . urlencode($currentPage));
+            $present_request = explode("&", $queryString);
             $libele = explode('=', $present_request[0]);
-            //        var_dump($libele);
-            $page = new Page(0, $libele[1], $present_request[0], "");
+            $pageName = isset($libele[1]) ? $libele[1] : $currentPage;
+            $page = new Page(0, $pageName, $present_request[0], "");
             //        $data =  ($_SERVER['SERVER_ADDR'] == "127.0.0.1" ? "localhost" : $_SERVER['SERVER_ADDR']) . str_replace("/index.php", "", $_SERVER['PHP_SELF']);
             
 
@@ -374,7 +419,8 @@ include_once("donnees/manager.php");
             //        var_dump($present_request);
             //                var_dump($_SESSION);
             include_once("traitement/user_t.php");
-            $access_level = AuthManager::checkPageAccess($_SESSION['user_id'], $libele[1]);
+            $userId = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 0;
+            $access_level = AuthManager::checkPageAccess($userId, $pageName);
             ob_get_clean();
             //        var_dump($data);
 //        var_dump($data);
@@ -392,7 +438,8 @@ include_once("donnees/manager.php");
                 }
             }
             if (count($_GET) == 0) {
-                header("location: ?page=home");
+                header("Location: index.php?page=home");
+                exit;
             } elseif (($access_level == -1) && isset($_SESSION['id_aep'], $_SESSION['user_id'])) {
                 include_once("presentation/nos_access_page.php");
             } else {
