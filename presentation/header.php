@@ -159,12 +159,13 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="?page=backup"><i
-                                        class="bi bi-cloud-arrow-down me-2"></i>Sauvegarde & Restauration</a></li>
+                            
                             <li><a class="dropdown-item" href="?page=licence"><i
                                         class="bi bi-shield-lock me-2"></i>Licence</a></li>
                             <li><a class="dropdown-item" href="?page=a_propos"><i
                                         class="bi bi-info-circle me-2"></i>À propos</a></li>
+                            <li><a class="dropdown-item" href="?page=backup"><i 
+                                        class="bi bi-cloud-arrow-down me-2"></i>Sauvegarde & Restauration</a></li>
                         </ul>
                     </li>
                 </ul>
