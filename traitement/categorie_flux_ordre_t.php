@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard(true);
 /**
  * Endpoint AJAX : réordonnancement des catégories flux manuels (drag & drop).
  * Réponse JSON uniquement (pas de layout index.php).
@@ -15,10 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode($response);
-    exit;
-}
+Csrf::requireValid('Jeton CSRF invalide.', true);
 
 $id_aep = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
 $action = isset($_POST['action']) ? $_POST['action'] : '';

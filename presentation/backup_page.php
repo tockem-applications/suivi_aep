@@ -1,4 +1,5 @@
 <?php
+@include_once(__DIR__ . '/../donnees/web_guard.php');
 
 $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
 if (!is_dir($backupDir)) {
@@ -162,6 +163,7 @@ if ($actionPerformed) {
             <h2 class="h4 m-0">Export SQL de la base</h2>
             <form method="post" action="traitement/backup_t.php" class="m-0">
                 <input type="hidden" name="action" value="export_sql">
+                <?php echo Csrf::hiddenField(); ?>
                 <div class="input-group">
                     <input type="text" name="backup_name" class="form-control"
                         placeholder="Nom de la backup (optionnel)" value="backup_<?php echo date('Y-m-d_H-i-s'); ?>">
@@ -263,6 +265,7 @@ if ($actionPerformed) {
             </p>
             <form method="post" action="traitement/backup_t.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="apply_sql">
+                <?php echo Csrf::hiddenField(); ?>
                 <div class="input-group">
                     <input type="file" name="sql_file" accept=".sql" class="form-control" required>
                     <button class="btn btn-danger" type="submit"><i class="bi bi-upload me-1"></i>Appliquer</button>
@@ -283,6 +286,7 @@ if ($actionPerformed) {
             <div class="modal-body">
                 <form id="renameForm" method="post" action="traitement/backup_t.php">
                     <input type="hidden" name="action" value="rename_backup">
+                    <?php echo Csrf::hiddenField(); ?>
                     <input type="hidden" name="old_name" id="oldName">
                     <div class="mb-3">
                         <label for="newName" class="form-label">Nouveau nom</label>
@@ -321,6 +325,15 @@ if ($actionPerformed) {
 
 <script>
     let backupToDelete = null;
+    const backupCsrfToken = <?php echo json_encode(Csrf::token()); ?>;
+
+    function appendCsrf(form) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_csrf';
+        csrfInput.value = backupCsrfToken;
+        form.appendChild(csrfInput);
+    }
 
     function toggleBulkActions() {
         const bulkActions = document.getElementById('bulkActions');
@@ -382,6 +395,7 @@ if ($actionPerformed) {
 
             form.appendChild(actionInput);
             form.appendChild(filenameInput);
+            appendCsrf(form);
             document.body.appendChild(form);
             form.submit();
         }
@@ -420,6 +434,7 @@ if ($actionPerformed) {
 
             form.appendChild(actionInput);
             form.appendChild(newNameInput);
+            appendCsrf(form);
             document.body.appendChild(form);
             form.submit();
         }
@@ -451,6 +466,7 @@ if ($actionPerformed) {
             });
 
             form.appendChild(actionInput);
+            appendCsrf(form);
             document.body.appendChild(form);
             form.submit();
         }

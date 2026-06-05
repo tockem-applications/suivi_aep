@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_web_guard.php';
+bd_web_guard();
 /**
  * Données post-migration pour la synthèse compte d'exploitation (partie 14).
  * À lancer après restore d'une vieille base ou si la migration 9→10 structure est déjà faite.

@@ -234,11 +234,17 @@ abstract class Manager
         $this->connecter();
     }
 
+    public static function resetDb()
+    {
+        self::$bd = null;
+        if (class_exists('Connexion')) {
+            Connexion::resetConnection();
+        }
+    }
+
     public function connecter()
     {
         if (self::$bd == null) {
-            //self::$bdXml =Connexion::connectXml();
-            echo "------------------------------<br>";
             self::$bd = Connexion::connect();
         }
     }

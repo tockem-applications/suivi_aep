@@ -7,8 +7,10 @@ function getDbConnection()
 {
     $cfg = db_config_array();
     try {
-        $dsn = 'mysql:host=' . $cfg['db_host'] . ';dbname=' . $cfg['db_name'] . ';charset=utf8';
-        $conn = new PDO($dsn, $cfg['db_user'], $cfg['db_password'], array(PDO::ATTR_PERSISTENT => true));
+        $host = isset($cfg['db_host']) ? $cfg['db_host'] : 'localhost';
+        $port = isset($cfg['db_port']) ? (int) $cfg['db_port'] : 3306;
+        $dsn = 'mysql:host=' . $host . ';port=' . $port . ';dbname=' . $cfg['db_name'] . ';charset=utf8';
+        $conn = new PDO($dsn, $cfg['db_user'], $cfg['db_password']);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         $conn->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
         return $conn;
@@ -153,7 +155,7 @@ class AepModel
     // Récupérer l'historique des index (simplifié pour le graphique)
     // $moisMin / $moisMax : bornes inclusives sur m.mois (format date Y-m-d), null = pas de filtre
     // $excludeMoisBase : si true, exclut mois_facturation.est_mois_base = 1 (vue « opérationnelle » 12 derniers mois)
-    public function getIndexHistory($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true)
+    public function getIndexHistory($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true, $moisListe = null)
     {
         try {
             $sql = "SELECT SUM(i.nouvel_index - i.ancien_index) as value, m.mois as date
@@ -165,16 +167,26 @@ class AepModel
                 JOIN reseau r ON a.id_reseau = r.id
                 WHERE r.id_aep = :aepId";
             $params = array(':aepId' => $aepId);
-            if ($excludeMoisBase) {
-                $sql .= " AND m.est_mois_base = 0";
-            }
-            if ($moisMin !== null && $moisMin !== '') {
-                $sql .= " AND m.mois >= :mois_min";
-                $params[':mois_min'] = $moisMin;
-            }
-            if ($moisMax !== null && $moisMax !== '') {
-                $sql .= " AND m.mois <= :mois_max";
-                $params[':mois_max'] = $moisMax;
+            if (!empty($moisListe) && is_array($moisListe)) {
+                $inParts = array();
+                foreach ($moisListe as $idx => $m) {
+                    $key = ':mois_' . $idx;
+                    $inParts[] = $key;
+                    $params[$key] = $m;
+                }
+                $sql .= ' AND m.mois IN (' . implode(',', $inParts) . ')';
+            } else {
+                if ($excludeMoisBase) {
+                    $sql .= " AND m.est_mois_base = 0";
+                }
+                if ($moisMin !== null && $moisMin !== '') {
+                    $sql .= " AND m.mois >= :mois_min";
+                    $params[':mois_min'] = $moisMin;
+                }
+                if ($moisMax !== null && $moisMax !== '') {
+                    $sql .= " AND m.mois <= :mois_max";
+                    $params[':mois_max'] = $moisMax;
+                }
             }
             $sql .= " GROUP BY m.id ORDER BY m.mois ASC";
             $stmt = $this->conn->prepare($sql);
@@ -242,7 +254,7 @@ class AepModel
 
 
     // Nouvelle méthode : Récupérer les montants facturés et recouvrés par mois
-    public function getMontantsParMois($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true)
+    public function getMontantsParMois($aepId, $moisMin = null, $moisMax = null, $excludeMoisBase = true, $moisListe = null)
     {
         try {
             $sql = "
@@ -258,16 +270,26 @@ class AepModel
                 INNER JOIN constante_reseau cr ON m.id_constante = cr.id
                 WHERE r.id_aep = :aepId";
             $params = array(':aepId' => $aepId);
-            if ($excludeMoisBase) {
-                $sql .= " AND m.est_mois_base = 0";
-            }
-            if ($moisMin !== null && $moisMin !== '') {
-                $sql .= " AND m.mois >= :mois_min";
-                $params[':mois_min'] = $moisMin;
-            }
-            if ($moisMax !== null && $moisMax !== '') {
-                $sql .= " AND m.mois <= :mois_max";
-                $params[':mois_max'] = $moisMax;
+            if (!empty($moisListe) && is_array($moisListe)) {
+                $inParts = array();
+                foreach ($moisListe as $idx => $m) {
+                    $key = ':mois_' . $idx;
+                    $inParts[] = $key;
+                    $params[$key] = $m;
+                }
+                $sql .= ' AND m.mois IN (' . implode(',', $inParts) . ')';
+            } else {
+                if ($excludeMoisBase) {
+                    $sql .= " AND m.est_mois_base = 0";
+                }
+                if ($moisMin !== null && $moisMin !== '') {
+                    $sql .= " AND m.mois >= :mois_min";
+                    $params[':mois_min'] = $moisMin;
+                }
+                if ($moisMax !== null && $moisMax !== '') {
+                    $sql .= " AND m.mois <= :mois_max";
+                    $params[':mois_max'] = $moisMax;
+                }
             }
             $sql .= " GROUP BY m.id ORDER BY m.mois ASC";
             $stmt = $this->conn->prepare($sql);

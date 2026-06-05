@@ -98,17 +98,16 @@ function create_accordeon($titre, $html_body, $expande, $id)
 }
 
 if (!isset($_SESSION['user_id'])) {
-    //    var_dump((isset($_GET['form']) || isset($_GET['list'])));
-    //l'utilisateur n'est pas connecte et il ne veux que la page de login ou d'enregistrment
-    if (isset($_GET['page'])) {
-        //        var_dump("lllllllllllllllllllllllllllllll");
-        if ($_GET['page'] != 'login' && $_GET['page'] != 'register' && $_GET['page'] != 'logout')
-            header("location: ?page=login");
-    } else {
-        header("location: ?page=login");
-
+    $page = isset($_GET['page']) ? $_GET['page'] : '';
+    $allowed = ($page === 'login' || $page === 'register' || $page === 'logout');
+    if (!$allowed) {
+        if (!headers_sent()) {
+            header('Location: index.php?page=login');
+            exit;
+        }
+        echo '<script>window.location.href="index.php?page=login";</script>';
+        exit;
     }
-
 }
 
 if (isset($_GET['list'])) {

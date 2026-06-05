@@ -9,8 +9,6 @@
 class AuthManager
 {
     public static function logout(){
-        var_dump("ototo");
-//        session_start();
         // Supprimer toutes les variables de session
         $_SESSION = array();
         // Si un cookie de session existe, le supprimer
@@ -30,6 +28,11 @@ class AuthManager
 
     public static function handleLogin($data)
     {
+        @include_once(__DIR__ . '/../donnees/web_guard.php');
+        if (!Csrf::validate()) {
+            return array('success' => false, 'message' => 'Session expirée. Rechargez la page et réessayez.');
+        }
+
         if (!isset($data['email']) || !isset($data['password'])) {
             return array('success' => false, 'message' => 'Veuillez remplir tous les champs.');
         }
@@ -89,7 +92,6 @@ class AuthManager
         foreach ($permissions as $permission) {
             $access_level = max($access_level, (int)($permission['write_access'] + 0.0000001));
         }
-        var_dump($access_level);
         return $access_level;
     }
 

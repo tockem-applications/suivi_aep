@@ -22,32 +22,46 @@ class Connexion
     static public $db_user;
     static public $db_host;
     static public $db_password;
+    static public $db_port;
 
     public static function initConfig()
     {
         global $dbDefaults;
-        if (self::$db_host === null) {
-            self::$db_host     = $dbDefaults['db_host'];
-            self::$db_name     = $dbDefaults['db_name'];
-            self::$db_user     = $dbDefaults['db_user'];
-            self::$db_password = $dbDefaults['db_password'];
+        $dbDefaults = db_config_array();
+        self::$db_host     = $dbDefaults['db_host'];
+        self::$db_name     = $dbDefaults['db_name'];
+        self::$db_user     = $dbDefaults['db_user'];
+        self::$db_password = $dbDefaults['db_password'];
+        self::$db_port     = isset($dbDefaults['db_port']) ? $dbDefaults['db_port'] : '3306';
+        if (function_exists('db_config_is_docker') && db_config_is_docker()) {
+            if (self::$db_host === 'localhost' || self::$db_host === '127.0.0.1') {
+                self::$db_host = 'db';
+            }
         }
     }
+
+    public static function resetConnection()
+    {
+        self::$bdd = null;
+    }
+
     static private $bdd = null;
     public static function connect()
     {
         self::initConfig();
-        if (self::$bdd != null)
+        if (self::$bdd != null) {
             return self::$bdd;
+        }
         try {
-
-            //            new PDO("mysql:host=localhost;dbname=banane", "root", "");
+            $dsn = 'mysql:host=' . self::$db_host
+                . ';port=' . (int) self::$db_port
+                . ';dbname=' . self::$db_name
+                . ';charset=utf8';
             $bdd = new PDO(
-                "mysql:host=" . self::$db_host . ";dbname=" . self::$db_name . ";charset=utf8",
+                $dsn,
                 self::$db_user,
                 self::$db_password,
                 array(
-                    PDO::ATTR_PERSISTENT => true,
                     PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8"
                 )
             );

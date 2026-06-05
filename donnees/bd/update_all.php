@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_web_guard.php';
+bd_web_guard();
 /**
  * Script principal de mise à jour de la base de données
  * Exécute toutes les mises à jour nécessaires dans l'ordre

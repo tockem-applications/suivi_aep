@@ -8,4 +8,6 @@ return array(
     'db_name'     => 'suivi_aep_fokoue',
     'db_user'     => 'root',
     'db_password' => '',
+    // Token optionnel pour traitement/update_git.php (déploiement automatisé)
+    'git_update_token' => '',
 );

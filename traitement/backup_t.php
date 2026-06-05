@@ -1,4 +1,7 @@
 <?php
+ob_start();
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 
 @include_once("../donnees/connexion.php");
 @include_once("donnees/connexion.php");
@@ -77,6 +80,8 @@ class Backup_t
 
     public static function exportSql()
     {
+        Manager::resetDb();
+        Connexion::resetConnection();
         $success = 'ok';
         try {
             require_once __DIR__ . '/../donnees/db_config.php';
@@ -176,6 +181,8 @@ class Backup_t
 
     public static function applySql()
     {
+        Manager::resetDb();
+        Connexion::resetConnection();
         try {
             if (!isset($_FILES['sql_file']) || !is_uploaded_file($_FILES['sql_file']['tmp_name'])) {
                 throw new Exception('Aucun fichier SQL reçu');
@@ -201,6 +208,7 @@ class Backup_t
         }
         $preFile = $backupDir . DIRECTORY_SEPARATOR . 'pre_apply_' . $timestamp . '.sql';
         try {
+            Connexion::resetConnection();
             $pdo = Connexion::connect();
             self::phpSqlDump($pdo, $db, $preFile);
         } catch (Exception $e) {
@@ -216,46 +224,53 @@ class Backup_t
             exit;
         }
 
-        // Tenter via mysql.exe si dispo, sinon via PDO
         $applied = false;
-        // Chercher mysql.exe
-        $candidates = array(
-            'mysql',
-            'C:\\wamp64\\bin\\mysql\\mysql8.0.\\bin\\mysql.exe',
-            'C:\\wamp64\\bin\\mysql\\mysql5.7.\\bin\\mysql.exe',
-            'C:\\wamp\\bin\\mysql\\mysql5.7.\\bin\\mysql.exe',
-            'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe',
-            'C:\\Program Files (x86)\\MySQL\\MySQL Server 5.7\\bin\\mysql.exe'
-        );
-        $mysqlBin = null;
-        foreach ($candidates as $c) {
-            if (strpos($c, ':\\') !== false) {
-                if (file_exists($c)) {
-                    $mysqlBin = '"' . $c . '"';
-                    break;
-                }
-            } else {
-                $mysqlBin = $c;
-            }
-        }
+        $inDocker = file_exists('/.dockerenv');
+        $pdoHost = function_exists('db_config_pdo_host') ? db_config_pdo_host($host) : $host;
+        $port = isset($cfg['db_port']) ? (int) $cfg['db_port'] : 3306;
 
-        if (function_exists('exec') && $mysqlBin !== null) {
-            $cmd = $mysqlBin . ' -h ' . escapeshellarg($host) . ' -u ' . escapeshellarg($user);
-            if ($pass !== '') {
-                $cmd .= ' -p' . $pass;
+        // Sous Docker : pas de client mysql dans le conteneur web — PDO uniquement
+        if (!$inDocker) {
+            $candidates = array(
+                'mysql',
+                'C:\\wamp64\\bin\\mysql\\mysql8.0.\\bin\\mysql.exe',
+                'C:\\wamp64\\bin\\mysql\\mysql5.7.\\bin\\mysql.exe',
+                'C:\\wamp\\bin\\mysql\\mysql5.7.\\bin\\mysql.exe',
+                'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe',
+                'C:\\Program Files (x86)\\MySQL\\MySQL Server 5.7\\bin\\mysql.exe'
+            );
+            $mysqlBin = null;
+            foreach ($candidates as $c) {
+                if (strpos($c, ':\\') !== false) {
+                    if (file_exists($c)) {
+                        $mysqlBin = '"' . $c . '"';
+                        break;
+                    }
+                } else {
+                    $mysqlBin = $c;
+                }
             }
-            $cmd .= ' ' . escapeshellarg($db) . ' < ' . '"' . $tmp . '"';
-            $output = array();
-            $code = 0;
-            @exec($cmd, $output, $code);
-            if ($code === 0) {
-                $applied = true;
+
+            if (function_exists('exec') && $mysqlBin !== null) {
+                $cmd = $mysqlBin . ' -h ' . escapeshellarg($pdoHost) . ' -P ' . (int) $port
+                    . ' -u ' . escapeshellarg($user);
+                if ($pass !== '') {
+                    $cmd .= ' -p' . $pass;
+                }
+                $cmd .= ' ' . escapeshellarg($db) . ' < ' . '"' . $tmp . '"';
+                $output = array();
+                $code = 0;
+                @exec($cmd, $output, $code);
+                if ($code === 0) {
+                    $applied = true;
+                }
             }
         }
 
         if (!$applied) {
             // Application via PDO: découper naïvement par ';' en prenant en compte les lignes
             try {
+                Connexion::resetConnection();
                 $pdo = Connexion::connect();
                 $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
                 $buffer = '';
@@ -468,21 +483,33 @@ class Backup_t
 }
 
 if (isset($_POST['action']) && $_POST['action'] === 'export_sql') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::exportSql();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'apply_sql') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::applySql();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'rename_backup') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::renameBackup();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'delete_backup') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::deleteBackup();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'bulk_rename') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::bulkRename();
 }
 if (isset($_POST['action']) && $_POST['action'] === 'bulk_delete') {
+    require_once dirname(__DIR__) . '/donnees/web_guard.php';
+    Csrf::requireValid();
     Backup_t::bulkDelete();
 }
 

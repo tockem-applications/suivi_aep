@@ -8,7 +8,7 @@ LABEL org.opencontainers.image.title="suivi-reseau-web" \
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p /var/www/html/backups
+    && mkdir -p /var/www/html/backups /opt/php/lib/php.d
 
 WORKDIR /var/www/html
 EXPOSE 80

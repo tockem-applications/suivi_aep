@@ -61,7 +61,7 @@ $tableauMontantsBfBp = array();
 $dashboardNbMoisGlissant = 12;
 $dashboardHasTypeAbone = false;
 /** Mode période : 12 derniers mois | annee | tous | intervalle */
-$dashboardPeriodeMode = '13';
+$dashboardPeriodeMode = '12';
 $dashboardAnneeVue = null;
 $dashboardMfDebutId = isset($_GET['mf_debut']) ? (int) $_GET['mf_debut'] : 0;
 $dashboardMfFinId = isset($_GET['mf_fin']) ? (int) $_GET['mf_fin'] : 0;
@@ -81,13 +81,13 @@ if (isset($_GET['annee'])) {
         $dashboardPeriodeMode = 'intervalle';
     } elseif ($rawAnnee === 'm3') {
         $dashboardPeriodeMode = '12';
-        $dashboardNbMoisGlissant = 4;
+        $dashboardNbMoisGlissant = 3;
     } elseif ($rawAnnee === 'm6') {
         $dashboardPeriodeMode = '12';
-        $dashboardNbMoisGlissant = 7;
+        $dashboardNbMoisGlissant = 6;
     } elseif ($rawAnnee === '') {
         $dashboardPeriodeMode = '12';
-        $dashboardNbMoisGlissant = 13;
+        $dashboardNbMoisGlissant = 12;
     } elseif ($rawAnnee !== '') {
         $yy = (int) $rawAnnee;
         if ($yy >= 1990 && $yy <= 2100) {
@@ -98,6 +98,8 @@ if (isset($_GET['annee'])) {
 }
 $dashboardMoisMin = null;
 $dashboardMoisMax = null;
+/** Liste explicite des mois (mode glissant) — évite de perdre un mois si un mois base est dans l'intervalle min/max. */
+$dashboardMoisFiltre = array();
 $dashboardPeriodeLibelle = '';
 $dashboardAnneesDisponibles = array();
 
@@ -247,25 +249,32 @@ if ($aepId) {
         // Fenêtre = les N derniers mois de facturation en base (périodes mf), pas N mois civils.
         $nM = max(1, (int) $dashboardNbMoisGlissant);
         $res12 = Manager::prepare_query(
-            "SELECT MIN(t.mois) AS min_m, MAX(t.mois) AS max_m FROM (
-                SELECT mf.mois AS mois FROM mois_facturation mf
+            "SELECT mf.mois AS mois FROM mois_facturation mf
                 INNER JOIN constante_reseau c ON c.id = mf.id_constante
                 WHERE c.id_aep = ? AND mf.est_mois_base = 0
                 GROUP BY mf.mois
                 ORDER BY mf.mois DESC
-                LIMIT " . (int) $nM . "
-            ) t",
+                LIMIT " . (int) $nM,
             array($aepId)
         );
-        $row12 = $res12 ? $res12->fetch() : null;
-        if ($row12 && !empty($row12['min_m']) && !empty($row12['max_m'])) {
-            $tsMin = strtotime($row12['min_m']);
-            $tsMax = strtotime($row12['max_m']);
+        $dashboardMoisFiltre = array();
+        if ($res12) {
+            while ($row12 = $res12->fetch(PDO::FETCH_ASSOC)) {
+                if (!empty($row12['mois'])) {
+                    $dashboardMoisFiltre[] = $row12['mois'];
+                }
+            }
+        }
+        if (!empty($dashboardMoisFiltre)) {
+            $moisSorted = $dashboardMoisFiltre;
+            sort($moisSorted);
+            $tsMin = strtotime($moisSorted[0]);
+            $tsMax = strtotime($moisSorted[count($moisSorted) - 1]);
             if ($tsMin !== false && $tsMax !== false) {
                 $dashboardMoisMin = date('Y-m-01', $tsMin);
                 $dashboardMoisMax = date('Y-m-t', $tsMax);
-                $dashboardPeriodeLibelle = $nM . ' dernier' . ($nM > 1 ? 's' : '')
-                    . ' mois de facturation (jusqu\'à ' . getLetterMonth($row12['max_m']) . ')';
+                $dashboardPeriodeLibelle = count($dashboardMoisFiltre) . ' dernier' . (count($dashboardMoisFiltre) > 1 ? 's' : '')
+                    . ' mois de facturation (jusqu\'à ' . getLetterMonth($moisSorted[count($moisSorted) - 1]) . ')';
             }
         }
     }
@@ -288,13 +297,28 @@ if ($aepId) {
 
     // Synthèse redevances sur la période : estimatif par base ; versés = somme des versements dont l'année-mois de date_versement est dans l'intervalle (aligné page versements redevance)
     if ($dashboardMoisMin !== null && $dashboardMoisMax !== null && class_exists('Redevance')) {
-        $qIdsRng = Manager::prepare_query(
-            "SELECT m.id FROM mois_facturation m
+        if (!empty($dashboardMoisFiltre)) {
+            $paramsIdsRng = array($aepId);
+            $inMoisRng = implode(',', array_fill(0, count($dashboardMoisFiltre), '?'));
+            foreach ($dashboardMoisFiltre as $mf) {
+                $paramsIdsRng[] = $mf;
+            }
+            $qIdsRng = Manager::prepare_query(
+                "SELECT m.id FROM mois_facturation m
+             INNER JOIN constante_reseau c ON c.id = m.id_constante
+             WHERE c.id_aep = ? AND m.mois IN (" . $inMoisRng . ")
+             ORDER BY m.mois ASC",
+                $paramsIdsRng
+            );
+        } else {
+            $qIdsRng = Manager::prepare_query(
+                "SELECT m.id FROM mois_facturation m
              INNER JOIN constante_reseau c ON c.id = m.id_constante
              WHERE c.id_aep = ? AND m.mois >= ? AND m.mois <= ?
              ORDER BY m.mois ASC",
-            array($aepId, $dashboardMoisMin, $dashboardMoisMax)
-        );
+                array($aepId, $dashboardMoisMin, $dashboardMoisMax)
+            );
+        }
         $moisIdsRng = $qIdsRng ? $qIdsRng->fetchAll(PDO::FETCH_COLUMN, 0) : array();
         $ymMin = substr((string) $dashboardMoisMin, 0, 7);
         $ymMax = substr((string) $dashboardMoisMax, 0, 7);
@@ -387,10 +411,10 @@ if ($aepId) {
         }
     }
 
-    // En vue année / tous les mois : inclure le mois de référence (est_mois_base = 1), souvent janvier
-    $dashboardExclureMoisBase = ($dashboardPeriodeMode === '12');
-    $data['index_history'] = $model->getIndexHistory($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase);
-    $data['montants_par_mois'] = $model->getMontantsParMois($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase);
+    // En vue glissante : liste explicite des mois (déjà sans mois base). Sinon filtre est_mois_base sur intervalle.
+    $dashboardExclureMoisBase = ($dashboardPeriodeMode === '12' && empty($dashboardMoisFiltre));
+    $data['index_history'] = $model->getIndexHistory($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase, $dashboardMoisFiltre);
+    $data['montants_par_mois'] = $model->getMontantsParMois($aepId, $dashboardMoisMin, $dashboardMoisMax, $dashboardExclureMoisBase, $dashboardMoisFiltre);
 
     // Récupérer les factures (filtrées si un mois est spécifié)
     $mois = isset($_GET['mois']) ? $_GET['mois'] : null;
@@ -456,7 +480,13 @@ if ($aepId) {
     // taux = somme volumes compteurs distribution réseau / somme volumes compteurs abonnés
     $dashSqlMois = '';
     $dashParamsMois = array($aepId);
-    if ($dashboardMoisMin !== null && $dashboardMoisMax !== null) {
+    if (!empty($dashboardMoisFiltre)) {
+        $inDash = implode(',', array_fill(0, count($dashboardMoisFiltre), '?'));
+        $dashSqlMois = ' AND mf.mois IN (' . $inDash . ')';
+        foreach ($dashboardMoisFiltre as $mf) {
+            $dashParamsMois[] = $mf;
+        }
+    } elseif ($dashboardMoisMin !== null && $dashboardMoisMax !== null) {
         $dashSqlMois = ' AND mf.mois >= ? AND mf.mois <= ?';
         $dashParamsMois[] = $dashboardMoisMin;
         $dashParamsMois[] = $dashboardMoisMax;
@@ -533,7 +563,7 @@ if ($aepId) {
         $dashboardHasTypeAbone = false;
     }
 
-    $sqlBfBpEstMoisBase = $dashboardExclureMoisBase ? ' AND mf.est_mois_base = 0' : '';
+    $sqlBfBpEstMoisBase = ($dashboardExclureMoisBase && empty($dashboardMoisFiltre)) ? ' AND mf.est_mois_base = 0' : '';
 
     $limMoisBfBp = (int) $dashboardNbMoisGlissant;
     $bfBpPeriodeSql = '';
@@ -541,12 +571,18 @@ if ($aepId) {
     if ($dashboardPeriodeMode === 'annee' && $dashboardAnneeVue !== null) {
         $bfBpPeriodeSql = ' AND YEAR(mf.mois) = ?';
         $bfBpParams[] = $dashboardAnneeVue;
+    } elseif (!empty($dashboardMoisFiltre)) {
+        $inBfBp = implode(',', array_fill(0, count($dashboardMoisFiltre), '?'));
+        $bfBpPeriodeSql = ' AND mf.mois IN (' . $inBfBp . ')';
+        foreach ($dashboardMoisFiltre as $mf) {
+            $bfBpParams[] = $mf;
+        }
     } elseif ($dashboardMoisMin !== null && $dashboardMoisMax !== null) {
         $bfBpPeriodeSql = ' AND mf.mois >= ? AND mf.mois <= ?';
         $bfBpParams[] = $dashboardMoisMin;
         $bfBpParams[] = $dashboardMoisMax;
     }
-    $bfBpLimitClause = ($bfBpPeriodeSql !== '') ? '' : (' LIMIT ' . (int) $limMoisBfBp);
+    $bfBpLimitClause = ($bfBpPeriodeSql !== '' || !empty($dashboardMoisFiltre)) ? '' : (' LIMIT ' . (int) $limMoisBfBp);
 
     if ($dashboardHasTypeAbone) {
         $sqlBfBp = "

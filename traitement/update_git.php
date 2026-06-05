@@ -1,4 +1,30 @@
 <?php
+require_once dirname(__DIR__) . '/donnees/web_guard.php';
+
+@ini_set('display_errors', 0);
+
+function respond($status, $data)
+{
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(array('status' => $status, 'data' => $data));
+    exit;
+}
+
+WebGuard::setRedirectPrefix('../');
+WebGuard::enforceLicence(true);
+WebGuard::loadCore();
+
+@include_once(dirname(__DIR__) . '/donnees/db_config.php');
+
+$expectedToken = db_config('git_update_token', '');
+$providedToken = isset($_GET['token']) ? (string) $_GET['token'] : (isset($_POST['token']) ? (string) $_POST['token'] : '');
+$authed = !empty($_SESSION['user_id']);
+$tokenOk = ($expectedToken !== '' && $providedToken !== '' && $providedToken === $expectedToken);
+
+if (!$authed && !$tokenOk) {
+    respond('error', 'Accès refusé : authentification ou token requis.');
+}
+
 // Outil de mise à jour basé sur Git/GitHub (compatible PHP 5.3.4)
 // Usage (à restreindre via token et/ou IP):
 //   index.php?task=update_git (si inclus) ou directement traitement/update_git.php?token=VOTRE_TOKEN
@@ -10,7 +36,6 @@
 // Configuration minimale
 // ------------------------
 $CONFIG = array(
-    'secret_token' => 'osd9wjsks4sdi39jd', // Modifiez ce token et conservez-le secret
     'allowed_branches' => array('recouvrement_branch'),
     'git_bin' => 'git', // Chemin vers git si nécessaire, ex: 'C:\\Program Files\\Git\\bin\\git.exe'
     'repo_dir' => realpath(dirname(__FILE__) . '/..'), // Racine du dépôt (un niveau au-dessus de traitement/)
@@ -22,13 +47,6 @@ $CONFIG = array(
 // ------------------------
 // Helpers
 // ------------------------
-function respond($status, $data)
-{
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(array('status' => $status, 'data' => $data));
-    exit;
-}
-
 function run_cmd($cmd, $cwd)
 {
     $descriptor = array(1 => array('pipe', 'w'), 2 => array('pipe', 'w'));
@@ -49,14 +67,6 @@ function run_cmd($cmd, $cwd)
 function file_put_contents_silent($path, $content)
 {
     @file_put_contents($path, $content);
-}
-
-// ------------------------
-// Sécurité (token)
-// ------------------------
-$token = isset($_GET['token']) ? $_GET['token'] : (isset($_POST['token']) ? $_POST['token'] : '');
-if ($CONFIG['secret_token'] !== 'CHANGEZ-MOI' && $token !== $CONFIG['secret_token']) {
-    respond('error', 'Accès refusé: token invalide.');
 }
 
 // ------------------------

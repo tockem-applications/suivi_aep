@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_web_guard.php';
+bd_web_guard();
 /**
  * Script pour générer un fichier de migration SQL
  * Permet de faire passer la base de données de l'état (9) à l'état (10)

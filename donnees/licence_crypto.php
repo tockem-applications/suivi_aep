@@ -113,6 +113,10 @@ class LicenceCrypto
             return array('ok' => false, 'error' => 'Encodage base64 invalide.');
         }
 
+        if (!function_exists('openssl_verify')) {
+            return array('ok' => false, 'error' => 'Extension OpenSSL absente dans PHP.');
+        }
+
         if (!is_readable($publicKeyPath)) {
             return array('ok' => false, 'error' => 'Clé publique introuvable.');
         }

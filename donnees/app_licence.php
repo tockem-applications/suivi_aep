@@ -275,11 +275,27 @@ class AppLicence
     }
 
     /**
+     * Docker local sans extension openssl : autoriser l'app si LICENCE_DEV_MODE=1.
+     * @return bool
+     */
+    private static function isLicenceDevBypass()
+    {
+        $v = getenv('LICENCE_DEV_MODE');
+        if ($v === false || $v === '' || $v === '0') {
+            return false;
+        }
+        return !function_exists('openssl_verify');
+    }
+
+    /**
      * Licence chargée, signée et non expirée (expire_bientot autorisé).
      * @return bool
      */
     public function isAccesAutorise()
     {
+        if (self::isLicenceDevBypass()) {
+            return true;
+        }
         if (!$this->loaded || !$this->signatureOk) {
             return false;
         }

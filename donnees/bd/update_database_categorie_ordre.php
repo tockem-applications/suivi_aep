@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_web_guard.php';
+bd_web_guard();
 /**
  * Migration : ordre d'affichage des catégories flux manuel (comptes d'exploitation).
  * Idempotent.

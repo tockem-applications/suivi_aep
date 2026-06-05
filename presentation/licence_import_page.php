@@ -46,6 +46,7 @@ $lic = app_licence();
                 <div class="card-body p-4">
                     <form method="POST" action="index.php?page=licence" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="import_licence">
+                        <?php echo Csrf::hiddenField(); ?>
                         <div class="mb-3">
                             <label for="licence_file" class="form-label">Fichier licence (.lic)</label>
                             <input type="file" class="form-control" id="licence_file" name="licence_file" accept=".lic" required>

@@ -47,7 +47,11 @@ docker\check-versions.bat
 | `DB_USER` / `DB_PASSWORD` | suivi / suivi |
 | `MYSQL_ROOT_PASSWORD` | root |
 
-Connexion PHP : `donnees/db_config.php` (variables `DB_*`).
+Connexion PHP : `donnees/db_config.php` (variables `DB_*`). Dans Docker, `config.local.php` WAMP (`localhost`) est ignore pour la BD — hôte = `db`.
+
+Import backup SQL : page **Sauvegardes** (PDO vers le service `db`, pas le socket local).
+
+Dossier **`backups/`** à la racine du projet (monté dans le conteneur web, droits `daemon` via `docker/entrypoint.sh`).
 
 ### WAMP sans Docker
 
@@ -55,16 +59,57 @@ Connexion PHP : `donnees/db_config.php` (variables `DB_*`).
 
 ## Base de donnees
 
-Au premier demarrage, import automatique de `docker/init-db/01-schema.sql`.
+Au demarrage, le service **`db-init`** importe **`app-setup/App_vide.sql`** si la table `aep` est absente (l’image `vsamov/mysql` **n’execute pas** `/docker-entrypoint-initdb.d`).
 
-Import manuel d’un backup :
+Si `SHOW TABLES` est vide :
 
 ```bat
-docker compose exec -T db mysql -uroot -proot suivi_aep_fokoue < C:\chemin\backup.sql
+docker compose run --rm db-init
+```
+
+ou :
+
+```bat
+docker\import-db.bat
+```
+
+Fichier utilise : **`app-setup/App_vide.sql`** (reference unique pour l’initialisation).
+
+Ensuite, appliquez les migrations PHP si necessaire :  
+`http://localhost:8080/donnees/bd/update_all.php?run_update=1`
+
+Import manuel d’un autre backup :
+
+```bat
+docker compose cp "C:\chemin\backup.sql" db:/tmp/backup.sql
+docker compose exec db sh -c "mysql -uroot -proot suivi_aep_fokoue < /tmp/backup.sql"
+```
+
+Repartir de zero (efface toutes les donnees Docker) :
+
+```bat
+docker compose down -v
+docker compose up -d
+docker\import-db.bat
 ```
 
 ## Depannage
 
+- **`TLS handshake timeout` sur `kochanup/apache-2.2-php-5.3`** : Docker Hub inaccessible (reseau lent, VPN, pare-feu). **Ne pas utiliser** `docker compose up -d --build` si l'image existe deja. Demarrer avec :
+  ```bat
+  docker compose up -d
+  ```
+  Rebuild seulement quand le `Dockerfile` change et que le reseau fonctionne :
+  ```bat
+  docker compose build web
+  ```
+  Ou telecharger l'image de base une fois :
+  ```bat
+  docker pull kochanup/apache-2.2-php-5.3
+  docker pull vsamov/mysql-5.1.73
+  ```
+- **404 sur `/index.php`** : l'image kochanup sert par defaut `/opt/apache-2.2/htdocs`. Le compose monte `docker/apache/default_80.conf` vers `/var/www/html`. Apres modification : `docker compose up -d` (ou `restart web`).
+- **Page blanche** : l'image PHP n'a pas `openssl` → erreur fatale sur `active.lic`. Corrige dans `licence_crypto.php`. En Docker, `LICENCE_DEV_MODE=1` (defaut dans compose) permet d'utiliser l'app ; pour tester l'import `.lic`, utiliser **WAMP** ou mettre `LICENCE_DEV_MODE=0` et installer OpenSSL dans l'image.
 - **Port occupe** : changer `APP_PORT` dans `.env`.
 - **Erreur MySQL** : `docker compose logs db` — attendre `healthy`.
 - **`compile_mysql51.sh`** : ancienne methode abandonnee ; utiliser `docker compose pull` puis `up`.
@@ -73,4 +118,4 @@ docker compose exec -T db mysql -uroot -proot suivi_aep_fokoue < C:\chemin\backu
 
 - `docker-compose.yml` — services `web` + `db`
 - `Dockerfile` — couche legere sur `kochanup/apache-2.2-php-5.3`
-- `docker/init-db/01-schema.sql` — schema initial
+- `app-setup/App_vide.sql` — schema initial (Docker init + `docker\import-db.bat`)

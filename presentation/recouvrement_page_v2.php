@@ -605,8 +605,16 @@ function display_recouvrement_v2()
             background-color: #fff3cd !important;
             border-top: 2px solid #ffc107;
             border-bottom: 2px solid #ffc107;
-            font-weight: 700;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.3rem 0.35rem;
+            white-space: nowrap;
+            line-height: 1.15;
             color: #212529 !important;
+        }
+
+        .table tr.recouvrement-totals-row .badge {
+            font-size: 0.62rem;
         }
     </style>
 

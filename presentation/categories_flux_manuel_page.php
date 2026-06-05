@@ -1,6 +1,7 @@
 <?php
 @include_once("../donnees/categorie_flux_manuel.php");
 @include_once("donnees/categorie_flux_manuel.php");
+@include_once(__DIR__ . '/../donnees/web_guard.php');
 
 CategorieFluxManuel::ensureOrdreAffichageColumn();
 
@@ -1009,6 +1010,7 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
 
 <script>
 var cfmAjaxReorderUrl = <?php echo json_encode($cfm_ajax_reorder_url); ?>;
+var cfmCsrfToken = <?php echo json_encode(Csrf::token()); ?>;
 var cfmNbMemeCode = <?php echo $detail ? (int) $detail['nb_meme_code'] : 0; ?>;
 var cfmCanImport = <?php echo $cfm_can_import ? 'true' : 'false'; ?>;
 var cfmModalMode = 'new';
@@ -1107,6 +1109,7 @@ function cfmSaveSortOrder(tbody, typeFlux, savingEl) {
     var formData = new FormData();
     formData.append('action', 'reorder_ordre');
     formData.append('type_flux', typeFlux);
+    formData.append('_csrf', cfmCsrfToken);
     ids.forEach(function (id) { formData.append('categorie_ids[]', id); });
     fetch(cfmAjaxReorderUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
         .then(function (r) { return r.text(); })

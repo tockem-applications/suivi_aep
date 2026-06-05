@@ -135,7 +135,7 @@ if (isset($_GET['form'])) {
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">PrixsemBS</span>
-            <input type="number" class="form-control" value="<?= $PrixsemBS ?? '' ?>" name="prixSemBS"
+            <input type="number" class="form-control" value="<?php echo isset($PrixsemBS) ? htmlspecialchars($PrixsemBS, ENT_QUOTES, 'UTF-8') : ''; ?>" name="prixSemBS"
                    aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <?php
@@ -425,7 +425,7 @@ if (isset($_GET['form'])) {
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">PrixsemBS</span>
-            <input type="number" class="form-control" value="<?= $PrixsemBS ?? '' ?>" name="prixSemBS"
+            <input type="number" class="form-control" value="<?php echo isset($PrixsemBS) ? htmlspecialchars($PrixsemBS, ENT_QUOTES, 'UTF-8') : ''; ?>" name="prixSemBS"
                    aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <?php
@@ -675,19 +675,19 @@ if (isset($_GET['form'])) {
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Nom<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="text" class="form-control" value="<?= $NomLocataire ?? '' ?>" name="nom"
+            <input type="text" class="form-control" value="<?php echo isset($NomLocataire) ? htmlspecialchars($NomLocataire, ENT_QUOTES, 'UTF-8') : ''; ?>" name="nom"
                    aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Prenom<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="text" class="form-control" value="<?= $PrenomLocataire ?? '' ?>" name="prenom"
+            <input type="text" class="form-control" value="<?php echo isset($PrenomLocataire) ? htmlspecialchars($PrenomLocataire, ENT_QUOTES, 'UTF-8') : ''; ?>" name="prenom"
                    aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Email<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="email" class="form-control" value="<?= $CodePostalLocataire ?? '' ?>" name="email"
+            <input type="email" class="form-control" value="<?php echo isset($CodePostalLocataire) ? htmlspecialchars($CodePostalLocataire, ENT_QUOTES, 'UTF-8') : ''; ?>" name="email"
                    placeholder="email@gmail.com" aria-label="Sizing example input"
                    aria-describedby="inputGroup-sizing-default">
         </div>
@@ -695,7 +695,7 @@ if (isset($_GET['form'])) {
             <div class="input-group mb-3">
                 <span class="input-group-text w-25" id="inputGroup-sizing-default">Cle admin<span
                             style="color: red; font-weight: bold">*</span></span>
-                <input type="text" class="form-control" value="<?= $NumTel1Locataire ?? '' ?>" required
+                <input type="text" class="form-control" value="<?php echo isset($NumTel1Locataire) ? htmlspecialchars($NumTel1Locataire, ENT_QUOTES, 'UTF-8') : ''; ?>" required
                        placeholder="Cle Unique" name="cle_admin" aria-label="Sizing example input"
                        aria-describedby="inputGroup-sizing-default">
             </div>
@@ -704,13 +704,13 @@ if (isset($_GET['form'])) {
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Password<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="password" class="form-control" value="<?= $NumTel2Locataire ?? '' ?>" placeholder=""
+            <input type="password" class="form-control" value="<?php echo isset($NumTel2Locataire) ? htmlspecialchars($NumTel2Locataire, ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder=""
                    name="confirm" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Confirm<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="password" class="form-control" value="<?= $VilleLocataire ?? '' ?>" name="password"
+            <input type="password" class="form-control" value="<?php echo isset($VilleLocataire) ? htmlspecialchars($VilleLocataire, ENT_QUOTES, 'UTF-8') : ''; ?>" name="password"
                    aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <a href="index.php?form=login">J'ai deja un compte</a>
@@ -723,14 +723,14 @@ if (isset($_GET['form'])) {
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Email<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="email" class="form-control" value="<?= $CodePostalLocataire ?? '' ?>" name="email"
+            <input type="email" class="form-control" value="<?php echo isset($CodePostalLocataire) ? htmlspecialchars($CodePostalLocataire, ENT_QUOTES, 'UTF-8') : ''; ?>" name="email"
                    placeholder="email@gmail.com" aria-label="Sizing example input"
                    aria-describedby="inputGroup-sizing-default">
         </div>
         <div class="input-group mb-3">
             <span class="input-group-text w-25" id="inputGroup-sizing-default">Password<span
                         style="color: red; font-weight: bold">*</span></span>
-            <input type="password" class="form-control" value="<?= $NumTel2Locataire ?? '' ?>" placeholder=""
+            <input type="password" class="form-control" value="<?php echo isset($NumTel2Locataire) ? htmlspecialchars($NumTel2Locataire, ENT_QUOTES, 'UTF-8') : ''; ?>" placeholder=""
                    name="password" aria-label="Sizing example input" aria-describedby="inputGroup-sizing-default">
         </div>
         <a href="index.php?form=logup">Je n'ai pas de compte</a>

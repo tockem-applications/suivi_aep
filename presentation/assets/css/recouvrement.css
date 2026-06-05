@@ -114,3 +114,21 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* Lignes de totaux (recouvrement) — police réduite pour les montants */
+.table tr.recouvrement-totals-row td,
+.table_searching tr.recouvrement-totals-row td {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.3rem 0.35rem;
+    white-space: nowrap;
+    line-height: 1.15;
+    vertical-align: middle;
+}
+
+.table tr.recouvrement-totals-row .badge,
+.table_searching tr.recouvrement-totals-row .badge {
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 0.15em 0.4em;
+}

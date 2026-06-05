@@ -1,6 +1,7 @@
 <?php
 ob_start();
 include_once("donnees/manager.php");
+@include_once("donnees/web_guard.php");
 @include_once("traitement/licence_t.php");
 
 $pageLicence = isset($_GET['page']) && $_GET['page'] === 'licence';
@@ -11,6 +12,12 @@ if (
     && isset($_POST['action'])
     && $_POST['action'] === 'import_licence'
 ) {
+    if (!Csrf::validate()) {
+        $_SESSION['LICENCE_IMPORT_ERROR'] = 'Session expirée. Rechargez la page et réessayez.';
+        ob_end_clean();
+        header('Location: index.php?page=licence');
+        exit;
+    }
     $importResult = LicenceT::handleImportUpload();
     if (!empty($importResult['success'])) {
         ob_end_clean();
@@ -35,8 +42,10 @@ if (!$licenceAcces && $pageLicence) {
     exit;
 }
 
-ob_end_flush();
-header('Content-Type: text/html; charset=UTF-8');
+if (!headers_sent()) {
+    header('Content-Type: text/html; charset=UTF-8');
+}
+// Ne pas flusher ici : liste.php et d'autres includes peuvent encore appeler header()
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -395,17 +404,30 @@ header('Content-Type: text/html; charset=UTF-8');
             include_once("traitement/role_t.php");
 
             $currentPage = isset($_GET['page']) ? trim((string) $_GET['page']) : '';
-            if ($currentPage === '') {
+            $routeList = isset($_GET['list']) ? trim((string) $_GET['list']) : '';
+            $routeForm = isset($_GET['form']) ? trim((string) $_GET['form']) : '';
+            $routeAction = isset($_GET['action']) ? trim((string) $_GET['action']) : '';
+
+            if ($currentPage === '' && $routeList === '' && $routeForm === '' && $routeAction === '') {
                 ob_get_clean();
                 header('Location: index.php?page=home');
                 exit;
             }
 
+            $pageName = $currentPage;
+            if ($pageName === '') {
+                if ($routeList !== '') {
+                    $pageName = $routeList;
+                } elseif ($routeForm !== '') {
+                    $pageName = $routeForm;
+                } elseif ($routeAction !== '') {
+                    $pageName = $routeAction;
+                }
+            }
+
             $request = explode('?', $_SERVER['REQUEST_URI']);
-            $queryString = isset($request[1]) ? $request[1] : ('page=' . urlencode($currentPage));
+            $queryString = isset($request[1]) ? $request[1] : ('page=' . urlencode($pageName));
             $present_request = explode("&", $queryString);
-            $libele = explode('=', $present_request[0]);
-            $pageName = isset($libele[1]) ? $libele[1] : $currentPage;
             $page = new Page(0, $pageName, $present_request[0], "");
             //        $data =  ($_SERVER['SERVER_ADDR'] == "127.0.0.1" ? "localhost" : $_SERVER['SERVER_ADDR']) . str_replace("/index.php", "", $_SERVER['PHP_SELF']);
             
@@ -543,3 +565,8 @@ header('Content-Type: text/html; charset=UTF-8');
 </body>
 
 </html>
+<?php
+if (ob_get_level() > 0) {
+    ob_end_flush();
+}
+?>

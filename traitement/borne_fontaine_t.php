@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 /**
  * Traitement des actions sur les Bornes Fontaines
  */

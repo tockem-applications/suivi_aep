@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 @include_once("../donnees/facture.php");
 @include_once("donnees/impaye.php");
 @include_once("../donnees/impaye.php");
@@ -10,6 +12,8 @@
 @include_once("../traitement/aep_t.php.php");
 @include_once("traitement/aep_t.php.php");
 
+
+//http://localhost:8080/index.php?list=recouvrement
 class Facture_t
 {
 
@@ -429,7 +433,7 @@ class Facture_t
     {
         ob_start();
         ?>
-        <tr class="recouvrement-totals-row table-warning fw-bold">
+        <tr class="recouvrement-totals-row table-warning">
             <td colspan="2"><?php echo htmlspecialchars($label, ENT_QUOTES, 'UTF-8'); ?>
                 <span class="badge bg-dark ms-1"><?php echo (int) $totals['count']; ?></span>
             </td>
@@ -668,7 +672,15 @@ class Facture_t
                 background-color: #fff3cd !important;
                 border-top: 2px solid #ffc107;
                 border-bottom: 2px solid #ffc107;
-                font-weight: 700;
+                font-size: 0.72rem;
+                font-weight: 600;
+                padding: 0.3rem 0.35rem;
+                white-space: nowrap;
+                line-height: 1.15;
+            }
+
+            .table_searching tr.recouvrement-totals-row .badge {
+                font-size: 0.62rem;
             }
         </style>
 

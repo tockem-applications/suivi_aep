@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 /**
  * Traitement des actions pénalités : appliquer / retirer
  * Redirige vers page=penalites après traitement.

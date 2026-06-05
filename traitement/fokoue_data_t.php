@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 include("../donnees/manager.php");
 header('Content-Type: text/html; charset=UTF-8');
 $uploadDir = '../donnees/csv/uploads/';

@@ -1,14 +1,19 @@
 <?php
+@include_once(__DIR__ . '/../donnees/web_guard.php');
 @include_once(__DIR__ . '/../traitement/licence_t.php');
 
 $importMessage = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'import_licence') {
+    if (!Csrf::validate()) {
+        $importMessage = 'Session expirée. Rechargez la page et réessayez.';
+    } else {
     $result = LicenceT::handleImportUpload();
     if (!empty($result['success'])) {
         header('Location: ?page=a_propos');
         exit;
     }
     $importMessage = isset($result['message']) ? $result['message'] : 'Erreur import.';
+    }
 }
 
 $lic = app_licence();
@@ -38,6 +43,7 @@ $lic = app_licence();
                     </p>
                     <form method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="action" value="import_licence">
+                        <?php echo Csrf::hiddenField(); ?>
                         <div class="mb-3">
                             <label for="licence_file" class="form-label">Fichier licence</label>
                             <input type="file" class="form-control" id="licence_file" name="licence_file" accept=".lic" required>

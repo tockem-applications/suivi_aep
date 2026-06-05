@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 
 @include_once("../donnees/intervention.php");
 @include_once("donnees/intervention.php");
