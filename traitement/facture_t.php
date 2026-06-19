@@ -1381,11 +1381,26 @@ class Facture_t
                 </div>
             </div>
 
-            <div class=" d-flex justify-content-center fs-5">
+            <div class="d-flex justify-content-center fs-5">
                 <div class="email">Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></div>
                 <div class="col-2"> </div>
                 <div class="code_postal">B.P 02 Fokoue</div>
+            </div>kkkkk
+
+            <?php
+            $banque = trim((string) $nom_banque);
+            $compteBancaire = trim((string) $numero_compte_bancaire);
+            if ($banque !== '' || $compteBancaire !== ''):
+            ?>llsllll
+            <div class="text-center my-5 py-2 px-3 border border-2 border-secondary rounded" style="background:#f0f4f8; max-width:92%; margin:0 auto;">
+                <?php if ($banque !== ''): ?>
+                    <div class="fs-5 fw-bold text-uppercase">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php endif; ?>
+                <?php if ($compteBancaire !== ''): ?>
+                    <div class="fs-5 fw-bold text-primary mt-1" style="letter-spacing:0.06em;">N° de compte : <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
+                <?php endif; ?>
             </div>
+            <?php endif; ?>
 
             <div class="row text-center fs-5 border-bottom border-secondary border-3 pb-3 mb-2">
                 <div class="numero_telephone">
@@ -1562,6 +1577,29 @@ class Facture_t
                     .additional-space {
                         min-height: 150px;
                     }
+
+                    .fokoue-banque-encadre {
+                        background-color: #f0f4f8;
+                        border: 1px solid #495057 !important;
+                        max-width: 92%;
+                        margin-left: auto;
+                        margin-right: auto;
+                    }
+
+                    .fokoue-banque-encadre .fokoue-banque-nom {
+                        font-size: 1.15rem;
+                        font-weight: 700;
+                        color: #212529;
+                        text-transform: uppercase;
+                        letter-spacing: 0.02em;
+                    }
+
+                    .fokoue-banque-encadre .fokoue-banque-compte {
+                        font-size: 1.15rem;
+                        font-weight: 700;
+                        color: #0d6efd;
+                        letter-spacing: 0.06em;
+                    }
                 </style>
                 <div class="row align-items-center mb-3">
                     <div class="col-2 logo_commune">
@@ -1577,14 +1615,29 @@ class Facture_t
                     </div>
                 </div>
 
-                <div class="row text-center mb-2">
-                    <div class="col">
-                        <span>Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></span>
+                <div class="row text-center mb-2 align-items-center">
+                    <div class="col-6">
+                        <span class="fs-6">Email: <a href="https://fokoue/amgeea/home">amgeeafokoue@gmail.com</a></span>
                     </div>
-                    <div class="col">
-                        <span>B.P 02 Fokoué</span>
+                    <div class="col-6">
+                        <span class="fs-6">B.P 02 Fokoué</span>
                     </div>
                 </div>
+
+                <?php
+                $banque = trim((string) $nom_banque);
+                $compteBancaire = trim((string) $numero_compte_bancaire);
+                if ($banque !== '' || $compteBancaire !== ''):
+                ?>
+                <div class="fokoue-banque-encadre text-center py-1 d-flex justify-content-around px-3 rounded">
+                    <?php if ($banque !== ''): ?>
+                        <div class="fokoue-banque-nom">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <?php endif; ?>
+                    <?php if ($compteBancaire !== ''): ?>
+                        <div class="fokoue-banque-compte">N° de compte : <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
 
                 <div class="row text-center mb-3">
                     <div class="col">

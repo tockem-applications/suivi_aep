@@ -1,7 +1,6 @@
 <?php
 require_once __DIR__ . '/_guard.php';
 traitement_guard();
-session_start();
 
 @include_once("../donnees/mois_facturation.php");
 @include_once("../donnees/constante_reseau.php");
