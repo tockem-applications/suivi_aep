@@ -1,0 +1,144 @@
+\chapter{Fonctionnalités du logiciel}
+
+Le logiciel Tockem SPE regorge de nombreuses fonctionnalités qui vous permettront d'être plus efficace dans la gestion de vos AEP. Nous avons, entre autres, la gestion des abonnés, le relevé d'index des compteurs, le recouvrement et la facturation. Il y a aussi d'autres fonctionnalités, comme la gestion des utilisateurs et des rôles, qui relèvent plus du domaine de la sécurité et du contrôle d'accès.
+
+\section{Inscription et connexion}
+
+Avant d'accéder aux fonctionnalités du logiciel, il est nécessaire de vous y inscrire ou de vous connecter si c'est déjà le cas. Pour s'inscrire, il faut remplir un formulaire dans lequel vous précisez, en plus de votre clé d'accès, votre nom et prénom, votre adresse e-mail, votre numéro de téléphone et votre mot de passe. La clé d'accès est un code que vous donne le responsable du système afin que vous puissiez créer votre compte.
+
+Pour vous connecter, une fois sur la page de connexion, renseignez les champs e-mail et mot de passe, puis validez. Une fois connecté, s'affiche à vous la page d'accueil de Tockem SPE.
+
+Ici, on voit que le système contient déjà trois AEP nommés respectivement Bassessa, Trying AEP et Bandjoun. Il s'agit là de données fictives à but explicatif.
+
+\section{Créer un AEP}
+
+Lorsque vous vous connectez, s'il n'y a pas déjà d'AEP dans le système, il vous sera nécessaire de créer un AEP. Pour ce faire, une fois à la page d'accueil, cliquez sur le bouton \og Créer \fg{} juste au-dessus du pied de page. Une fois le bouton cliqué, vous verrez la page de création des AEP, qui vous demande de mentionner le nom de l'AEP, la date de création, une description et des détails bancaires (nom de la banque, numéro de compte) facultatifs. Il vous est aussi demandé de sélectionner un modèle de facture qui sera utilisé pour la facturation. Une fois tout cela fait, cliquez sur \og Valider \fg{}. Une fois le nouvel AEP créé, vous serez redirigé vers son tableau de bord.
+
+Il s'agit d'une page qui vous donne un aperçu rapide de l'état de l'AEP. On y trouve notamment des graphiques qui présentent l'évolution des consommations globales et un autre qui montre pour les derniers mois les montants facturés et le montant recouvré. D'autres indicateurs sont aussi présents sur le tableau de bord.
+
+\inclurecapture{fig01-creer-aep.png}{Créer un AEP}{fig:creer-aep}
+\inclurecapture{fig02-tableau-de-bord.png}{Tableau de bord de l'AEP}{fig:tableau-de-bord}
+
+\section{Définir les tarifs du réseau}
+
+Les tarifs réseau sont des valeurs utiles pour la facturation et qui ne peuvent pas varier arbitrairement. Dans Tockem SPE, nous en avons défini trois (03)~:
+\begin{itemize}
+    \item le prix du mètre cube d'eau (entier)~;
+    \item le prix de l'entretien compteur (entier)~;
+    \item la valeur de la TVA (un réel, par exemple 22{,}33).
+\end{itemize}
+
+Pour créer un tarif réseau, vous devez aller sur le menu \textbf{Facturation} et cliquer sur l'onglet \textbf{Tarifs AEP}. La page s'affiche avec les différents champs à remplir et vous ne devez plus que les renseigner ainsi qu'une description. La procédure est la même le jour où vous aurez besoin de modifier ces valeurs.
+
+\inclurecapture{fig03-tarifs-reseau.png}{Création des tarifs réseau}{fig:tarifs-reseau}
+
+\section{Créer un sous-réseau}
+
+Pour créer un sous-réseau, vous devez aller sur le menu \textbf{Structure} et sélectionner l'onglet \textbf{Réseau}. Une fois que la page s'affiche, vous verrez une interface présentant quelques informations de l'AEP. Une section (à gauche) est sous forme de graphique et elle donne des statistiques des douze derniers mois. L'autre (à droite) affiche des valeurs dans des cartes~; ici les informations sont fractionnées pour les différents mois.
+
+Il est à noter qu'en cliquant sur un des éléments de la liste des réseaux, vous verrez uniquement les informations sur ce réseau.
+
+\inclurecapture{fig04-page-reseaux.png}{Page des réseaux}{fig:page-reseaux}
+
+Pour créer un nouveau réseau, vous devez cliquer sur le bouton \textbf{Liste des réseaux}. Il se trouve à l'extrême gauche de la bande grise située en dessous du menu. Cela aura pour effet d'afficher à gauche de la page la liste des réseaux et, en dessous, un formulaire demandant le nom du sous-réseau, une abréviation, une date de création et une description. Une fois ces informations renseignées, cliquez sur \og Enregistrer \fg{}.
+
+\inclurecapture{fig05-creation-reseau.png}{Liste des réseaux et création de réseau}{fig:creation-reseau}
+
+\section{Les abonnés}
+
+Pour ce qui est des abonnés, vous devez être capable de les créer et de voir leurs informations. La page de création d'un abonné est accessible depuis l'onglet \textbf{Ajouter un abonné} du menu \textbf{Structure}. Sur cette page vous devez renseigner le sous-réseau auquel l'abonné appartient, son nom, son numéro de compteur, de téléphone, le dernier index affiché sur son compteur et enfin l'état (s'il est actif ou non).
+
+\inclurecapture{fig06-ajouter-abonne.png}{Ajouter un abonné}{fig:ajouter-abonne}
+
+Une fois les informations renseignées, il faut cliquer sur le bouton \og Valider \fg{} et vous seront affichées les informations du nouvel abonné. De manière générale, vous y verrez aussi la liste éditable des versements de cet abonné.
+
+Si vous souhaitez voir la liste des abonnés, vous devez cliquer sur l'onglet \textbf{Liste des abonnés} du menu \textbf{Structure}.
+
+\inclurecapture{fig07-liste-abonnes.png}{Liste des abonnés}{fig:liste-abonnes}
+
+En cliquant sur le nom d'un abonné, les informations sur cet abonné apparaîtront. À gauche se trouvent les informations propres à l'abonné et à droite la liste des recouvrements. Pour ce qui est des recouvrements, nous en dirons plus dans la section~\ref{sec:recouvrement}.
+
+\inclurecapture{fig08-info-abonne.png}{Informations d'un abonné}{fig:info-abonne}
+
+\section{La relève}
+
+La page des relèves est accessible depuis l'onglet \textbf{Relèves} du menu \textbf{Opérations}.
+
+\inclurecapture{fig09-page-releves.png}{Page des relèves}{fig:page-releves}
+
+Cette page affiche à gauche la liste des mois facturés ainsi que le bouton d'exportation et le bouton d'importation des index. Sur la même page mais dans la section de droite on a la liste pour les relevés du dernier mois et le bouton de facturation en haut à droite. Pour éditer un mois plus ancien, il suffit de cliquer sur le mois de la liste.
+
+Le tableau suivant récapitule les opérations de la page~:
+
+\begin{table}[H]
+    \centering
+    \small
+    \begin{tabular}{@{}p{2.2cm}p{2.2cm}p{8.5cm}@{}}
+        \toprule
+        \textbf{Opération} & \textbf{Bouton} & \textbf{Description} \\
+        \midrule
+        Exporter &
+        En haut à gauche &
+        Bouton pour exporter les données d'index pour faire la relève. Quand on clique dessus, les index sont téléchargés dans un fichier avec l'extension \texttt{.json}. Cette opération est faite avant la relève. \\
+        \addlinespace
+        Importer &
+        En haut à gauche &
+        Bouton pour importer les données de relèves mensuelles. L'opération doit être effectuée une fois la relève terminée. \\
+        \addlinespace
+        Facturer &
+        En haut à droite &
+        Le bouton \textbf{Facturer} permet d'afficher les factures en vue de les imprimer. Il faut donc les imprimer avant de commencer les recouvrements. \\
+        \bottomrule
+    \end{tabular}
+    \caption{Opérations de la page des relèves}
+    \label{tab:operations-releves}
+\end{table}
+
+Lorsque l'on clique sur \textbf{Importer}, le formulaire suivant s'affiche~:
+
+\inclurecapture{fig10-importer-index.png}{Importer les index}{fig:importer-index}
+
+On doit sélectionner le mois pour lequel on veut faire la facturation, choisir le fichier de relève, donner une description pour la relève et cliquer sur le bouton \textbf{Importer}. En cliquant sur \textbf{Voir les tarifs}, les tarifs du réseau vont s'afficher et vous pourrez les modifier.
+
+Une fois que les index ont été renseignés, il faut alors procéder à la facturation.
+
+\section{Facturation}
+
+La facturation est l'opération qui consiste à générer les factures des abonnés étant donné leurs consommations, impayés et les tarifs pour un mois précis. Dans le logiciel Tockem SPE, pour facturer, il faut aller dans le menu \textbf{Facturation}, sélectionner l'onglet \textbf{Facturation}. La page de facturation s'affiche et vous devez sélectionner le mois pour lequel vous souhaitez facturer puis entrer la date qui devra s'afficher comme date de dépôt des factures.
+
+\inclurecapture{fig11-formulaire-facturation.png}{Formulaire de facturation}{fig:formulaire-facturation}
+
+Lorsque vous cliquez sur \textbf{Facturer}, la liste des factures est affichée~; il ne vous reste plus qu'à l'imprimer en cliquant sur le bouton \textbf{Imprimer} en haut à droite.
+
+\inclurecapture{fig12-facture-generee.png}{Facture générée pour le mois d'août 2025}{fig:facture-generee}
+
+Une fois les factures générées et transmises, les abonnés commenceront à régler leurs factures et il faudra faire les recouvrements.
+
+\section{Le recouvrement}
+\label{sec:recouvrement}
+
+Le recouvrement doit se faire pour chaque mois après la facturation. Vous pouvez le faire sur plusieurs pages différentes de l'application, mais il est préférable de le faire sur \textbf{Facturation} $\rightarrow$ \textbf{Recouvrement}.
+
+\inclurecapture{fig13-page-recouvrement.png}{Page des recouvrements}{fig:page-recouvrement}
+
+Sur cette page vous avez la liste des abonnés facturés pour le mois de juillet 2025. Le tableau affiche plusieurs informations dont le nom et prénom, les index (ancien et nouveau), la consommation, l'impayé, la facture (le montant facturé pour le mois), le total (total à verser), le reste (montant restant à verser), le versement (champ pour renseigner le versement) et enfin l'avance.
+
+Sur cette page, il revient à l'utilisateur de renseigner chaque versement dans la zone de texte de la ligne correspondante à l'abonné pour qui on fait le recouvrement. Pour cela, plusieurs cas de figure sont possibles~:
+
+\begin{itemize}
+    \item \textbf{L'utilisateur n'avait pas encore fait de versements~:} dans ce cas le champ de saisie est vide et accessible~; il faut simplement entrer le montant versé.
+
+    \item \textbf{L'utilisateur a déjà fait un versement et souhaite le compléter~:} dans ce cas, le champ de saisie contient déjà le montant du premier versement. Il vous est recommandé de ne pas supprimer le montant déjà dans la zone de texte et d'ajouter le montant à compléter (par exemple \texttt{100+450}). Cela aura pour effet de faire directement la somme comme sur Excel, sauf qu'il ne faut pas commencer par le signe égal dans la zone de texte. Dans l'exemple suivant, l'abonné Donkeng Maxime à la première ligne avait déjà fait un versement de 100\,F et on complète cela à 550\,F en ajoutant 450 au montant déjà présent.
+
+    \item \textbf{L'utilisateur n'avait pas payé toute la facture d'un mois précédent~:} dans ce cas, la zone de saisie affiche l'expression \og Veuillez verser les impayés \fg{}. Il est donc obligatoire de rentrer dans les mois précédents pour faire le(s) versement(s). Pour ce faire, cliquez sur une des lettres du nom de l'abonné correspondant~: une fenêtre va s'ouvrir. Cette fenêtre contient les versements effectués chaque mois par l'abonné. Allez à la ligne correspondant au mois dont il n'a pas réglé toute sa facture pour entrer le montant nécessaire (ce montant ne peut pas excéder la somme qu'il vous aura remise en main propre).
+
+    Ainsi, en cliquant sur le nom de Takam Ulrich à la ligne~3 de l'image précédente, on peut constater que le mois de juillet ne contient aucun montant versé~; c'est la raison pour laquelle il n'est pas possible de faire le versement du mois d'août. Pour remplir le montant versé, il faut procéder comme indiqué dans les deux points précédents. Il faut actualiser la page après avoir rempli le montant versé afin que cela soit visible sur la page principale.
+\end{itemize}
+
+\inclurecapture{fig14-completer-versement.png}{Compléter un versement}{fig:completer-versement}
+
+Sur la page des recouvrements, d'autres fonctionnalités intéressantes sont présentes, notamment dans la zone suivante~:
+
+\inclurecapture{fig15-options-recouvrement.png}{Autres options de la page de recouvrement}{fig:options-recouvrement}
+
+Tout d'abord, vous pouvez choisir le mois pour lequel vous allez faire vos recouvrements~: il suffit de dérouler la liste, sélectionner un autre mois puis cliquer sur le bouton \textbf{Afficher} en bleu. Les autres boutons permettent de voir la liste des abonnés qui, pour le mois courant, ont déjà payé leur facture (bouton vert), fait une avance (bouton jaune) ou sont insolvables (bouton rouge).

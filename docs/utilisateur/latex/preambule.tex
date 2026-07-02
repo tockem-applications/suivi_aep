@@ -1,0 +1,51 @@
+% Préambule — Documentation utilisateur Tockem SPE
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{ifthen}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    urlcolor=blue!60!black,
+    pdftitle={Documentation utilisateur Tockem SPE},
+    pdfauthor={Erick Tsafack}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Volet EHA TOCKEM}
+\fancyhead[R]{\small Documentation utilisateur Tockem SPE}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Inclusion d'une capture d'écran (images/ relative au dossier latex/)
+% Usage : \inclurecapture{nom-fichier.png}{Légende}{fig:label}
+\newcommand{\inclurecapture}[3]{%
+    \begin{figure}[H]
+        \centering
+        \IfFileExists{images/#1}{%
+            \includegraphics[width=0.92\textwidth]{images/#1}%
+        }{%
+            \fcolorbox{gray!50}{gray!10}{%
+                \parbox[c][3.5cm][c]{0.88\textwidth}{%
+                    \centering\small
+                    \textbf{Capture d'écran à insérer}\\[0.4em]
+                    \texttt{images/#1}%
+                }%
+            }%
+        }%
+        \caption{#2}
+        \label{#3}
+    \end{figure}%
+}

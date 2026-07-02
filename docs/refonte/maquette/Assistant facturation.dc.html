@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; background:#F8FAFC; }
+  * { box-sizing:border-box; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;padding:48px 24px;">
+  <div style="width:100%;max-width:640px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+      <div style="width:28px;height:28px;border-radius:7px;background:#0E7490;display:flex;align-items:center;justify-content:center;">
+        <img src="uploads/logo_file-1782990071979.ico" style="width:14px;height:14px;"/>
+      </div>
+      <span style="font-size:13px;color:#64748B;">AEP Centre-ville / Facturation</span>
+    </div>
+    <h1 style="font-size:22px;font-weight:800;margin:0 0 24px;">Lancer la facturation</h1>
+
+    <div style="display:flex;align-items:center;margin-bottom:28px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:28px;height:28px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">✓</div><span style="font-size:11px;font-weight:600;color:#0E7490;">Mois</span></div>
+      <div style="flex:1;height:2px;background:#0E7490;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:28px;height:28px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div><span style="font-size:11px;font-weight:600;color:#0E7490;">Aperçu</span></div>
+      <div style="flex:1;height:2px;background:#E2E8F0;"></div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><div style="width:28px;height:28px;border-radius:999px;background:#F1F5F9;color:#94A3B8;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">3</div><span style="font-size:11px;font-weight:600;color:#94A3B8;">Résultat</span></div>
+    </div>
+
+    <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:28px;">
+      <div style="font-size:15px;font-weight:700;margin-bottom:6px;">Étape 2 — Aperçu avant génération</div>
+      <div style="font-size:13px;color:#64748B;margin-bottom:20px;">Vérifiez les paramètres avant de lancer la facturation du mois de Juillet 2026</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:13px;font-weight:600;color:#334155;">Mois à facturer</label>
+          <select style="border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;font-size:14px;background:#fff;"><option>Juillet 2026</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label style="font-size:13px;font-weight:600;color:#334155;">Date de dépôt des factures</label>
+          <input value="01/08/2026" style="border:1px solid #CBD5E1;border-radius:8px;padding:10px 12px;font-size:14px;outline:none;"/>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:#64748B;">Factures à générer</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px;">1 126</div>
+        </div>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:#64748B;">Relevés manquants</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px;color:#D97706;">18</div>
+        </div>
+        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:14px;text-align:center;">
+          <div style="font-size:11px;color:#64748B;">Montant estimé</div>
+          <div style="font-size:20px;font-weight:800;margin-top:4px;">8,4M FCFA</div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;background:#FEF3C7;border:1px solid #FDE68A;border-radius:8px;padding:12px 14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+        <span style="font-size:12px;color:#B45309;">18 abonnés n'ont pas de relevé saisi pour ce mois — ils recevront une facture au forfait précédent.</span>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-top:24px;">
+        <button style="background:#fff;color:#334155;border:1px solid #E2E8F0;padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;">Retour</button>
+        <button style="background:#0E7490;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;font-size:13px;">Lancer la facturation</button>
+      </div>
+    </div>
+  </div>
+</div>
+]]>
+</x-dc>
+</body>
+</html>
