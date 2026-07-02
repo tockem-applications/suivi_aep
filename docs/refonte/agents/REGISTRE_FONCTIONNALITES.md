@@ -39,9 +39,9 @@
 
 | ID | Fonctionnalité | Exigences CDC | Dépend de | Statut | Agent | Date | Branche | Notes |
 |----|----------------|---------------|-----------|--------|-------|------|---------|-------|
-| FUNC-000 | **Socle technique** (squelette Go+React, config dual DB, migrations goose, CI, middlewares auth/RBAC/CSRF de base, embed SPA, healthcheck) | EX-100–144, EX-200–243, EX-300–302, EX-800–808 | — | disponible | | | | **Bloquant** : doit être `terminée` avant toute autre fonctionnalité |
-| FUNC-001 | Connexion / déconnexion / sessions / mot de passe oublié | EX-600, EX-220–223, EX-230 | FUNC-000 | disponible | | | | |
-| FUNC-002 | Inscription par clé d'accès + validation admin | EX-601 | FUNC-000, FUNC-001 | disponible | | | | |
+| FUNC-000 | **Socle technique** (squelette Go+React, config dual DB, migrations goose, CI, middlewares auth/RBAC/CSRF de base, embed SPA, healthcheck) | EX-100–144, EX-200–243, EX-300–302, EX-800–808 | — | terminée | agent-20260702-cursor | 2026-07-02 | feat/FUNC-000-socle | Socle initial — voir livrables/FUNC-000.md |
+| FUNC-001 | Connexion / déconnexion / sessions / mot de passe oublié | EX-600, EX-220–223, EX-230 | FUNC-000 | réservée | agent-20260702-hqwp | 2026-07-02 | feat/FUNC-001-auth | |
+| FUNC-002 | Inscription par clé d'accès + validation admin | EX-601 | FUNC-000, FUNC-001 | en cours | agent-20260702-func002 | 2026-07-02 | feat/FUNC-002-inscription | |
 | FUNC-003 | Sélection AEP de travail + page accès refusé | EX-602, EX-603, EX-242 | FUNC-000, FUNC-001 | disponible | | | | |
 | FUNC-004 | Charte graphique paramétrable (thème, logo, couleurs, devise, formats) | EX-500–504, EX-680 | FUNC-000 | disponible | | | | |
 | FUNC-005 | Assistant premier démarrage | EX-311 | FUNC-000, FUNC-001, FUNC-004 | disponible | | | | |
