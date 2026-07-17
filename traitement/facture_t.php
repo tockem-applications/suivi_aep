@@ -592,7 +592,7 @@ class Facture_t
                                     </td>
                                     <!--                        <td><a href="#" class="btn btn-info mb-0">Valider</a></td>-->
                                 </tr>
-                            <?php
+                                <?php
                             }
                             if (!empty($filteredFactures)) {
                                 echo self::renderRecouvrementTotalsRow($recTotals, 'TOTAL');
@@ -1391,15 +1391,18 @@ class Facture_t
             $banque = trim((string) $nom_banque);
             $compteBancaire = trim((string) $numero_compte_bancaire);
             if ($banque !== '' || $compteBancaire !== ''):
-            ?>llsllll
-            <div class="text-center my-5 py-2 px-3 border border-2 border-secondary rounded" style="background:#f0f4f8; max-width:92%; margin:0 auto;">
-                <?php if ($banque !== ''): ?>
-                    <div class="fs-5 fw-bold text-uppercase">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?></div>
-                <?php endif; ?>
-                <?php if ($compteBancaire !== ''): ?>
-                    <div class="fs-5 fw-bold text-primary mt-1" style="letter-spacing:0.06em;">N° de compte : <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
-                <?php endif; ?>
-            </div>
+                ?>llsllll
+                <div class="text-center my-5 py-2 px-3 border border-2 border-secondary rounded"
+                    style="background:#f0f4f8; max-width:92%; margin:0 auto;">
+                    <?php if ($banque !== ''): ?>
+                        <div class="fs-5 fw-bold text-uppercase">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($compteBancaire !== ''): ?>
+                        <div class="fs-5 fw-bold text-primary mt-1" style="letter-spacing:0.06em;">N° de compte :
+                            <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
 
             <div class="row text-center fs-5 border-bottom border-secondary border-3 pb-3 mb-2">
@@ -1628,15 +1631,16 @@ class Facture_t
                 $banque = trim((string) $nom_banque);
                 $compteBancaire = trim((string) $numero_compte_bancaire);
                 if ($banque !== '' || $compteBancaire !== ''):
-                ?>
-                <div class="fokoue-banque-encadre text-center py-1 d-flex justify-content-around px-3 rounded">
-                    <?php if ($banque !== ''): ?>
-                        <div class="fokoue-banque-nom">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?></div>
-                    <?php endif; ?>
-                    <?php if ($compteBancaire !== ''): ?>
-                        <div class="fokoue-banque-compte">N° de compte : <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
-                    <?php endif; ?>
-                </div>
+                    ?>
+                    <div class="fokoue-banque-encadre text-center py-1 d-flex justify-content-around px-3 rounded">
+                        <?php if ($banque !== ''): ?>
+                            <div class="fokoue-banque-nom">Banque : <?php echo htmlspecialchars($banque, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php endif; ?>
+                        <?php if ($compteBancaire !== ''): ?>
+                            <div class="fokoue-banque-compte">N° de compte :
+                                <?php echo htmlspecialchars($compteBancaire, ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
 
                 <div class="row text-center mb-3">
@@ -1825,10 +1829,9 @@ class Facture_t
                 <div class="d-flex justify-content-evenly">
                     <div class="" style="width: 25%; font-size: 12px">
                         <span class="fw-bold">Association TOCKEM</span><br>
-                        Siège Bureau d’exploitation : Nkong
-                        Zem 1er étage immeuble derrière la
-                        place des fêtes.
-                        BP 62 DSCHANG (Cameroun)
+                        Nos services sont situés à l'association 
+                        TOCKEM sis au village Ntsingbeu et à la régie communale de
+                        l'eau derrière la commune de Nkong zem
                     </div>
                     <div class="fs-6 fw-bold text-center me-1 text-white d-flex justify-content-center align-items-center"
                         style="border: 2px solid #5B9BD5; border-radius: 10px; background-color: #2F5597; width: 50%">
