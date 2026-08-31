@@ -1,0 +1,15 @@
+.git
+.gitignore
+.idea
+.vscode
+.env
+.env.*
+!/.env.example
+node_modules
+backups
+**/backups/**
+donnees/csv
+donnees/exports
+donnees/imports
+*.log
+app-setup

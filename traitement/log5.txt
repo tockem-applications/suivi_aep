@@ -1,0 +1,487 @@
+recouvrement: 1
+id_indexes: 10310
+nouvel_index: 160
+id_compteur: 7446\nrecouvrement: 1
+id_indexes: 10229
+nouvel_index: 67
+id_compteur: 6525\nrecouvrement: 1
+id_indexes: 10288
+nouvel_index: 85
+id_compteur: 6539\nrecouvrement: 1
+id_indexes: 10235
+nouvel_index: 30
+id_compteur: 6531\nrecouvrement: 1
+id_indexes: 10293
+nouvel_index: 100
+id_compteur: 6543\nrecouvrement: 1
+id_indexes: 10203
+nouvel_index: 45
+id_compteur: 6498\nrecouvrement: 1
+id_indexes: 10308
+nouvel_index: 51
+id_compteur: 6506\nrecouvrement: 1
+id_indexes: 10232
+nouvel_index: 29
+id_compteur: 6528\nrecouvrement: 1
+id_indexes: 10199
+nouvel_index: 45
+id_compteur: 6494\nrecouvrement: 1
+id_indexes: 10195
+nouvel_index: 199
+id_compteur: 6490\nrecouvrement: 1
+id_indexes: 10182
+nouvel_index: 46
+id_compteur: 6476\nrecouvrement: 1
+id_indexes: 10181
+nouvel_index: 53
+id_compteur: 6475\nrecouvrement: 1
+id_indexes: 10180
+nouvel_index: 55
+id_compteur: 6474\nrecouvrement: 1
+id_indexes: 10179
+nouvel_index: 675
+id_compteur: 6473\nrecouvrement: 1
+id_indexes: 10185
+nouvel_index: 77
+id_compteur: 6479\nrecouvrement: 1
+id_indexes: 10184
+nouvel_index: 102
+id_compteur: 6478\nrecouvrement: 1
+id_indexes: 10183
+nouvel_index: 102
+id_compteur: 6477\nrecouvrement: 1
+id_indexes: 10268
+nouvel_index: 89
+id_compteur: 7416\nrecouvrement: 1
+id_indexes: 10284
+nouvel_index: 8
+id_compteur: 7433\nrecouvrement: 1
+id_indexes: 10213
+nouvel_index: 52
+id_compteur: 6509\nrecouvrement: 1
+id_indexes: 10307
+nouvel_index: 31
+id_compteur: 6488\nrecouvrement: 1
+id_indexes: 10285
+nouvel_index: 27
+id_compteur: 7434\nrecouvrement: 1
+id_indexes: 10305
+nouvel_index: 12
+id_compteur: 7093\nrecouvrement: 1
+id_indexes: 10275
+nouvel_index: 31
+id_compteur: 7424\nrecouvrement: 1
+id_indexes: 10311
+nouvel_index: 300
+id_compteur: 7447\nrecouvrement: 1
+id_indexes: 10309
+nouvel_index: 1000
+id_compteur: 7445\nrecouvrement: 1
+id_indexes: 10103
+nouvel_index: 119
+id_compteur: 7024\nrecouvrement: 1
+id_indexes: 10170
+nouvel_index: 31
+id_compteur: 7444\nrecouvrement: 1
+id_indexes: 10169
+nouvel_index: 69
+id_compteur: 7443\nrecouvrement: 1
+id_indexes: 10168
+nouvel_index: 26
+id_compteur: 7442\nrecouvrement: 1
+id_indexes: 10167
+nouvel_index: 150
+id_compteur: 7441\nrecouvrement: 1
+id_indexes: 9802
+nouvel_index: 46
+id_compteur: 6954\nrecouvrement: 1
+id_indexes: 9801
+nouvel_index: 10
+id_compteur: 6953\nrecouvrement: 1
+id_indexes: 9800
+nouvel_index: 11
+id_compteur: 6952\nrecouvrement: 1
+id_indexes: 9737
+nouvel_index: 88.96
+id_compteur: 6951\nrecouvrement: 1
+id_indexes: 9736
+nouvel_index: 72
+id_compteur: 6950\nrecouvrement: 1
+id_indexes: 9735
+nouvel_index: 91
+id_compteur: 6949\nrecouvrement: 1
+id_indexes: 9734
+nouvel_index: 59
+id_compteur: 6948\nrecouvrement: 1
+id_indexes: 9848
+nouvel_index: 69
+id_compteur: 6956\nrecouvrement: 1
+id_indexes: 9733
+nouvel_index: 295
+id_compteur: 6947\nrecouvrement: 1
+id_indexes: 9765
+nouvel_index: 65
+id_compteur: 6984\nrecouvrement: 1
+id_indexes: 9818
+nouvel_index: 68
+id_compteur: 7029\nrecouvrement: 1
+id_indexes: 9851
+nouvel_index: 77
+id_compteur: 7058\nrecouvrement: 1
+id_indexes: 9750
+nouvel_index: 112
+id_compteur: 6969\nrecouvrement: 1
+id_indexes: 9828
+nouvel_index: 150
+id_compteur: 7037\nrecouvrement: 1
+id_indexes: 9853
+nouvel_index: 78.96
+id_compteur: 7060\nrecouvrement: 1
+id_indexes: 9745
+nouvel_index: 125
+id_compteur: 6964\nrecouvrement: 1
+id_indexes: 9741
+nouvel_index: 63
+id_compteur: 6960\nrecouvrement: 1
+id_indexes: 9746
+nouvel_index: 100
+id_compteur: 6965\nrecouvrement: 1
+id_indexes: 9850
+nouvel_index: 57
+id_compteur: 7057\nrecouvrement: 1
+id_indexes: 9813
+nouvel_index: 111
+id_compteur: 7024\nrecouvrement: 1
+id_indexes: 8243
+nouvel_index: 200
+id_compteur: 6092\nrecouvrement: 1
+id_indexes: 8245
+nouvel_index: 200
+id_compteur: 6094\nrecouvrement: 1
+id_indexes: 8246
+nouvel_index: 128
+id_compteur: 6095\nrecouvrement: 1
+id_indexes: 8262
+nouvel_index: 95
+id_compteur: 7390\nrecouvrement: 1
+id_indexes: 8244
+nouvel_index: 111
+id_compteur: 6093\nrecouvrement: 1
+id_indexes: 8256
+nouvel_index: 145
+id_compteur: 6105\nrecouvrement: 1
+id_indexes: 8247
+nouvel_index: 60
+id_compteur: 6096\nrecouvrement: 1
+id_indexes: 8225
+nouvel_index: 40
+id_compteur: 6074\nrecouvrement: 1
+id_indexes: 8224
+nouvel_index: 1025
+id_compteur: 6073\nrecouvrement: 1
+id_indexes: 8223
+nouvel_index: 27
+id_compteur: 6072\nrecouvrement: 1
+id_indexes: 8222
+nouvel_index: 15
+id_compteur: 6071\nrecouvrement: 1
+id_indexes: 8204
+nouvel_index: 74
+id_compteur: 6094\nrecouvrement: 1
+id_indexes: 8205
+nouvel_index: 105
+id_compteur: 6095\nrecouvrement: 1
+id_indexes: 8221
+nouvel_index: 45
+id_compteur: 7390\nrecouvrement: 1
+id_indexes: 8203
+nouvel_index: 75
+id_compteur: 6093\nrecouvrement: 1
+id_indexes: 8215
+nouvel_index: 102
+id_compteur: 6105\nrecouvrement: 1
+id_indexes: 8206
+nouvel_index: 36
+id_compteur: 6096\nrecouvrement: 1
+id_indexes: 8184
+nouvel_index: 18
+id_compteur: 6074\nrecouvrement: 1
+id_indexes: 8183
+nouvel_index: 1010
+id_compteur: 6073\nrecouvrement: 1
+id_indexes: 8182
+nouvel_index: 21
+id_compteur: 6072\nrecouvrement: 1
+id_indexes: 8181
+nouvel_index: 10
+id_compteur: 6071\nrecouvrement: 1
+id_indexes: 1759
+nouvel_index: 55
+id_compteur: 431\nrecouvrement: 1
+id_indexes: 1743
+nouvel_index: 43
+id_compteur: 401\nrecouvrement: 1
+id_indexes: 1806
+nouvel_index: 31
+id_compteur: 376\nrecouvrement: 1
+id_indexes: 1805
+nouvel_index: 621
+id_compteur: 373\nrecouvrement: 1
+id_indexes: 1665
+nouvel_index: 69
+id_compteur: 318\nrecouvrement: 1
+id_indexes: 1686
+nouvel_index: 29
+id_compteur: 433\nrecouvrement: 1
+id_indexes: 1680
+nouvel_index: 41
+id_compteur: 403\nrecouvrement: 1
+id_indexes: 1688
+nouvel_index: 29
+id_compteur: 435\nrecouvrement: 1
+id_indexes: 1682
+nouvel_index: 42
+id_compteur: 405\nrecouvrement: 1
+id_indexes: 1789
+nouvel_index: 562
+id_compteur: 333\nrecouvrement: 1
+id_indexes: 1822
+nouvel_index: 142
+id_compteur: 426\nrecouvrement: 1
+id_indexes: 1815
+nouvel_index: 159
+id_compteur: 396\nrecouvrement: 1
+id_indexes: 1655
+nouvel_index: 83
+id_compteur: 306\nrecouvrement: 1
+id_indexes: 1803
+nouvel_index: 69
+id_compteur: 363\nrecouvrement: 1
+id_indexes: 1654
+nouvel_index: 33
+id_compteur: 305\nrecouvrement: 1
+id_indexes: 1652
+nouvel_index: 61
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1788
+nouvel_index: 222
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1833
+nouvel_index: 36
+id_compteur: 462\nrecouvrement: 1
+id_indexes: 1656
+nouvel_index: 28
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1479
+nouvel_index: 33.5
+id_compteur: 403\nrecouvrement: 1
+id_indexes: 1487
+nouvel_index: 26
+id_compteur: 435\nrecouvrement: 1
+id_indexes: 1481
+nouvel_index: 26
+id_compteur: 405\nrecouvrement: 1
+id_indexes: 1588
+nouvel_index: 551
+id_compteur: 333\nrecouvrement: 1
+id_indexes: 1621
+nouvel_index: 136
+id_compteur: 426\nrecouvrement: 1
+id_indexes: 1614
+nouvel_index: 150
+id_compteur: 396\nrecouvrement: 1
+id_indexes: 1454
+nouvel_index: 75
+id_compteur: 306\nrecouvrement: 1
+id_indexes: 1602
+nouvel_index: 61
+id_compteur: 363\nrecouvrement: 1
+id_indexes: 1453
+nouvel_index: 30
+id_compteur: 305\nrecouvrement: 1
+id_indexes: 1451
+nouvel_index: 55
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1587
+nouvel_index: 200
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1632
+nouvel_index: 31
+id_compteur: 462\nrecouvrement: 1
+id_indexes: 1455
+nouvel_index: 26
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
+nouvel_index: 1.5
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
+nouvel_index: 55
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
+nouvel_index: 1.5
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1224
+nouvel_index: 2
+id_compteur: 307\nrecouvrement: 1
+id_indexes: 1205
+nouvel_index: 18
+id_compteur: 271\nrecouvrement: 1
+id_indexes: 1441
+nouvel_index: 70
+id_compteur: 318\nrecouvrement: 1
+id_indexes: 1456
+nouvel_index: 25
+id_compteur: 403\nrecouvrement: 1
+id_indexes: 1428
+nouvel_index: 50
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1564
+nouvel_index: 160.6
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1428
+nouvel_index: 52
+id_compteur: 296\nrecouvrement: 1
+id_indexes: 1564
+nouvel_index: 165
+id_compteur: 330\nrecouvrement: 1
+id_indexes: 1409
+nouvel_index: 4
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 1411
+nouvel_index: 41
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 1410
+nouvel_index: 45
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1412
+nouvel_index: 6
+id_compteur: 474\nrecouvrement: 1
+id_indexes: 1406
+nouvel_index: 32
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1407
+nouvel_index: 40
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 1406
+nouvel_index: 50
+id_compteur: 475\nrecouvrement: 1
+id_indexes: 1408
+nouvel_index: 3
+id_compteur: 474\nrecouvrement: 1
+id_indexes: 1401
+nouvel_index: 7.3
+id_compteur: 462\nrecouvrement: 1
+id_indexes: 1168
+nouvel_index: 215
+id_compteur: 360\nrecouvrement: 1
+id_indexes: 1195
+nouvel_index: 0.7
+id_compteur: 453\nrecouvrement: 1
+id_indexes: 5
+nouvel_index: 20
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 146
+nouvel_index: 7
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 146
+nouvel_index: 25
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 150
+nouvel_index: 15.6
+id_compteur: 13\nrecouvrement: 1
+id_indexes: 144
+nouvel_index: 2.20
+id_compteur: 8\nrecouvrement: 1
+id_indexes: 145
+nouvel_index: 11.20
+id_compteur: 6\nrecouvrement: 1
+id_indexes: 148
+nouvel_index: 21
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 5
+nouvel_index: 18.3
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 630
+nouvel_index: 25
+id_compteur: 298\nrecouvrement: 1
+id_indexes: 815
+nouvel_index: 4.6
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 814
+nouvel_index: 11.3
+id_compteur: 472\nrecouvrement: 1
+id_indexes: 816
+nouvel_index: 6.2
+id_compteur: 471\nrecouvrement: 1
+id_indexes: 812
+nouvel_index: 1.5
+id_compteur: 473\nrecouvrement: 1
+id_indexes: 813
+nouvel_index: 3
+id_compteur: 471\nrecouvrement: 1
+id_indexes: 60
+nouvel_index: 5
+id_compteur: 9\nrecouvrement: 1
+id_indexes: 59
+nouvel_index: 6.30
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 58
+nouvel_index: 15
+id_compteur: 6\nrecouvrement: 1
+id_indexes: 111
+nouvel_index: 3
+id_compteur: 11\nrecouvrement: 1
+id_indexes: 110
+nouvel_index: 5.50
+id_compteur: 10\nrecouvrement: 1
+id_indexes: 111
+nouvel_index: 3.1
+id_compteur: 11\nrecouvrement: 1
+id_indexes: 110
+nouvel_index: 5.6
+id_compteur: 10\nrecouvrement: 1
+id_indexes: 78
+nouvel_index: 30
+id_compteur: 1\nrecouvrement: 1
+id_indexes: 85
+nouvel_index: 43
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 77
+nouvel_index: 45
+id_compteur: 3\nrecouvrement: 1
+id_indexes: 68
+nouvel_index: 5
+id_compteur: 9\nrecouvrement: 1
+id_indexes: 65
+nouvel_index: 5
+id_compteur: 8\nrecouvrement: 1
+id_indexes: 67
+nouvel_index: 10
+id_compteur: 7\nrecouvrement: 1
+id_indexes: 66
+nouvel_index: 13
+id_compteur: 6\nrecouvrement: 1
+id_indexes: 64
+nouvel_index: 29
+id_compteur: 4\nrecouvrement: 1
+id_indexes: 63
+nouvel_index: 22
+id_compteur: 2\nrecouvrement: 1
+id_indexes: 62
+nouvel_index: 31
+id_compteur: 1\nrecouvrement: 1
+id_indexes: 69
+nouvel_index: 44
+id_compteur: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 55
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\nrecouvrement: 1
+id_facture: 69
+nouvel_index: 44
+id_abone: 3\n

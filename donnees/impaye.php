@@ -14,6 +14,11 @@ class Impaye extends Manager
         return self::prepare_query("select sum(montant) as impaye from impaye where  id_facture=?", array($id_facture));
     }
 
+    public static function deleteByIdCacture($id_facture)
+    {
+        return self::prepare_query("delete from impaye where  id_facture=?", array($id_facture));
+    }
+
 
     function getconstraint()
     {

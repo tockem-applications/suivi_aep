@@ -1,11 +1,21 @@
+<?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
 
 <?php
 
 @include_once("../donnees/Abones.php");
 @include_once("donnees/Abones.php");
 
+if(!isset($_GET['id_mois']))
+    exit();
+$id_mois = $_GET['id_mois'];
 
-$req = Abones::getLastmonthIndex($_SESSION['id_aep']);
+
+$req = Abones::getJsonDataFromIdMois($id_mois);
+//var_dump($id_mois);
+//var_dump($req);
+//exit();
 //var_dump($req);
 $date_export = new DateTime();
 $data =json_encode($req);

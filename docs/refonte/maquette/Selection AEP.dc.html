@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; background:#F8FAFC; }
+  * { box-sizing:border-box; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;padding:60px 24px;">
+  <div style="width:100%;max-width:760px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;border-radius:8px;background:#0E7490;display:flex;align-items:center;justify-content:center;">
+          <img src="uploads/logo_file-1782990071979.ico" style="width:16px;height:16px;"/>
+        </div>
+        <div style="font-weight:800;font-size:16px;">Tockem SPE</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:999px;background:#64748B;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">MN</div>
+        <span style="font-size:13px;color:#334155;font-weight:600;">Marc Ngono</span>
+        <a href="Connexion.dc.html" style="font-size:12px;color:#DC2626;text-decoration:none;font-weight:600;">Déconnexion</a>
+      </div>
+    </div>
+
+    <h1 style="font-size:24px;font-weight:800;margin:0 0 6px;">Sélectionnez un AEP</h1>
+    <div style="font-size:13px;color:#64748B;margin-bottom:24px;">Choisissez la régie sur laquelle vous souhaitez travailler</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:20px;">
+      <div style="position:relative;flex:1;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" style="position:absolute;left:12px;top:12px;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Rechercher un AEP…" style="width:100%;border:1px solid #E2E8F0;border-radius:8px;padding:10px 12px 10px 34px;font-size:13px;font-family:Inter;outline:none;background:#fff;"/>
+      </div>
+      <button style="background:#fff;color:#334155;border:1px solid #E2E8F0;padding:10px 16px;border-radius:8px;font-weight:600;font-size:13px;">Tout fermer</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;cursor:pointer;transition:border .1s;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#0E7490;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2s6 7.5 6 12a6 6 0 0 1-12 0c0-4.5 6-12 6-12z"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:700;">AEP Centre-ville</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">1 284 abonnés · dernière connexion aujourd'hui</div>
+      </div>
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;cursor:pointer;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M12 2s6 7.5 6 12a6 6 0 0 1-12 0c0-4.5 6-12 6-12z"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:700;">Eau du Littoral</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">842 abonnés · dernière connexion il y a 3 jours</div>
+      </div>
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;cursor:pointer;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#F1F5F9;display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2"><path d="M12 2s6 7.5 6 12a6 6 0 0 1-12 0c0-4.5 6-12 6-12z"/></svg>
+        </div>
+        <div style="font-size:16px;font-weight:700;">AEP Nkongzem Rural</div>
+        <div style="font-size:12px;color:#64748B;margin-top:2px;">318 abonnés · dernière connexion il y a 1 semaine</div>
+      </div>
+    </div>
+  </div>
+</div>
+]]>
+</x-dc>
+</body>
+</html>

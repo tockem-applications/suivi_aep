@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; background:#94A3B8; }
+  * { box-sizing:border-box; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;flex-direction:column;align-items:center;padding:32px 16px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:680px;margin-bottom:16px;">
+    <div style="color:#fff;font-size:13px;font-weight:600;">Aperçu — Modèle Fokoué</div>
+    <div style="display:flex;gap:8px;">
+      <select style="border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;"><option>Modèle Fokoué</option><option>Modèle Nkongzem</option></select>
+      <button style="background:#fff;color:#334155;border:none;padding:8px 16px;border-radius:8px;font-weight:600;font-size:13px;">Imprimer</button>
+    </div>
+  </div>
+
+  <div style="width:100%;max-width:680px;background:#fff;box-shadow:0 12px 32px rgba(0,0,0,.2);padding:48px;color:#0F172A;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #0E7490;padding-bottom:20px;margin-bottom:24px;">
+      <div style="display:flex;gap:12px;align-items:center;">
+        <div style="width:40px;height:40px;border-radius:8px;background:#0E7490;display:flex;align-items:center;justify-content:center;">
+          <img src="uploads/logo_file-1782990071979.ico" style="width:20px;height:20px;"/>
+        </div>
+        <div>
+          <div style="font-size:16px;font-weight:800;">AEP Centre-ville</div>
+          <div style="font-size:11px;color:#64748B;">Régie communale de l'eau · Yaoundé</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:18px;font-weight:800;color:#0E7490;">FACTURE</div>
+        <div style="font-size:12px;color:#64748B;font-family:'JetBrains Mono',monospace;">N° FAC-6621</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;font-size:12px;">
+      <div>
+        <div style="color:#94A3B8;text-transform:uppercase;font-size:10px;font-weight:700;margin-bottom:4px;">Abonné</div>
+        <div style="font-weight:700;font-size:14px;">Mbarga Jean-Paul</div>
+        <div style="color:#64748B;">N° BP-0143 · Réseau B — Zone industrielle</div>
+        <div style="color:#64748B;">Biyem-Assi</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="color:#94A3B8;text-transform:uppercase;font-size:10px;font-weight:700;margin-bottom:4px;">Période</div>
+        <div style="font-weight:700;">Juin 2026</div>
+        <div style="color:#64748B;">Émise le 01/07/2026</div>
+        <div style="color:#64748B;">Échéance : 15/07/2026</div>
+      </div>
+    </div>
+
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px;">
+      <thead><tr style="border-bottom:1px solid #E2E8F0;">
+        <th style="text-align:left;padding:8px 0;color:#64748B;font-size:11px;text-transform:uppercase;">Désignation</th>
+        <th style="text-align:right;padding:8px 0;color:#64748B;font-size:11px;text-transform:uppercase;">Quantité</th>
+        <th style="text-align:right;padding:8px 0;color:#64748B;font-size:11px;text-transform:uppercase;">P.U.</th>
+        <th style="text-align:right;padding:8px 0;color:#64748B;font-size:11px;text-transform:uppercase;">Montant</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;">Consommation d'eau (m³)</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">160</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">450</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">72 000</td></tr>
+        <tr><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;">Entretien compteur</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;">1</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">500</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">500</td></tr>
+        <tr><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;">Pénalité de retard</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;">—</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;">—</td><td style="padding:8px 0;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;color:#DC2626;">2 000</td></tr>
+        <tr><td style="padding:8px 0;">Impayé antérieur</td><td style="padding:8px 0;text-align:right;">—</td><td style="padding:8px 0;text-align:right;">—</td><td style="padding:8px 0;text-align:right;font-family:'JetBrains Mono',monospace;color:#DC2626;">6 300</td></tr>
+      </tbody>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;">
+      <div style="width:240px;display:flex;flex-direction:column;gap:6px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:#64748B;">Sous-total</span><span style="font-family:'JetBrains Mono',monospace;">72 500 FCFA</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:#64748B;">TVA (19,25 %)</span><span style="font-family:'JetBrains Mono',monospace;">13 956 FCFA</span></div>
+        <div style="display:flex;justify-content:space-between;padding-top:8px;border-top:2px solid #0F172A;font-weight:800;font-size:15px;"><span>Total à payer</span><span style="font-family:'JetBrains Mono',monospace;">94 756 FCFA</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;padding-top:16px;border-top:1px solid #E2E8F0;font-size:11px;color:#94A3B8;text-align:center;">
+      Merci de régler votre facture avant le 15/07/2026 pour éviter toute pénalité de retard. AEP Centre-ville · Compte Afriland First Bank
+    </div>
+  </div>
+</div>
+]]>
+</x-dc>
+</body>
+</html>

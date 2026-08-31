@@ -21,14 +21,14 @@ class Reseau extends Manager
     {
         try {
             $this->ajouter();
-            if($compteur != null){
-                $compteur->ajouter();
-                self::prepare_query("insert into compteur_reseau(id_compteur, id_reseau) values(?, ?)", array($compteur->id, $this->id));
+            if($compteur instanceof Compteur){
+                $compteur->save_compteur_reseau($this->id);
+
             }
             return true;
         }catch (Exception $e){
             echo $e->getMessage();
-//            throw $e;
+            throw $e;
         }
         return false;
     }
@@ -52,6 +52,25 @@ class Reseau extends Manager
     function getNomTable()
     {
         return "reseau";
+    }
+
+    public function deleteReseau()
+    {
+        try {
+            $res = self::prepare_query("select id_compteur from compteur_reseau where id_reseau=?", array($this->id));
+            $res->fetchAll();
+            self::prepare_query("DELETE FROM compteur_reseau WHERE id_reseau = ?", array($this->id));
+            self::prepare_query("DELETE FROM abone WHERE id_reseau = ?", array($this->id));
+            foreach ($res as $ligne) {
+                $id_compteur = $ligne['id_compteur'];
+                self::prepare_query("delete from compteur where id =?", array($id_compteur));
+            }
+            self::prepare_query("DELETE FROM reseau WHERE id = ?", array($this->id));
+            return true;
+        }catch (Exception $e){
+            echo $e->getMessage();
+        }
+        return false;
     }
 
     public function __construct($id, $nom, $abreviation, $date_creation, $description_reseau, $id_aep = 1)

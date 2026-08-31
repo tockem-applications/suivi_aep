@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<![CDATA[
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased; background:#F8FAFC; }
+  * { box-sizing:border-box; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#CBD5E1; border-radius:4px; }
+</style>
+</helmet>
+
+<div style="display:flex;height:100vh;width:100%;color:#0F172A;overflow:hidden;">
+  <div style="width:260px;flex-shrink:0;background:#FFFFFF;border-right:1px solid #E2E8F0;display:flex;flex-direction:column;height:100%;">
+    <div style="height:64px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 20px;border-bottom:1px solid #E2E8F0;">
+      <img src="uploads/logo_file-1782990071979.ico" style="width:26px;height:26px;border-radius:6px;" />
+      <div><div style="font-weight:700;font-size:14px;">Tockem SPE</div><div style="font-size:11px;color:#94A3B8;">Gestion AEP</div></div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px 12px;display:flex;flex-direction:column;gap:18px;">
+      <a href="Dashboard.dc.html" style="text-decoration:none;padding:9px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Tableau de bord</a>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#94A3B8;padding:0 12px 6px;text-transform:uppercase;">Structure</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <a href="Liste des reseaux.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;background:#ECFEFF;color:#0E7490;font-weight:600;font-size:13px;">Réseaux</a>
+          <a href="Liste des abonnes.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Abonnés (BP)</a>
+          <a href="Liste des bornes fontaines.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Bornes fontaines</a>
+          <a href="Liste des AEP.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">AEP</a>
+          <a href="Import de donnees.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Import de données</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#94A3B8;padding:0 12px 6px;text-transform:uppercase;">Facturation</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <a href="Releves index.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Relevés</a>
+          <a href="Mois de facturation.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Mois de facturation</a>
+          <a href="Liste des factures.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Factures</a>
+          <a href="Recouvrement.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Recouvrement</a>
+          <a href="Penalites.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Pénalités</a>
+          <a href="Impayes.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Impayés</a>
+          <a href="Statistiques reseau.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Statistiques réseau</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#94A3B8;padding:0 12px 6px;text-transform:uppercase;">Finances</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <a href="Entrees Sorties.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Entrées / Sorties</a>
+          <a href="Tarifs.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Tarifs</a>
+          <a href="Tarifs differencies.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Tarifs différenciés</a>
+          <a href="Branchements.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Branchements</a>
+          <a href="Redevances.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Redevances</a>
+          <a href="Compte d exploitation.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Compte d'exploitation</a>
+          <a href="Synthese.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Synthèse</a>
+          <a href="Analyse financiere.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Analyse financière</a>
+          <a href="Config compte rendu.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Config. compte-rendu</a>
+          <a href="Categories de flux.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Catégories de flux</a>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#94A3B8;padding:0 12px 6px;text-transform:uppercase;">Administration</div>
+        <div style="display:flex;flex-direction:column;gap:2px;">
+          <a href="Utilisateurs.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Utilisateurs</a>
+          <a href="Roles et permissions.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Rôles &amp; permissions</a>
+          <a href="Cles d inscription.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Clés d'inscription</a>
+          <a href="Sauvegarde et restauration.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Sauvegarde &amp; restauration</a>
+          <a href="Licence.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Licence</a>
+          <a href="Mise a jour.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Mise à jour</a>
+          <a href="Journal d audit.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Journal d'audit</a>
+          <a href="Parametres.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">Paramètres</a>
+          <a href="A propos.dc.html" style="text-decoration:none;padding:8px 12px;border-radius:8px;color:#334155;font-weight:500;font-size:13px;">À propos</a>
+        </div>
+      </div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid #E2E8F0;display:flex;align-items:center;gap:10px;">
+      <div style="width:32px;height:32px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">MN</div>
+      <div><div style="font-size:13px;font-weight:600;">Marc Ngono</div><div style="font-size:11px;color:#94A3B8;">Administrateur</div></div>
+    </div>
+  </div>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%;">
+    <div style="height:64px;flex-shrink:0;background:#fff;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;gap:16px;padding:0 24px;">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #E2E8F0;border-radius:8px;background:#F8FAFC;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0E7490" stroke-width="2"><path d="M12 2s6 7.5 6 12a6 6 0 0 1-12 0c0-4.5 6-12 6-12z"/></svg>
+        <span style="font-size:13px;font-weight:600;">AEP Centre-ville</span>
+      </div>
+      <div style="flex:1;max-width:420px;position:relative;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" style="position:absolute;left:12px;top:10px;"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Rechercher…" style="width:100%;border:1px solid #E2E8F0;background:#F8FAFC;border-radius:8px;padding:9px 12px 9px 34px;font-size:13px;font-family:Inter;outline:none;"/>
+      </div>
+      <div style="flex:1;"></div>
+      <span style="display:flex;align-items:center;gap:6px;background:#DCFCE7;color:#15803D;font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;">Licence active</span>
+      <div style="width:30px;height:30px;border-radius:999px;background:#0E7490;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">MN</div>
+    </div>
+    <div style="height:40px;flex-shrink:0;display:flex;align-items:center;padding:0 24px;font-size:13px;color:#64748B;border-bottom:1px solid #F1F5F9;">
+      <span>AEP Centre-ville</span><span style="margin:0 6px;">/</span><a href="Liste des reseaux.dc.html" style="color:#64748B;text-decoration:none;">Réseaux</a><span style="margin:0 6px;">/</span><span style="color:#0F172A;font-weight:600;">Réseau A — Centre-ville</span>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:28px 32px 60px;" data-screen-label="Détail réseau">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <h1 style="font-size:22px;font-weight:800;margin:0;">Réseau A — Centre-ville</h1>
+            <span style="background:#ECFEFF;color:#0E7490;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;">Actif</span>
+          </div>
+          <div style="font-size:13px;color:#64748B;margin-top:4px;">612 abonnés · 1 sous-réseau · rendement 87 %</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button style="background:#fff;color:#334155;border:1px solid #E2E8F0;padding:9px 14px;border-radius:8px;font-weight:600;font-size:13px;">Modifier</button>
+          <button style="background:#0E7490;color:#fff;border:none;padding:9px 16px;border-radius:8px;font-weight:600;font-size:13px;">Ajouter un sous-réseau</button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;"><div style="color:#64748B;font-size:12px;font-weight:600;">Production (mois)</div><div style="font-size:20px;font-weight:800;margin-top:6px;">9 850 m³</div></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;"><div style="color:#64748B;font-size:12px;font-weight:600;">Distribué</div><div style="font-size:20px;font-weight:800;margin-top:6px;">8 570 m³</div></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;"><div style="color:#64748B;font-size:12px;font-weight:600;">Rendement</div><div style="font-size:20px;font-weight:800;margin-top:6px;color:#16A34A;">87 %</div></div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:16px;"><div style="color:#64748B;font-size:12px;font-weight:600;">Pertes estimées</div><div style="font-size:20px;font-weight:800;margin-top:6px;color:#D97706;">1 280 m³</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:16px;">
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px;">Production vs distribution — 6 derniers mois</div>
+          <svg width="100%" height="160" viewBox="0 0 480 160" preserveAspectRatio="none">
+            <polyline points="10,50 90,45 170,40 250,42 330,35 410,30" fill="none" stroke="#0E7490" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="10,80 90,78 170,70 250,75 330,65 410,60" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="4 4"/>
+          </svg>
+          <div style="display:flex;gap:14px;font-size:12px;color:#64748B;margin-top:8px;">
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:2px;background:#0E7490;display:inline-block;"></span>Production</span>
+            <span style="display:flex;align-items:center;gap:5px;"><span style="width:14px;height:2px;background:#94A3B8;display:inline-block;"></span>Distribution</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:20px;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Sous-réseaux</div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #F1F5F9;">
+              <div><div style="font-size:13px;font-weight:600;">Sous-réseau A1 — Nkolbisson</div><div style="font-size:12px;color:#64748B;">184 abonnés</div></div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:13px;">81 %</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;">
+        <div style="padding:16px 20px;border-bottom:1px solid #F1F5F9;font-size:14px;font-weight:700;">Compteurs du réseau</div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="background:#F8FAFC;">
+            <th style="text-align:left;padding:10px 20px;font-size:12px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;">Compteur</th>
+            <th style="text-align:left;padding:10px 20px;font-size:12px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;">Type</th>
+            <th style="text-align:right;padding:10px 20px;font-size:12px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;">Ancien index</th>
+            <th style="text-align:right;padding:10px 20px;font-size:12px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;">Nouvel index</th>
+            <th style="text-align:right;padding:10px 20px;font-size:12px;color:#64748B;font-weight:600;border-bottom:1px solid #E2E8F0;">Consommation</th>
+          </tr></thead>
+          <tbody>
+            <tr><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;font-family:'JetBrains Mono',monospace;">CPT-PR-001</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;">Production</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">142 300</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">152 150</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;">9 850 m³</td></tr>
+            <tr><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;font-family:'JetBrains Mono',monospace;">CPT-DI-004</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;">Distribution</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">98 400</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;">106 970</td><td style="padding:12px 20px;border-bottom:1px solid #F1F5F9;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;">8 570 m³</td></tr>
+            <tr><td style="padding:12px 20px;font-family:'JetBrains Mono',monospace;">CPT-RS-002</td><td style="padding:12px 20px;">Réservoir</td><td style="padding:12px 20px;text-align:right;font-family:'JetBrains Mono',monospace;">54 120</td><td style="padding:12px 20px;text-align:right;font-family:'JetBrains Mono',monospace;">58 900</td><td style="padding:12px 20px;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600;">4 780 m³</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+]]>
+</x-dc>
+</body>
+</html>

@@ -10,25 +10,71 @@ class FluxFinancier extends Manager
     public $mois;            // Mois du flux financier
     public $libele;          // Libellé du flux
     public $prix;            // Montant du flux
-    public $id_aep;            // Type de flux (sortie ou entrée)
+    public $id_aep;            // ID de l'AEP
     public $type;            // Type de flux (sortie ou entrée)
     public $description;     // Description du flux
+    public $id_categorie_flux_manuel; // ID de la catégorie du flux manuel
 
-    public static function getFinanceData($mois = '', $type = '', $prix_min = 0, $id_aep='')
+    public static function getFinanceData($mois = '', $type = '', $prix_min = 0, $id_aep = '')
     {
         return self::prepare_query("
-                            SELECT * 
-                            from flux_financier 
-                            where mois like concat('%', ?) and 
-                                  type like concat('%', ?) and 
-                                  prix>=? and
-                                  id_aep=?
-                            order by mois desc;", array($mois, $type, $prix_min, $id_aep));
+                            SELECT ff.*, cfm.nom as categorie_nom
+                            from flux_financier ff
+                            LEFT JOIN categorie_flux_manuel cfm ON ff.id_categorie_flux_manuel = cfm.id
+                            where ff.mois like concat('%', ?) and 
+                                  ff.type like concat('%', ?) and 
+                                  ff.prix>=? and
+                                  ff.id_aep=?
+                            order by ff.mois desc;", array($mois, $type, $prix_min, $id_aep));
     }
 
     public static function getFluxById($id)
     {
-        return self::prepare_query("SELECT * from flux_financier where id = ?;", array($id));
+        return self::prepare_query("SELECT ff.*, cfm.nom as categorie_nom, cfm.id as id_categorie_flux_manuel 
+                                    from flux_financier ff
+                                    LEFT JOIN categorie_flux_manuel cfm ON ff.id_categorie_flux_manuel = cfm.id
+                                    where ff.id = ?;", array($id));
+    }
+
+    public static function getAllVersements($id_aep)
+    {
+        return self::prepare_query("
+            select rq.*, 'no_action' as actions from  (SELECT 
+                f.id,
+                CONCAT(mf.mois, '-28') as date,
+                mf.mois,
+                CONCAT('Recouvrements - ', mf.mois) as libele,
+                sum(f.montant_verse) as prix,
+                'entree' as type,
+                CONCAT('versements de ', f.montant_verse, ' FCFA pour le mois de - ', mf.mois) as description,
+                ? as id_aep
+            FROM facture f
+            INNER JOIN indexes i on f.id_indexes = i.id
+            INNER JOIN mois_facturation mf ON i.id_mois_facturation = mf.id
+            inner join constante_reseau cr on mf.id_constante = cr.id
+            WHERE cr.id_aep = ? AND f.montant_verse > 0 and mf.mois <> '2020-01'
+            group by mf.id
+            
+            union
+            
+            SELECT 
+                ba.id,
+                CONCAT(ba.mois, '-28') as date,
+                ba.mois,
+                CONCAT('Branchements - ', ba.mois) as libele,
+                sum(ba.versement_fcfa) as prix,
+                'entree' as type,
+                CONCAT('Branchements de ', ba.versement_fcfa, ' FCFA pour le mois de - ', ba.mois) as description,
+                ? as id_aep
+            FROM abone a
+            INNER JOIN compteur_abone ca on a.id = ca.id_abone
+            INNER JOIN compteur c on c.id = ca.id_compteur
+            INNER JOIN reseau r on a.id_reseau = r.id
+            INNER JOIN branchement_abonne as ba on ba.id_abone = a.id
+            WHERE r.id_aep =? 
+            group by ba.mois) as rq
+            ORDER BY rq.date DESC;
+        ", array($id_aep, $id_aep, $id_aep, $id_aep));
     }
 
     function getConstraint()
@@ -38,7 +84,7 @@ class FluxFinancier extends Manager
 
     function getDonnee()
     {
-        return array(
+        $donnees = array(
             'date' => $this->date,
             'mois' => $this->mois,
             'libele' => $this->libele,
@@ -47,6 +93,13 @@ class FluxFinancier extends Manager
             'id_aep' => $this->id_aep,
             'description' => $this->description
         );
+        
+        // Ajouter id_categorie_flux_manuel si défini
+        if (isset($this->id_categorie_flux_manuel)) {
+            $donnees['id_categorie_flux_manuel'] = $this->id_categorie_flux_manuel;
+        }
+        
+        return $donnees;
     }
 
     function getNomTable()
@@ -54,7 +107,8 @@ class FluxFinancier extends Manager
         return "flux_financier";
     }
 
-    public static function delete_flux($id){
+    public static function delete_flux($id)
+    {
         return self::prepare_query("DELETE FROM flux_financier where id =?", array($id));
     }
 

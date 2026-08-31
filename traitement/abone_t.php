@@ -1,34 +1,77 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
+//exit();
 @include_once("../donnees/Abones.php");
 @include_once("donnees/Abones.php");
 @include_once("../donnees/facture.php");
 @include_once("donnees/facture.php");
 @include_once("traitement/reseau_t.php");
 @include_once("resau_t.php");
+@include_once("../donnees/branchement_abonne.php");
+@include_once("donnees/branchement_abonne.php");
 
 class Abone_t
 {
 
     public static function ajout()
     {
-        if (isset($_GET['ajout'])) {
-            var_dump($_POST);
-            echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['numero_compte_anticipation'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
-            if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['type_compteur'], $_POST['numero_telephone'], $_POST['numero_compte_anticipation'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
+        if (isset($_GET['ajout_abone'])) {
+            ob_start();
+            //            var_dump($_POST);
+            echo $_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'];
+            if (isset($_POST['nom'], $_POST['numero_compteur'], $_POST['numero_telephone'], $_POST['id_reseau'], $_POST['derniers_index'], $_POST['etat'])) {
                 echo "nnnnnnnnnnnnnnnnnnnnnnnnn";
-                echo "ooooooooooo";
-                /*if ($_POST['nom'] == '' || $_POST['prenom'] == '' || $_POST['numero'] == '') {
-                    $_POST['operation_message'] = 'Veuillez saisir tout les champs';
-                    header("location: ../index.php?form=abone&operation=error&message=Veuillez saisir tout les champs");
-                }*/
+
                 $nom = htmlspecialchars($_POST['nom']);
                 $numero_compteur = htmlspecialchars($_POST['numero_compteur']);
                 $numero_telephone = htmlspecialchars($_POST['numero_telephone']);
-                $numero_compte_anticipation = htmlspecialchars($_POST['numero_compte_anticipation']);
-                $derniers_index = htmlspecialchars($_POST['derniers_index']);
+                $numero_compte_anticipation = 100;// htmlspecialchars($_POST['numero_compte_anticipation']);
+                $derniers_index = (float) htmlspecialchars($_POST['derniers_index']);
                 $id_reseau = htmlspecialchars($_POST['id_reseau']);
-                $type_compteur = htmlspecialchars($_POST['type_compteur']);
+                $rang = htmlspecialchars(isset($_POST['rang']) ? htmlspecialchars($_POST['rang']) : '');
                 $etat = htmlspecialchars($_POST['etat']);
+                if (empty($nom)) {
+                    throw new Exception('Le nom est requis');
+                }
+                if (strlen($nom) > 128) {
+                    throw new Exception('Le nom est trop long (max 128 caractères)');
+                }
+
+                if (strlen($numero_compteur) > 16) {
+                    throw new Exception('Le numero de compteur est trop long (max 16 caractères)');
+                }
+
+                if ($derniers_index < 0) {
+                    throw new Exception('Le dernier index ne peu etre inferieur à 0');
+                }
+
+                if (empty($numero_telephone)) {
+                    throw new Exception('Le numéro de téléphone est requis');
+                }
+                if (strlen($numero_telephone) > 16) {
+                    throw new Exception('Le numéro de téléphone est trop long (max 16 caractères)');
+                }
+
+                if (!in_array($etat, array('actif', 'inactif', 'suspendu'))) {
+                    throw new Exception('État invalide');
+                }
+
+                if ($id_reseau <= 0) {
+                    throw new Exception('Réseau invalide');
+                }
+
+                // Vérifier que le réseau appartient à l'AEP
+                $reseau = Manager::prepare_query(
+                    'SELECT * FROM reseau WHERE id = ? AND id_aep = ?',
+                    array($id_reseau, $_SESSION['id_aep'])
+                )->fetch();
+
+                if (!$reseau) {
+                    throw new Exception('Réseau introuvable ou non autorisé');
+                }
+
+
 
                 $nouvel_abone = new Abones(
                     0,
@@ -38,18 +81,19 @@ class Abone_t
                     $numero_telephone,
                     $numero_compte_anticipation,
                     $etat,
-                    0,
+                    $rang,
                     $id_reseau,
-                    $derniers_index,
-                    $type_compteur
+                    $derniers_index
                 );
 
                 $res = $nouvel_abone->save_abone();
                 var_dump($nouvel_abone);
                 $nouvel_abone->getAboneIdBy();
                 var_dump($nouvel_abone);
+                //                exit();
+                $text = ob_get_clean();
                 if (!$res)
-                    header("location: ../index.php?form=abone&operation=error");
+                    header("location: ../index.php?page=abonne&operation=error");
                 else
                     header("location: ../index.php?page=info_abone&id=$nouvel_abone->id");
             }
@@ -108,7 +152,7 @@ class Abone_t
             ?>
 
             <!--            ceation de l'entete du tableau      -->
-            <table class="table table-striped">
+            <table class="table_searching table table-striped">
                 <thead>
                     <h3 style="text-align: center; margin-top: 20px;">
                         <?= $titre ?>
@@ -162,24 +206,309 @@ class Abone_t
         return 1;
     }
 
-    public static function afficheInfoAbone($id_abone)
+    /**
+     * @return array<string,mixed>|null
+     */
+    public static function loadAboneContext($id_abone)
     {
+        $id_abone = (int) $id_abone;
         $res = Abones::getAllAboneInfoByid($id_abone);
         if (!$res) {
+            return null;
+        }
+        $rows = $res->fetchAll();
+        if (!count($rows)) {
+            return null;
+        }
+        $data = $rows[0];
+        $idCompteur = (int) $data['id_compteur'];
+        return array(
+            'id_abone' => $id_abone,
+            'data' => $data,
+            'id_compteur' => $idCompteur,
+            'branchement' => BranchementAbonne::getByAboneId($id_abone),
+            'indexes' => self::getIndexesByCompteur($idCompteur),
+        );
+    }
+
+    private static function infoAboneShowSection($section, $name)
+    {
+        return $section === 'all' || $section === $name;
+    }
+
+    public static function afficheInfoAbone($id_abone, $section = 'all')
+    {
+        $ctx = self::loadAboneContext($id_abone);
+        if (!$ctx) {
             echo "<h1>Erreur !</h1>";
-            return;
+            return 0;
         }
-        $res = $res->fetchAll();
-        if (!count($res)) {
-            echo "<h1>Aucun Abone Retrouvé </h1/";
-            return;
-        }
-        $data = $res[0];
+        $data = $ctx['data'];
+        $idCompteur = $ctx['id_compteur'];
+        $branchement = $ctx['branchement'];
+        $indexes = $ctx['indexes'];
+        $id_abone = $ctx['id_abone'];
         //var_dump($data);
         ?>
-                
+
+        <?php if (self::infoAboneShowSection($section, 'header')): ?>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h5 class="mb-0 me-2"><?php echo htmlspecialchars($data['nom']); ?></h5>
+                            <span class="badge bg-light text-dark">Réseau:
+                                <?php echo htmlspecialchars($data['reseau']); ?></span>
+                            <?php $etatClass = ($data['etat'] === 'actif') ? 'bg-success' : (($data['etat'] === 'suspendu') ? 'bg-warning' : 'bg-secondary'); ?>
+                            <span
+                                class="badge <?php echo $etatClass; ?> text-uppercase"><?php echo htmlspecialchars($data['etat']); ?></span>
+                        </div>
+                        <div>
+                            <span class="badge bg-info">Tél: <a class="text-white text-decoration-none"
+                                    href="https://wa.me/237<?php echo htmlspecialchars($data['numero_telephone']); ?>"
+                                    target="_blank"><?php echo htmlspecialchars($data['numero_telephone']); ?></a></span>
+                        </div>
+                    </div>
+                </div>
+                <?php endif; ?>
+
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
+                <?php if (self::infoAboneShowSection($section, 'branchement')): ?>
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                        <strong>Branchement</strong>
+                        <div>
+                            <?php if ($branchement): ?>
+                                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalEditBranchement">Modifier</button>
+                            <?php endif; ?>
+                            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalCreateBranchement" <?php echo $branchement ? 'disabled' : '' ?>>Créer</button>
+                            <?php if ($branchement): ?>
+                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalDeleteBranchement">Supprimer</button>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <?php if ($branchement): ?>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Quartier</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['quartier']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Code abonné</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['code_abonne']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">N° Tél.</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['telephone']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Statut</div>
+                                    <div class="fw-bold text-success"><?php echo htmlspecialchars($branchement['statut']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Mois</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars($branchement['mois']); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Côté</div>
+                                    <div class="fw-bold"><?php echo htmlspecialchars(BranchementAbonne::libelleCote(isset($branchement['cote_reseau']) ? $branchement['cote_reseau'] : null), ENT_QUOTES, 'UTF-8'); ?></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted">Versement (FCFA)</div>
+                                    <div class="fw-bold text-success">
+                                        <?php echo number_format((int) $branchement['versement_fcfa'], 0, ',', ' '); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-muted">Aucune information de branchement. Cliquez sur "Créer".</div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (self::infoAboneShowSection($section, 'index')): ?>
+<!-- Section Gestion des Index par Mois -->
+                <div class="card mb-3">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <strong>Gestion des Index par Mois</strong>
+                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalEditIndexes">
+                            <i class="fas fa-edit"></i> Modifier les index
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <?php
+                        // Récupérer l'historique des index pour ce compteur
+                        $indexes = self::getIndexesByCompteur($idCompteur);
+                        if (count($indexes) > 0):
+                            ?>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Mois</th>
+                                            <th>Ancien Index</th>
+                                            <th>Nouvel Index</th>
+                                            <th>Consommation</th>
+                                            <th>Date Facturation</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php foreach ($indexes as $index): ?>
+                                            <tr>
+                                                <td><?php echo getLetterMonth($index['mois']); ?></td>
+                                                <td class="text-end"><?php echo number_format($index['ancien_index'], 2); ?></td>
+                                                <td class="text-end fw-bold"><?php echo number_format($index['nouvel_index'], 2); ?>
+                                                </td>
+                                                <td class="text-end text-primary">
+                                                    <?php echo number_format($index['nouvel_index'] - $index['ancien_index'], 2); ?> m³
+                                                </td>
+                                                <td class="text-center">
+                                                    <?php echo $index['date_paiement'] ? date('d/m/Y', strtotime($index['date_paiement'])) : '-'; ?>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-muted text-center py-3">
+                                <i class="fas fa-info-circle"></i> Aucun historique d'index disponible
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Modal Modification des Index -->
+                <div class="modal fade" id="modalEditIndexes" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php" id="formEditIndexes">
+                                <div class="modal-header bg-warning text-dark">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-edit"></i> Modifier les index par mois
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="update_indexes">
+                                    <input type="hidden" name="id_compteur" value="<?php echo $idCompteur; ?>">
+
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle"></i>
+                                        <strong>Attention :</strong> La modification des index peut affecter les calculs de
+                                        facturation.
+                                        L'ancien index peut être inférieur à 0 pour les cas de remise à zéro du compteur.
+                                    </div>
+
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Mois</th>
+                                                    <th>Ancien Index</th>
+                                                    <th>Nouvel Index</th>
+                                                    <th>Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="indexesTableBody">
+                                                <?php foreach ($indexes as $index): ?>
+                                                    <tr data-index-id="<?php echo $index['id']; ?>">
+                                                        <td><?php echo getLetterMonth($index['mois']); ?></td>
+                                                        <td>
+                                                            <input type="number" name="ancien_index[<?php echo $index['id']; ?>]"
+                                                                class="form-control form-control-sm"
+                                                                value="<?php echo $index['ancien_index']; ?>" step="0.01"
+                                                                min="-999999"
+                                                                data-original-value="<?php echo $index['ancien_index']; ?>">
+                                                        </td>
+                                                        <td>
+                                                            <input type="number" name="nouvel_index[<?php echo $index['id']; ?>]"
+                                                                class="form-control form-control-sm"
+                                                                value="<?php echo $index['nouvel_index']; ?>" step="0.01" min="0"
+                                                                data-original-value="<?php echo $index['nouvel_index']; ?>">
+                                                        </td>
+                                                        <td>
+                                                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                                onclick="resetIndexRow(this)">
+                                                                <i class="fas fa-undo"></i>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times"></i> Annuler
+                                    </button>
+                                    <button type="submit" class="btn btn-warning" id="btnSaveIndexes">
+                                        <i class="fas fa-save"></i> Enregistrer les modifications
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    function resetIndexRow(button) {
+                        const row = button.closest('tr');
+                        const ancienInput = row.querySelector('input[name*="ancien_index"]');
+                        const nouvelInput = row.querySelector('input[name*="nouvel_index"]');
+
+                        ancienInput.value = ancienInput.getAttribute('data-original-value');
+                        nouvelInput.value = nouvelInput.getAttribute('data-original-value');
+                    }
+
+                    // Validation du formulaire
+                    document.getElementById('formEditIndexes').addEventListener('submit', function (e) {
+                        const inputs = this.querySelectorAll('input[type="number"]');
+                        let hasChanges = false;
+
+                        inputs.forEach(input => {
+                            if (input.value !== input.getAttribute('data-original-value')) {
+                                hasChanges = true;
+                            }
+
+                            // Validation : nouvel index doit être >= ancien index
+                            if (input.name.includes('nouvel_index')) {
+                                const row = input.closest('tr');
+                                const ancienIndex = parseFloat(row.querySelector('input[name*="ancien_index"]').value);
+                                const nouvelIndex = parseFloat(input.value);
+
+                                if (nouvelIndex < ancienIndex) {
+                                    e.preventDefault();
+                                    alert('Le nouvel index ne peut pas être inférieur à l\'ancien index pour le mois ' +
+                                        row.querySelector('td:first-child').textContent);
+                                    input.focus();
+                                    return false;
+                                }
+                            }
+                        });
+
+                        if (!hasChanges) {
+                            e.preventDefault();
+                            alert('Aucune modification détectée.');
+                            return false;
+                        }
+
+                        if (!confirm('Êtes-vous sûr de vouloir modifier ces index ? Cette action peut affecter les calculs de facturation.')) {
+                            e.preventDefault();
+                            return false;
+                        }
+                    });
+                </script>
+                <?php endif; ?>
+
+                <?php if (self::infoAboneShowSection($section, 'fiche')): ?>
                 <table class="table table-bordered">
                     <h1 class="text-center text-dark my-3 h1"><?php echo $data['nom'] ?></h1>
                     <thead class="text-center">
@@ -204,7 +533,9 @@ class Abone_t
                         <tr>
                             <th>Nº compteur</th>
                             <th> <?php echo $data['numero_compteur'] ?> </th>
-                            <th> <input type="number" step="0.01" placeholder="modifier le Nº compteur" onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)" class="form-control">
+                            <th> <input type="number" step="0.01" placeholder="modifier le Nº compteur"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)"
+                                    class="form-control">
                             </th>
                         </tr>
                         <tr>
@@ -213,27 +544,62 @@ class Abone_t
                                     data-bs-title="cliquer pour envoyer un message sur mobile"
                                     href="https://wa.me/237<?php echo $data['numero_telephone'] ?>"><?php echo $data['numero_telephone'] ?></a>
                             </th>
-                            <th> <input type="tel" placeholder="modifier le numero" class="form-control" onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)"></th>
+                            <th> <input type="tel" placeholder="modifier le numero" class="form-control"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Index</th>
                             <th><?php echo $data['derniers_index'] ?></th>
-                            <th> <input type="number" step="0.01" placeholder="nouvel index" class="form-control" data-bs-toggle="tooltip" data-bs-placement="right" data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
-                             onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)"></th>
+                            <th> <input type="number" step="0.01" placeholder="nouvel index" class="form-control"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Etat</th>
                             <th><?php echo $data['etat'] ?></th>
-                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $id_abone?>" class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a></th>
+                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $id_abone ?>"
+                                    class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>">
+                                    <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a></th>
                         </tr>
+                        <?php
+                        // Récupérer tarif_differencie_autorise depuis la base de données
+                        $tarifDiffAutorise = Manager::prepare_query(
+                            "SELECT tarif_differencie_autorise FROM abone WHERE id = ?",
+                            array($id_abone)
+                        )->fetch();
+                        $tarifDiffAutorise = $tarifDiffAutorise ? (int) $tarifDiffAutorise['tarif_differencie_autorise'] : 1;
+                        ?>
                         <tr>
-                            <th>Type</th>
-                            <th><?php echo strtoupper($data['type_compteur']) ?></th>
-                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=<?php echo $data['type_compteur']=='distribution'?'production':'distribution'?>&id_abone=<?php echo $id_abone?>" class="btn form-control <?php echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?>"> <?php echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production')?></a></th>
+                            <th>Tarif différencié</th>
+                            <th>
+                                <span class="badge <?php echo $tarifDiffAutorise ? 'bg-success' : 'bg-secondary'; ?>">
+                                    <?php echo $tarifDiffAutorise ? 'Autorisé' : 'Non autorisé'; ?>
+                                </span>
+                            </th>
+                            <th>
+                                <select class="form-select"
+                                    onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
+                                    <option value="1" <?php echo $tarifDiffAutorise ? 'selected' : ''; ?>>Autorisé</option>
+                                    <option value="0" <?php echo !$tarifDiffAutorise ? 'selected' : ''; ?>>Non autorisé</option>
+                                </select>
+                                <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la
+                                    consommation</small>
+                            </th>
                         </tr>
+                        <!--                        <tr>-->
+                        <!--                            <th>Type</th>-->
+                        <!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
+                        <!--                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=--><?php //echo $data['type_compteur']=='distribution'?'production':'distribution' ?><!--&id_abone=--><?php //echo $id_abone ?><!--" class="btn form-control --><?php //echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?><!--"> --><?php //echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production') ?><!--</a></th>-->
+                        <!--                        </tr>-->
                         <tr>
-                            <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0" data-bs-toggle="tooltip"data-bs-placement="right" data-bs-title="Modifiez le nom de l'aboné"
-                             onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)"></th>
+                            <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Modifiez le nom de l'aboné"
+                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)">
+                            </th>
                         </tr>
                         <tr>
                             <th>Consommation</th>
@@ -257,19 +623,282 @@ class Abone_t
                             <th class="text-end px-5"><?php echo $data['duree'] ?></sub></th>
                         </tr>
                         <tr>
-                            <th colspan="3" class=""> <a href="traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>"
-                             placeholder="modifier le nom" class="form-control m-0 bg-danger text-center" data-bs-toggle="tooltip"
-                             data-bs-placement="right" data-bs-title="Cette action va suprimer definitivement l'abone de la liste"> Suprimer</a></th>
+                            <th colspan="3" class="">
+                                <button type="button" class="form-control m-0 bg-danger text-center text-white border-0"
+                                    data-bs-toggle="modal" data-bs-target="#modalSuppressionAbone<?php echo $id_abone ?>"
+                                    data-bs-toggle="tooltip" data-bs-placement="right"
+                                    data-bs-title="Cette action va supprimer définitivement l'abonné de la liste">
+                                    <i class="fas fa-trash"></i> Supprimer
+                                </button>
+                            </th>
                         </tr>
                     </tbody>
                 </table>
+                <?php endif; ?>
+
+                                <?php if (self::infoAboneShowSection($section, 'modals') || self::infoAboneShowSection($section, 'branchement') || self::infoAboneShowSection($section, 'index') || self::infoAboneShowSection($section, 'fiche')): ?>
+<!-- Modal Créer branchement -->
+                <div class="modal fade" id="modalCreateBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">Créer branchement</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="create_branchement">
+                                    <input type="hidden" name="id_abone" value="<?php echo (int) $id_abone; ?>">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Mois</label>
+                                            <input type="month" name="mois" class="form-control" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Côté (abonnement au service)</label>
+                                            <select name="cote_reseau" class="form-select">
+                                                <option value="">— Non défini —</option>
+                                                <option value="reseau">Côté réseau (62 500 FCFA)</option>
+                                                <option value="oppose">Côté opposé (70 000 FCFA)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Montant</label>
+                                                                                        <div class="input-group">
+                                                <input type="number" name="versement_fcfa" class="form-control" min="0"
+                                                    step="500" placeholder="0" aria-label="Montant en FCFA">
+                                                <span class="input-group-text">FCFA</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Statut</label>
+                                            <select name="statut" class="form-select">
+                                                <option value="OK" selected>OK</option>
+                                                <option value="en attente">En attente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Quartier</label>
+                                            <input name="quartier" class="form-control" placeholder="Ex: MBIH1">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Code abonné</label>
+                                            <input name="code_abonne" class="form-control" placeholder="Ex: 22M">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">N° Tél.</label>
+                                            <input name="telephone" class="form-control" placeholder="Ex: 694039998">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Modifier branchement -->
+                <div class="modal fade" id="modalEditBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-warning">
+                                    <h5 class="modal-title">Modifier branchement</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <input type="hidden" name="action" value="update_branchement">
+                                    <input type="hidden" name="id_abone" value="<?php echo (int) $id_abone; ?>">
+                                    <input type="hidden" name="id_branchement"
+                                        value="<?php echo $branchement ? (int) $branchement['id'] : 0; ?>">
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Mois</label>
+                                            <input type="month" name="mois" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['mois']) : '' ?>">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Côté (abonnement au service)</label>
+                                            <select name="cote_reseau" class="form-select">
+                                                <option value="" <?php echo (!$branchement || empty($branchement['cote_reseau'])) ? 'selected' : ''; ?>>— Non défini —</option>
+                                                <option value="reseau" <?php echo ($branchement && $branchement['cote_reseau'] === 'reseau') ? 'selected' : ''; ?>>Côté réseau (62 500 FCFA)</option>
+                                                <option value="oppose" <?php echo ($branchement && $branchement['cote_reseau'] === 'oppose') ? 'selected' : ''; ?>>Côté opposé (70 000 FCFA)</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Montant</label>
+                                            <div class="input-group">
+                                                <input type="number" name="versement_fcfa" class="form-control" min="0"
+                                                    step="500"
+                                                    value="<?php echo $branchement ? (int) $branchement['versement_fcfa'] : 0 ?>">
+                                                <span class="input-group-text">FCFA</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Statut</label>
+                                            <select name="statut" class="form-select">
+                                                <option value="OK" <?php echo ($branchement && strtoupper(trim($branchement['statut'])) == 'OK') ? 'selected' : ''; ?>>OK
+                                                </option>
+                                                <option value="en attente" <?php echo ($branchement && strtolower(trim($branchement['statut'])) == 'en attente') ? 'selected' : ''; ?>>
+                                                    En attente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Quartier</label>
+                                            <input name="quartier" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['quartier']) : '' ?>">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Code abonné</label>
+                                            <input name="code_abonne" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['code_abonne']) : '' ?>">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">N° Tél.</label>
+                                            <input name="telephone" class="form-control"
+                                                value="<?php echo $branchement ? htmlspecialchars($branchement['telephone']) : '' ?>">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary" <?php echo $branchement ? '' : 'disabled' ?>>Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Supprimer branchement -->
+                <div class="modal fade" id="modalDeleteBranchement" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="traitement/abone_t.php">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">Supprimer le branchement</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>Confirmez la suppression des informations de branchement.</p>
+                                    <input type="hidden" name="action" value="delete_branchement">
+                                    <input type="hidden" name="id_branchement"
+                                        value="<?php echo $branchement ? (int) $branchement['id'] : 0; ?>">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-danger" <?php echo $branchement ? '' : 'disabled' ?>>Supprimer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal de confirmation de suppression -->
+                <div class="modal fade" id="modalSuppressionAbone<?php echo $id_abone ?>" tabindex="-1"
+                    aria-labelledby="modalSuppressionAboneLabel<?php echo $id_abone ?>" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title" id="modalSuppressionAboneLabel<?php echo $id_abone ?>">
+                                    <i class="fas fa-exclamation-triangle"></i> Confirmation de suppression
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-danger">
+                                    <strong>Attention !</strong> Cette action est irréversible et supprimera définitivement
+                                    l'abonné et toutes ses données associées.
+                                </div>
+
+                                <p class="mb-3">Pour confirmer la suppression de l'abonné
+                                    <strong><?php echo htmlspecialchars($data['nom']); ?></strong>, veuillez saisir exactement
+                                    son nom dans le champ ci-dessous :
+                                </p>
+
+                                <div class="mb-3">
+                                    <label for="nomConfirmation<?php echo $id_abone ?>" class="form-label">Nom de l'abonné à
+                                        supprimer :</label>
+                                    <input type="text" class="form-control" id="nomConfirmation<?php echo $id_abone ?>"
+                                        placeholder="Saisissez le nom exact de l'abonné"
+                                        data-nom-attendu="<?php echo htmlspecialchars($data['nom']); ?>">
+                                    <div class="invalid-feedback" id="erreurNom<?php echo $id_abone ?>">
+                                        Le nom saisi ne correspond pas au nom de l'abonné.
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox"
+                                            id="confirmationCheckbox<?php echo $id_abone ?>">
+                                        <label class="form-check-label" for="confirmationCheckbox<?php echo $id_abone ?>">
+                                            Je comprends que cette action est irréversible et supprimera toutes les données de
+                                            l'abonné.
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                    <i class="fas fa-times"></i> Annuler
+                                </button>
+                                <button type="button" class="btn btn-danger" id="btnConfirmerSuppression<?php echo $id_abone ?>"
+                                    disabled>
+                                    <i class="fas fa-trash"></i> Supprimer définitivement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script>
+                    (function () {
+                        const nomInput = document.getElementById('nomConfirmation<?php echo $id_abone ?>');
+                        const checkbox = document.getElementById('confirmationCheckbox<?php echo $id_abone ?>');
+                        const btnConfirmer = document.getElementById('btnConfirmerSuppression<?php echo $id_abone ?>');
+                        const nomAttendu = nomInput.getAttribute('data-nom-attendu');
+
+                        function validerFormulaire() {
+                            const nomSaisi = nomInput.value.trim();
+                            const isNomCorrect = nomSaisi === nomAttendu;
+                            const isCheckboxCochee = checkbox.checked;
+
+                            // Validation du nom
+                            if (nomSaisi && !isNomCorrect) {
+                                nomInput.classList.add('is-invalid');
+                            } else {
+                                nomInput.classList.remove('is-invalid');
+                            }
+
+                            // Activation du bouton
+                            btnConfirmer.disabled = !(isNomCorrect && isCheckboxCochee);
+                        }
+
+                        nomInput.addEventListener('input', validerFormulaire);
+                        checkbox.addEventListener('change', validerFormulaire);
+
+                        btnConfirmer.addEventListener('click', function () {
+                            if (!btnConfirmer.disabled) {
+                                // Redirection vers la suppression
+                                window.location.href = 'traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>';
+                            }
+                        });
+                    })();
+                </script>
+                <?php endif; ?>
                 <?php
+                return $idCompteur;
     }
 
     public static function createTable($htmlTableCode, $titre = 'liste', $autre_entete = '')
     {
         ?>
-                <table class="table table-striped table-bordered">
+                <table class="table_searching table table-striped table-bordered">
                     <thead>
                         <h3 style="text-align: center; margin-top: 20px;">
                             <?php echo $titre ?>
@@ -286,29 +915,28 @@ class Abone_t
 
     public static function handleSingleFielAboneUpdate()
     {
-        if (isset($_GET['single_update_abone'])|| isset($_GET['abone_deleting'])) {
+        if (isset($_GET['single_update_abone']) || isset($_GET['abone_deleting'])) {
             echo "bonjour<br>";
             echo $_SERVER['REQUEST_METHOD'];
             $sendedData = null;
-            if($_SERVER['REQUEST_METHOD'] == 'GET')
+            if ($_SERVER['REQUEST_METHOD'] == 'GET')
                 $sendedData = $_GET;
             else
                 $sendedData = json_decode(file_get_contents('php://input'), true);
             //self::writeToFile('tito.txt',  '555555555555555555555555');
-            if(isset($_GET['abone_deleting'])){
-                if(isset($sendedData['id_abone'])){
+            if (isset($_GET['abone_deleting'])) {
+                if (isset($sendedData['id_abone'])) {
                     $id_abone = (int) htmlspecialchars($sendedData['id_abone']);
-                    $res = Abones::deleteAbone( $id_abone);
-                    if ($res){
-                        header("location: ../index.php?list=abone_simple&message='aboné suprimé'");
-                    }else{
+                    $res = Abones::deleteAbone($id_abone);
+                    if ($res) {
+                        header("location: ../index.php?page=abonne&message='aboné suprimé'");
+                    } else {
                         header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=echec de supression de l'aboné");
                     }
                     return;
                 }
-            }
-            else if (!isset($sendedData['id_abone'], $sendedData['key'], $sendedData['value'])){
-//                self::writeToFile('tito.txt',  '6666666666666666666666');
+            } else if (!isset($sendedData['id_abone'], $sendedData['key'], $sendedData['value'])) {
+                //                self::writeToFile('tito.txt',  '6666666666666666666666');
                 return false;
             }
 
@@ -321,7 +949,9 @@ class Abone_t
                 $value = (int) $value;
             else if ($key == 'derniers_index')
                 $value = (float) $value;
-            
+            else if ($key == 'tarif_differencie_autorise')
+                $value = (int) $value; // 0 ou 1
+
             $res = Abones::updateSingleValue($id_abone, $key, $value);
             if (!$res)
                 header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=");
@@ -332,33 +962,44 @@ class Abone_t
     }
     public static function getListeAboneSimple($type_compteur = '')
     {
-        $req = Abones::getSimpleAbone( $_SESSION['id_aep']);
-        $req = $req->fetchAll();
-        if($type_compteur == '')
-            $titre_page ='Liste de tout les compteurs (production et distribution)';
-        elseif ($type_compteur == 'distribution')
+        $req = Abones::getSimpleAbone($_SESSION['id_aep']);
+        $req = $req->fetchAll(PDO::FETCH_ASSOC);
+        //        var_dump($req);
+
+        if ($type_compteur == 'compteur_reseau') {
+            $titre_page = 'Liste de tout les compteurs reseau';
+            $req = Abones::getSimpleCompteurReseau($_SESSION['id_aep']);
+            $req = $req->fetchAll(PDO::FETCH_ASSOC);
+
+        } elseif ($type_compteur == 'distribution')
             $titre_page = "Liste des abonés";
-        elseif ( $type_compteur == 'production')
+        elseif ($type_compteur == 'production')
             $titre_page = "Liste des compteurs de production";
         ob_start();
+        create_csv_exportation_button(
+            $req,
+            "liste_abones.csv",
+            "Exporter la liste des abonés au format csv"
+        );
         ?>
-            <tr>
-                <th>Id</th>
+            <tr class="mt-3">
+                <!--                <th>Id</th>-->
                 <th>Nom et Prenom</th>
                 <th>N° Telephone</th>
                 <th>N° Compteur</th>
                 <th>Reseau</th>
                 <th>Index</th>
                 <th>Etat</th>
-                <th>Type</th>
+                <!--                <th>Type</th>-->
 
             </tr>
             <?php
             foreach ($req as $data) {
                 ?>
                 <tr <?php ?> class=<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>>
-                    <td> <?php echo $data['id'] ?></td>
-                    <td class="table_link"> <a href="?page=info_abone&id=<?php echo $data['id'] ?>"
+                    <!--                    <td> --><?php //echo $data['id'] ?><!--</td>-->
+                    <td class="table_link"> <a
+                            href="<?php echo $type_compteur == 'distribution' ? '?page=info_abone&id=' . $data['id'] : '#' ?>"
                             style="color:black;"><?php echo $data['nom'] ?></a></td>
                     <td> <?php echo $data['numero_telephone'] ?></td>
                     <td> <?php echo $data['numero_compteur'] ?></td>
@@ -366,15 +1007,14 @@ class Abone_t
                     <td> <?php echo $data['derniers_index'] ?></td>
                     <td class="<?php echo $data['etat'] == 'actif' ? '' : 'bg-danger' ?>">
                         <?php echo $data['etat'] == 'actif' ? 'ACTIF' : 'NON ACTIF' ?>
-                        <!-- <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat']=='actif'?'non actif':'actif'?>&id_abone=<?php echo $data['id']?>" class="btn form-control m-0 p-0"> <?php echo 'Rendre '.($data['etat']=='actif'?'non actif':'actif')?></a> -->
+                        <!-- <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $data['id'] ?>" class="btn form-control m-0 p-0"> <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a> -->
                     </td>
-                    <td> <?php echo strtoupper($data['type_compteur']) ?></td>
+                    <!--                    <td> --><?php //echo strtoupper($data['type_compteur']) ?><!--</td>-->
                 </tr>
-            <?php
+                <?php
             }
-            echo '<a class=dropdown-item" href="?form=abone"> Ajouter un aboné</a>';
             $codeHtml = ob_get_clean();
-            self::createTable($codeHtml, $titre_page, "<a href='traitement/abone_t.php?action=export_index' target='_blank'>Telecharger les index</a><br>");
+            self::createTable($codeHtml, $titre_page, "");
     }
 
     public static function writeToFile($fileName, $content)
@@ -408,7 +1048,7 @@ class Abone_t
     public static function getAllAboneInfoByid($id = 0)
     {
 
-        $req = Abones::getAllAboneInfoByid();
+        $req = Abones::getAllAboneInfoByid($id);
         $req = $req->fetchAll();
         foreach ($req as $ligne) {
             $id = $ligne['Id'];
@@ -437,41 +1077,53 @@ class Abone_t
 
 
 
-    public static function getData(){
-    $file_name = 'donnees/data.csv';
-    $handle = fopen($file_name, 'r');
-    $tab = array();
-    $i = 0;
-    while (($donnee = fgetcsv($handle, 1000, ';' )) !== false) {
-        $i++;
+    public static function getData()
+    {
+        $file_name = 'donnees/data.csv';
+        $handle = fopen($file_name, 'r');
+        $tab = array();
+        $i = 0;
+        while (($donnee = fgetcsv($handle, 1000, ';')) !== false) {
+            $i++;
 
-        $a = $donnee;
-        $data = array();
-        // Convertir l'encodage des données
+            $a = $donnee;
+            $data = array();
+            // Convertir l'encodage des données
             foreach ($donnee as &$cellule) {
                 $data[] = mb_convert_encoding($cellule, 'UTF-8', 'ISO-8859-1'); // Ajustez l'encodage d'origine si nécessaire
             }
-//            var_dump($data);
-            if($i == 1){
-            continue;
-        }
-        $abone =new Abones('',''.$data[1],''.$data[0],''.$data[4],
-         ''.$data[3],'actif',''.$data[6],''.$data[5],
-         ''.$data[8]); //$donnee;
-         $abone->ajouter();
-//          $facture = new Facture('','','','','','','','','');
+            //            var_dump($data);
+            if ($i == 1) {
+                continue;
+            }
+            $abone = new Abones(
+                '',
+                '' . $data[1],
+                '' . $data[0],
+                '' . $data[4],
+                '' . $data[3],
+                'actif',
+                '' . $data[6],
+                '' . $data[5],
+                '' . $data[8]
+            ); //$donnee;
+            $abone->ajouter();
+            //          $facture = new Facture('','','','','','','','','');
 
+        }
+        return $tab;
     }
-    return $tab;
-}
 
     public static function getJsonDataToExport()
     {
-        if (!isset($_GET['action']))
+        //        var_dump($_GET);
+        if (!isset($_GET['action'], $_GET['id_mois']))
             return;
         elseif ($_GET['action'] != 'export_index')
             return;
-        $req = Abones::getLastmonthIndex($_SESSION['id_aep']);
+        //        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
+        $req = Abones::getJsonDataFromIdMois($_GET['id_mois']);
+        //        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
         //var_dump($req);
         $date_export = new DateTime();
         $data = json_encode($req);
@@ -479,6 +1131,7 @@ class Abone_t
             "releve" => array(array("nom_feuille" => "nom_aep", "data" => $req)),
             "info_reseau" => array(
                 "nom_reseau" => $_SESSION['libele_aep'],
+                "id_reseau" => $_SESSION['id_aep'],
                 "agent_export" => "Non Disponible",
                 "date_export" => $date_export->format('d/m/Y:H/i/s')
             )
@@ -490,71 +1143,1222 @@ class Abone_t
         //echo $date_export->format('d/m/Y:H/i/s');
         //$boo = json_decode($data, true);
         //var_dump($boo);
-        $fileName = '../donnees/exports/export_index_nom_AEP_' . $date_export->format('d-m-Y_H-i-s') . '.json';
+        $fileName = '../donnees/exports/export_index_' . $_SESSION['libele_aep'] . '_' . $date_export->format('d-F-Y_H-i-s') . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
-        unlink($fileName);
+        header('location: ' . $_SESSION['PREVIOUS_REQUEST_HEADER']);
+        exit;
+        //        unlink($fileName);
+    }
+
+    private static function recouvrementShowSection($section, $name)
+    {
+        return $section === 'all' || $section === $name;
+    }
+
+    private static function prepareRecouvrementContext($id_compteur)
+    {
+        $req = Abones::getRecouvrementData($id_compteur, $_SESSION['id_aep']);
+        $resultats = $req->fetchAll(PDO::FETCH_ASSOC);
+
+        $labels = array();
+        $facturesArr = array();
+        $versesArr = array();
+        $resteCumule = 0;
+        foreach ($resultats as $row) {
+            $labels[] = getLetterMonth($row['mois']);
+            $mt = isset($row['montant_total']) ? (float) $row['montant_total'] : 0;
+            $mv = isset($row['montant_verse']) ? (float) $row['montant_verse'] : 0;
+            $mr = isset($row['montant_restant']) ? (float) $row['montant_restant'] : max(0, $mt - $mv);
+            $facturesArr[] = $mt;
+            $versesArr[] = $mv;
+            $resteCumule += $mr;
+        }
+
+        include_once("donnees/mois_facturation.php");
+        $moisActif = MoisFacturation::getMoisFacturationActive($_SESSION['id_aep']);
+        $moisActifData = $moisActif->fetchAll();
+        $moisActifId = count($moisActifData) > 0 ? $moisActifData[0]['id'] : 0;
+        $moisActifLibelle = count($moisActifData) > 0 ? getLetterMonth($moisActifData[0]['mois']) : 'Aucun mois actif';
+
+        $penaliteActuelle = 0;
+        if ($moisActifId > 0) {
+            $penaliteReq = Manager::prepare_query("
+                SELECT f.penalite 
+                FROM facture f 
+                INNER JOIN indexes i ON f.id_indexes = i.id 
+                WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+            ", array($id_compteur, $moisActifId));
+            $penaliteData = $penaliteReq->fetchAll();
+            if (count($penaliteData) > 0) {
+                $penaliteActuelle = (int) $penaliteData[0]['penalite'];
+            }
+        }
+
+        $idAboneForTools = self::getAboneIdByCompteur($id_compteur);
+
+        return array(
+            'resultats' => $resultats,
+            'labels' => $labels,
+            'facturesArr' => $facturesArr,
+            'versesArr' => $versesArr,
+            'moisActifId' => $moisActifId,
+            'moisActifLibelle' => $moisActifLibelle,
+            'penaliteActuelle' => $penaliteActuelle,
+            'idAboneForTools' => $idAboneForTools,
+            'availableMonthsTools' => $idAboneForTools > 0 ? self::getAvailableMonthsForManualFacture($idAboneForTools) : array(),
+            'existingMonthsTools' => $idAboneForTools > 0 ? self::getExistingMonthsForAbone($idAboneForTools) : array(),
+            'lastKnownIndexTools' => self::getCompteurLastIndex($id_compteur),
+        );
+    }
+
+    public static function afficheInputRecouvrementAbone($id_compteur, $section = 'all')
+    {
+        ob_start();
+        $ctx = self::prepareRecouvrementContext($id_compteur);
+        $resultats = $ctx['resultats'];
+        $labels = $ctx['labels'];
+        $facturesArr = $ctx['facturesArr'];
+        $versesArr = $ctx['versesArr'];
+        $id_compteur = (int) $id_compteur;
+
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
+        create_csv_exportation_button(
+            $resultats,
+            'facturation-abone-' . $_SESSION["libele_aep"] . '.csv',
+            "Vous allez exporter les donnees de facturation d'un aboné au format csv"
+        );
+
+        // Graphiques (au-dessus du tableau)
+        // echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
+        // echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
+        echo '<div class="card mb-3 col-md-12"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
+        echo '<div class="row g-3">';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement' . $id_compteur . '"></canvas></div></div>';
+        echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule' . $id_compteur . '"></canvas></div></div>';
+        echo '</div>';
+        if (!count($labels)) {
+            echo '<div class="text-muted small mt-2">Aucune donnée de recouvrement disponible pour afficher les graphiques.</div>';
+        }
+        echo '</div></div>';
+        }
+
+        if (self::recouvrementShowSection($section, 'analyse_penalite')) {
+        $moisActifId = $ctx['moisActifId'];
+        $moisActifLibelle = $ctx['moisActifLibelle'];
+        $penaliteActuelle = $ctx['penaliteActuelle'];
+
+        echo '<div class="card mb-3">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Gestion des pénalités</h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Mois actuel</h6>
+                            <span class="badge bg-primary fs-6">' . $moisActifLibelle . '</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center">
+                            <h6 class="text-muted mb-1">Pénalité actuelle</h6>
+                            <span class="badge ' . ($penaliteActuelle > 0 ? 'bg-danger' : 'bg-success') . ' fs-6">' . Facture::formatFinancier($penaliteActuelle) . '</span>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <form method="POST" action="traitement/abone_t.php" class="d-flex gap-2">
+                            <input type="hidden" name="action" value="apply_penalite">
+                            <input type="hidden" name="id_compteur" value="' . $id_compteur . '">
+                            <input type="hidden" name="id_mois" value="' . $moisActifId . '">
+                            <input type="number" name="penalite_montant" class="form-control" value="2500" min="0" step="100" style="width: 100px;" required>
+                            <button type="submit" class="btn btn-warning btn-sm" ' . ($moisActifId == 0 ? 'disabled' : '') . '>
+                                <i class="fas fa-plus"></i> Pénaliser
+                            </button>
+                        </form>
+                    </div>
+                </div>';
+
+        // Bouton d'annulation de pénalité si pénalité > 0 et mois actif
+        if ($penaliteActuelle > 0 && $moisActifId > 0) {
+            echo '<div class="row mt-3">
+                <div class="col-12 text-center">
+                    <form method="POST" action="traitement/abone_t.php" class="d-inline">
+                        <input type="hidden" name="action" value="cancel_penalite">
+                        <input type="hidden" name="id_compteur" value="' . $id_compteur . '">
+                        <input type="hidden" name="id_mois" value="' . $moisActifId . '">
+                        <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm(\'Êtes-vous sûr de vouloir annuler la pénalité ?\')">
+                            <i class="fas fa-times"></i> Annuler la pénalité
+                        </button>
+                    </form>
+                </div>
+            </div>';
+        }
+
+        echo '</div></div>';
+
+        // Section d'analyse des pénalités avec graphiques
+        echo '<div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line"></i> Analyse avant pénalité
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="penaltyAnalysisContent' . $id_compteur . '">
+                    <div class="text-center">
+                        <div class="spinner-border text-info" role="status">
+                            <span class="visually-hidden">Chargement...</span>
+                        </div>
+                        <p class="mt-2">Analyse de l\'historique de paiement...</p>
+                    </div>
+                </div>
+            </div>
+        </div>';
+
+        echo '<script>
+(function(){
+    window.addEventListener("load", function(){
+        if (typeof loadPenaltyAnalysis === "function") {
+            loadPenaltyAnalysis(' . $id_compteur . ');
+        }
+    });
+})();
+</script>';
+        }
+
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
+        echo '<script>
+(function(){
+    window.addEventListener("load", function(){
+        try {
+            if (!window.Chart) {
+                var cont = document.getElementById("abonne_bar_recouvrement");
+                if (cont) {
+                    var p = document.createElement("div");
+                    p.className = "text-danger small mt-2";
+                    p.textContent = "Chart.js non chargé.";
+                    cont.parentNode.appendChild(p);
+                }
+            } else {
+            var labels = ' . json_encode($labels) . ';
+            var factures = ' . json_encode($facturesArr) . ';
+            var verses = ' . json_encode($versesArr) . ';
+            var consommations = ' . json_encode(array_map(function ($row) {
+            return isset($row["consommation"]) ? (float) $row["consommation"] : 0;
+        }, $resultats)) . ';
+            if (!Array.isArray(labels) || !labels.length) {
+                labels = ["-"]; factures=[0]; verses=[0]; consommations=[0];
+            }
+            var cA = document.getElementById("abonne_bar_recouvrement' . $id_compteur . '");
+            if (cA) {
+                var ctxA = cA.getContext("2d");
+                new Chart(ctxA, {
+                    type: "bar",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: "Montant facturé", data: factures, backgroundColor: "rgba(255,99,132,0.7)", borderColor: "rgba(255,0,0,1)", borderWidth: 1 },
+                            { label: "Montant versé", data: verses, backgroundColor: "rgba(50,205,50,0.7)", borderColor: "rgba(0,128,0,1)", borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
+                });
+            }
+            var cB = document.getElementById("abonne_line_cumule' . $id_compteur . '");
+            if (cB) {
+                var ctxB = cB.getContext("2d");
+                new Chart(ctxB, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: "Consommation (m³)", data: consommations, borderColor: "rgba(54,162,235,1)", backgroundColor: "rgba(54,162,235,0.15)", tension: 0.2, fill: true }
+                        ]
+                    },
+                    options: { responsive: true, scales: { y: { beginAtZero: true } }, plugins: { legend: { position: "bottom" } } }
+                });
+            }
+            }
+        } catch (e) {
+            console.error(e);
+            var root = document.getElementById("abonne_bar_recouvrement' . $id_compteur . '");
+            if (root) {
+                var p2 = document.createElement("div");
+                p2.className = "text-danger small mt-2";
+                p2.textContent = e.message;
+                root.parentNode.appendChild(p2);
+            }
+        }
+
+    });
+})();
+</script>';
+        }
+
+        if (self::recouvrementShowSection($section, 'liste_recouvrements')) {
+        $sum = 0;
+        // Affichage des résultats dans un tableau HTML
+        if ($resultats) {
+            echo '<table class="table table-bordered table-hover">';
+            echo '<thead> <div class="d-flex justify-content55.json-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
+            echo '<tr>';
+            echo '<th>Mois</th>';
+            echo '<th>Penalité</th>';
+            echo '<th>Total</th>';
+            echo '<th>Montant Versé</th>';
+            echo '<th>Reste</th>';
+            echo '</tr>';
+
+            //        var_dump($resultats);
+            foreach ($resultats as $row) {
+                $mois = getLetterMonth($row['mois']);
+                $montant_verse = $row['montant_verse'] != '0' ? (int) $row['montant_verse'] : '';
+                $impaye = (int) $row['impaye'];
+                $prix_tva = $row['prix_tva'];
+                $prix_entretient_compteur = $row['prix_entretient_compteur'];
+                $avance = $row['montant_restant'];// ($row['montant_restant'])<0?$row['montant_restant']:'0';
+                $sum += $montant_verse;
+                $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
+                $montant_factue = $row['montant_total'];
+                $montant_restant = $row['montant_restant'];
+
+                $placeholder = "";
+                $bg = "";
+                $desabled = '';
+                if ($montant_factue == (int) ($montant_verse + 0.00000001)) {
+                    $bg = "bg-success-subtle text-success";
+                    //                $desabled = 'disabled';
+                }
+                if ((int) $row['montant_restant'] > 0) {
+                    //                    $desabled = 'disabled';
+                    $bg = "bg-danger-subtle text-danger";
+                    $placeholder = "";
+                }
+                //echo $montant_factue.'<br>';
+
+                echo "<tr class='  border border-dark' >";
+                echo '<td>' . htmlspecialchars($mois) . '</td>';
+                echo '<td class="text-end"> ' . htmlspecialchars(Facture::formatFinancier((int) $row['penalite'])) . '</td>';
+                echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($montant_factue)) . '</td>';
+                //            echo '<td>';
+
+                if ((int) $row['mois_actif']) {
+                    echo '<td><input class="form-control border-0 m-0 py-0 ' . $bg . '" ' . $desabled . '
+                            value="' . ($placeholder == "" ? htmlspecialchars($montant_verse) : $placeholder) . '" 
+                            onchange="handleRecouvrement(this.value, ' . ($placeholder == "" ? $row['id'] : 0) . ' , this.id)" 
+                            id="montant_verse2' . $row['id'] . '" type="text"> 
+                            <input type="datetime" id="date_releve_facture_' . $row['id'] . 'class="form-control mb-0 " hidden value="' . date('d/m/Y') . '"></td>';
+                } else
+                    echo '<td class="text-end ' . $bg . '">' . htmlspecialchars(Facture::formatFinancier($montant_verse)) . '</td>';
+
+                echo '<td class="text-end">' . htmlspecialchars(Facture::formatFinancier($avance)) . '</td>';
+                echo '</tr>';
+                //            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
+            }
+            echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
+            echo '</table>';
+        }
+        }
+
+        if (self::recouvrementShowSection($section, 'factures')) {
+        $idAboneForTools = $ctx['idAboneForTools'];
+        $availableMonthsTools = $ctx['availableMonthsTools'];
+        $existingMonthsTools = $ctx['existingMonthsTools'];
+        $lastKnownIndexTools = $ctx['lastKnownIndexTools'];
+        if ($idAboneForTools > 0) {
+            echo '<div class="card mb-3">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+                    <strong>Ajouter une facture manquante</strong>';
+            if (!empty($availableMonthsTools)) {
+                echo '<span class="badge bg-light text-dark">' . count($availableMonthsTools) . ' mois disponibles</span>';
+            }
+            echo '</div>
+                <div class="card-body">';
+
+            if (empty($availableMonthsTools)) {
+                echo '<div class="alert alert-secondary mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Toutes les factures existantes couvrent déjà les mois disponibles pour cet abonné.
+                    </div>';
+            } else {
+                echo '<form class="row g-3" method="POST" action="traitement/abone_t.php">
+                        <input type="hidden" name="action" value="add_missing_facture">
+                        <input type="hidden" name="id_abone" value="' . (int) $idAboneForTools . '">
+                        <input type="hidden" name="id_compteur" value="' . (int) $id_compteur . '">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Mois à facturer</label>
+                            <select name="id_mois_facturation" class="form-select" required>
+                                <option value="">Sélectionner un mois...</option>';
+                foreach ($availableMonthsTools as $month) {
+                    echo '<option value="' . (int) $month['id'] . '">' . htmlspecialchars(getLetterMonth($month['mois'])) . '</option>';
+                }
+                echo '</select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Ancien index</label>
+                            <input type="number" name="ancien_index" class="form-control" step="0.01" min="0" required placeholder="0,00">
+                            <div class="form-text">
+                                Dernier index connu : <strong>' . number_format($lastKnownIndexTools, 2, ',', ' ') . '</strong>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Nouvel index</label>
+                            <input type="number" name="nouvel_index" class="form-control" step="0.01" min="0" required placeholder="0,00">
+                            <div class="form-text">Doit être ≥ à l\'ancien index et non négatif.</div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Montant versé (F CFA)</label>
+                            <input type="number" name="montant_verse" class="form-control" step="1" min="0" value="0" placeholder="0">
+                        </div>
+
+                        <div class="col-12">
+                            <div class="alert alert-info py-2">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Le nouvel index doit être supérieur ou égal à l\'ancien index et ne peut pas être négatif. Une facture et un relevé seront créés pour le mois sélectionné.
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-secondary">
+                                <i class="fas fa-plus-circle me-1"></i> Créer la facture manquante
+                            </button>
+                        </div>
+                    </form>';
+            }
+
+            echo '</div></div>';
+
+            echo '<div class="card mb-3">
+                <div class="card-header bg-dark text-white">
+                    <strong>Retirer une facture existante</strong>
+                </div>
+                <div class="card-body">';
+
+            if (empty($existingMonthsTools)) {
+                echo '<div class="alert alert-secondary mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Aucune facture disponible pour suppression.
+                    </div>';
+            } else {
+                echo '<form class="row g-3" method="POST" action="traitement/abone_t.php" onsubmit="return confirm(\'Confirmez-vous la suppression de cette facture ? Les index et pénalités associés seront perdus.\');">
+                        <input type="hidden" name="action" value="remove_facture_month">
+                        <input type="hidden" name="id_abone" value="' . (int) $idAboneForTools . '">
+                        <input type="hidden" name="id_compteur" value="' . (int) $id_compteur . '">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Mois à retirer</label>
+                            <select name="id_mois_facturation" class="form-select" required>
+                                <option value="">Sélectionner un mois...</option>';
+                foreach ($existingMonthsTools as $month) {
+                    echo '<option value="' . (int) $month['id'] . '">' . htmlspecialchars(getLetterMonth($month['mois'])) . '</option>';
+                }
+                echo '</select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="alert alert-warning mb-0">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Cette action supprime la facture, les index associés et toute pénalité éventuelle sur le mois sélectionné. Le dernier index du compteur sera recalculé.
+                            </div>
+                        </div>
+
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="fas fa-trash-alt me-1"></i> Retirer la facture
+                            </button>
+                        </div>
+                    </form>';
+            }
+
+            echo '</div></div>';
+        }
+        }
+
+        return ob_get_clean();
+    }
+
+    public static function applyPenalite()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'apply_penalite') {
+            $id_compteur = (int) $_POST['id_compteur'];
+            $id_mois = (int) $_POST['id_mois'];
+            $penalite_montant = (int) $_POST['penalite_montant'];
+
+            if ($id_compteur > 0 && $id_mois > 0 && $penalite_montant > 0) {
+                try {
+                    // Récupérer l'ID de l'index pour ce compteur et ce mois
+                    $indexReq = Manager::prepare_query("
+                        SELECT i.id 
+                        FROM indexes i 
+                        WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+                    ", array($id_compteur, $id_mois));
+                    $indexData = $indexReq->fetchAll();
+
+                    if (count($indexData) > 0) {
+                        $id_indexes = $indexData[0]['id'];
+
+                        // Mettre à jour la pénalité dans la facture
+                        $updateReq = Manager::prepare_query("
+                            UPDATE facture 
+                            SET penalite = ? 
+                            WHERE id_indexes = ?
+                        ", array($penalite_montant, $id_indexes));
+
+                        if ($updateReq) {
+                            $_SESSION['success_message'] = "Pénalité de " . Facture::formatFinancier($penalite_montant) . " appliquée avec succès.";
+                            header("location: ../index.php?list=recouvrement&operation=succes");
+                            //                            header("location: ../index.php?list=tarif&operation=error");
+                        } else {
+                            $_SESSION['error_message'] = "Erreur lors de l'application de la pénalité.";
+                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'application de la pénalité");
+                        }
+                    } else {
+                        $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
+                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
+                }
+            } else {
+                $_SESSION['error_message'] = "Données invalides pour l'application de la pénalité.";
+                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'application de la pénalité.");
+            }
+        }
+    }
+
+    public static function cancelPenalite()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'cancel_penalite') {
+            $id_compteur = (int) $_POST['id_compteur'];
+            $id_mois = (int) $_POST['id_mois'];
+
+            if ($id_compteur > 0 && $id_mois > 0) {
+                try {
+                    // Récupérer l'ID de l'index pour ce compteur et ce mois
+                    $indexReq = Manager::prepare_query("
+                        SELECT i.id 
+                        FROM indexes i 
+                        WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
+                    ", array($id_compteur, $id_mois));
+                    $indexData = $indexReq->fetchAll();
+
+                    if (count($indexData) > 0) {
+                        $id_indexes = $indexData[0]['id'];
+
+                        // Annuler la pénalité (mettre à 0)
+                        $updateReq = Manager::prepare_query("
+                            UPDATE facture 
+                            SET penalite = 0 
+                            WHERE id_indexes = ?
+                        ", array($id_indexes));
+
+                        if ($updateReq) {
+                            $_SESSION['success_message'] = "Pénalité annulée avec succès.";
+                            header("location: ../index.php?list=recouvrement&operation=succes");
+                        } else {
+                            $_SESSION['error_message'] = "Erreur lors de l'annulation de la pénalité.";
+                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'annulation de la pénalité");
+                        }
+                    } else {
+                        $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
+                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
+                    }
+                } catch (Exception $e) {
+                    $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
+                    header("location: ../index.php?list=recouvrement&operation=error&message=" . $e->getMessage());
+                }
+            } else {
+                $_SESSION['error_message'] = "Données invalides pour l'annulation de la pénalité.";
+                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'annulation de la pénalité.");
+            }
+        }
+    }
+
+    public static function getIndexesByCompteur($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return array();
+        }
+
+        $query = "
+            SELECT 
+                i.id,
+                i.ancien_index,
+                i.nouvel_index,
+                mf.mois,
+                f.date_paiement
+            FROM indexes i
+            INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+            LEFT JOIN facture f ON f.id_indexes = i.id
+            WHERE i.id_compteur = ?
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array($id_compteur));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getAvailableMonthsForManualFacture($id_abone)
+    {
+        if ($id_abone <= 0) {
+            return array();
+        }
+
+        $aepReq = Manager::prepare_query("
+            SELECT r.id_aep 
+            FROM abone a 
+            INNER JOIN reseau r ON r.id = a.id_reseau 
+            WHERE a.id = ? 
+            LIMIT 1
+        ", array($id_abone));
+        $aepRow = $aepReq ? $aepReq->fetch(PDO::FETCH_ASSOC) : false;
+
+        if (!$aepRow) {
+            return array();
+        }
+
+        $query = "
+            SELECT mf.id, mf.mois
+            FROM mois_facturation mf
+            INNER JOIN constante_reseau cr ON cr.id = mf.id_constante
+            WHERE cr.id_aep = ?
+              AND NOT EXISTS (
+                    SELECT 1
+                    FROM facture f
+                    INNER JOIN indexes i ON i.id = f.id_indexes
+                    WHERE f.id_abone = ?
+                      AND i.id_mois_facturation = mf.id
+                )
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array((int) $aepRow['id_aep'], $id_abone));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getExistingMonthsForAbone($id_abone)
+    {
+        if ($id_abone <= 0) {
+            return array();
+        }
+
+        $query = "
+            SELECT DISTINCT mf.id, mf.mois
+            FROM facture f
+            INNER JOIN indexes i ON i.id = f.id_indexes
+            INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+            WHERE f.id_abone = ?
+            ORDER BY mf.mois DESC
+        ";
+
+        $result = Manager::prepare_query($query, array($id_abone));
+        return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+    }
+
+    public static function getCompteurLastIndex($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return 0;
+        }
+
+        $query = "SELECT derniers_index FROM compteur WHERE id = ? LIMIT 1";
+        $result = Manager::prepare_query($query, array($id_compteur));
+        if ($result) {
+            $row = $result->fetch(PDO::FETCH_ASSOC);
+            if ($row && isset($row['derniers_index'])) {
+                return (float) $row['derniers_index'];
+            }
+        }
+        return 0;
+    }
+
+    public static function updateIndexes()
+    {
+        if (isset($_POST['action']) && $_POST['action'] === 'update_indexes') {
+            $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+            $ancien_indexes = isset($_POST['ancien_index']) ? $_POST['ancien_index'] : array();
+            $nouvel_indexes = isset($_POST['nouvel_index']) ? $_POST['nouvel_index'] : array();
+
+            if ($id_compteur <= 0) {
+                $_SESSION['error_message'] = "ID compteur invalide.";
+                header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                exit;
+            }
+
+            try {
+                $updated = 0;
+                foreach ($ancien_indexes as $index_id => $ancien_index) {
+                    $index_id = (int) $index_id;
+                    $ancien_index = (float) $ancien_index;
+                    $nouvel_index = isset($nouvel_indexes[$index_id]) ? (float) $nouvel_indexes[$index_id] : 0;
+
+                    // Validation : nouvel index doit être >= ancien index
+                    if ($nouvel_index < $ancien_index) {
+                        $_SESSION['error_message'] = "Le nouvel index ne peut pas être inférieur à l'ancien index.";
+                        header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                        exit;
+                    }
+
+                    // Mettre à jour l'index
+                    $updateQuery = "
+                        UPDATE indexes 
+                        SET ancien_index = ?, nouvel_index = ? 
+                        WHERE id = ? AND id_compteur = ?
+                    ";
+
+                    $result = Manager::prepare_query($updateQuery, array(
+                        $ancien_index,
+                        $nouvel_index,
+                        $index_id,
+                        $id_compteur
+                    ));
+
+                    if ($result) {
+                        $updated++;
+                    }
+                }
+
+                if ($updated > 0) {
+                    // Mettre à jour le dernier index du compteur
+                    $lastIndexQuery = "
+                        SELECT nouvel_index 
+                        FROM indexes 
+                        WHERE id_compteur = ? 
+                        ORDER BY id DESC 
+                        LIMIT 1
+                    ";
+                    $lastIndexResult = Manager::prepare_query($lastIndexQuery, array($id_compteur));
+                    if ($lastIndexResult) {
+                        $lastIndex = $lastIndexResult->fetch();
+                        if ($lastIndex) {
+                            Manager::prepare_query(
+                                "UPDATE compteur SET derniers_index = ? WHERE id = ?",
+                                array($lastIndex['nouvel_index'], $id_compteur)
+                            );
+                        }
+                    }
+
+                    $_SESSION['success_message'] = "Index modifiés avec succès ($updated modification(s)).";
+                } else {
+                    $_SESSION['error_message'] = "Aucune modification effectuée.";
+                }
+
+            } catch (Exception $e) {
+                $_SESSION['error_message'] = "Erreur lors de la modification : " . $e->getMessage();
+            }
+
+            header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+            exit;
+        }
+    }
+
+    public static function getAboneIdByCompteur($id_compteur)
+    {
+        if ($id_compteur <= 0) {
+            return 0;
+        }
+
+        $query = "
+            SELECT ca.id_abone 
+            FROM compteur_abone ca 
+            WHERE ca.id_compteur = ? 
+            LIMIT 1
+        ";
+
+        $result = Manager::prepare_query($query, array($id_compteur));
+        if ($result) {
+            $row = $result->fetch();
+            return $row ? (int) $row['id_abone'] : 0;
+        }
+        return 0;
+    }
+
+    public static function getPenaltyEvaluation()
+    {
+        if (isset($_GET['action']) && $_GET['action'] === 'get_penalty_evaluation') {
+            // Nettoyer le buffer de sortie pour éviter les caractères parasites
+            if (ob_get_level()) {
+                ob_clean();
+            }
+
+            $id_compteur = isset($_GET['id_compteur']) ? (int) $_GET['id_compteur'] : 0;
+
+            if ($id_compteur <= 0) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => false, 'message' => 'ID compteur invalide'));
+                exit;
+            }
+
+            try {
+                // Récupérer d'abord l'historique des 12 derniers mois en utilisant la vue
+                $query = "
+                    SELECT 
+                        v.mois,
+                        mf.est_actif,
+                        v.montant_verse,
+                        v.penalite,
+                        v.date_facturation as date_paiement,
+                        v.ancien_index,
+                        v.nouvel_index,
+                        v.consommation,
+                        v.prix_metre_cube_eau,
+                        v.prix_tva,
+                        v.prix_entretient_compteur,
+                        v.montant_total,
+                        v.montant_restant
+                    FROM vue_abones_facturation v
+                    LEFT JOIN mois_facturation mf ON mf.id = v.id_mois_facturation
+                    WHERE v.id_compteur = ?
+                    ORDER BY v.mois DESC
+                    LIMIT 12
+                ";
+
+                $result = Manager::prepare_query($query, array($id_compteur));
+                $data = $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
+
+                // Calculer le nombre de mois non payés consécutifs depuis le dernier paiement
+                $consecutiveUnpaid = 0;
+                if (!empty($data)) {
+                    foreach ($data as $row) {
+                        $montant_verse = (float) $row['montant_verse'];
+                        $montant_total = (float) $row['montant_total'];
+
+                        if ($montant_verse < $montant_total) {
+                            $consecutiveUnpaid++;
+                        } else {
+                            break; // Arrêter dès qu'on trouve un mois payé
+                        }
+                    }
+                }
+
+
+                // Calculer le score de pénalité
+                $evaluation = self::calculatePenaltyScore($data, $consecutiveUnpaid);
+
+                header('Content-Type: application/json');
+                echo json_encode(array(
+                    'success' => true,
+                    'penalty_score' => $evaluation['score'],
+                    'positive_factors' => $evaluation['positive_factors'],
+                    'risk_factors' => $evaluation['risk_factors'],
+                    'recommendation_text' => $evaluation['recommendation_text'],
+                    'chart_labels' => $evaluation['chart_labels'],
+                    'chart_factured' => $evaluation['chart_factured'],
+                    'chart_paid' => $evaluation['chart_paid'],
+                    'chart_remaining' => $evaluation['chart_remaining'],
+                    'consecutive_unpaid' => $consecutiveUnpaid
+                ));
+                exit;
+
+            } catch (Exception $e) {
+                header('Content-Type: application/json');
+                echo json_encode(array('success' => false, 'message' => $e->getMessage()));
+                exit;
+            }
+        }
+    }
+
+    private static function calculatePenaltyScore($data, $consecutiveUnpaid = 0)
+    {
+        $score = 0;
+        $positive_factors = array();
+        $risk_factors = array();
+        $chart_labels = array();
+        $chart_factured = array();
+        $chart_paid = array();
+        $chart_remaining = array();
+
+        if (empty($data)) {
+            return array(
+                'score' => 0,
+                'positive_factors' => array('Aucun historique disponible'),
+                'risk_factors' => array(),
+                'recommendation_text' => 'Aucun historique de paiement disponible pour évaluer.',
+                'chart_labels' => array(),
+                'chart_factured' => array(),
+                'chart_paid' => array(),
+                'chart_remaining' => array()
+            );
+        }
+
+        $total_months = count($data);
+        $paid_months = 0;
+        $late_payments = 0;
+        $unpaid_months = 0;
+        $total_debt = 0;
+        $consecutive_late = $consecutiveUnpaid; // Utiliser la valeur calculée par SQL
+        $max_consecutive_late = $consecutiveUnpaid; // Utiliser la valeur calculée par SQL
+        $recent_payment_trend = 0;
+
+        foreach ($data as $index => $row) {
+            // Vérifier si la fonction getLetterMonth existe
+            $mois = function_exists('getLetterMonth') ? getLetterMonth($row['mois']) : date('M Y', strtotime($row['mois'] . '-01'));
+            $chart_labels[] = $mois;
+
+            $montant_total = (float) $row['montant_total'];
+            $montant_verse = (float) $row['montant_verse'];
+            $montant_restant = (float) $row['montant_restant'];
+
+            $chart_factured[] = $montant_total;
+            $chart_paid[] = $montant_verse;
+            $chart_remaining[] = $montant_restant;
+
+            // Calculer les facteurs
+            if ($montant_verse >= $montant_total) {
+                $paid_months++;
+            } else {
+                $unpaid_months++;
+                $total_debt += $montant_restant;
+
+                // Vérifier si c'est un paiement en retard (pas le mois actuel)
+                if (!$row['est_actif'] && $montant_verse < $montant_total) {
+                    $late_payments++;
+                }
+            }
+
+            // Analyser la tendance récente (3 derniers mois)
+            if ($index < 3) {
+                if ($montant_verse >= $montant_total) {
+                    $recent_payment_trend++;
+                }
+            }
+        }
+
+        // Calcul du score (0-100)
+
+        // Facteur 1: Pourcentage de mois payés (40% du score)
+        $payment_rate = ($total_months > 0) ? ($paid_months / $total_months) * 100 : 0;
+        $score += (100 - $payment_rate) * 0.4;
+
+        // Facteur 2: Dette totale (20% du score)
+        if ($total_debt > 50000) {
+            $score += 20;
+        } elseif ($total_debt > 25000) {
+            $score += 15;
+        } elseif ($total_debt > 10000) {
+            $score += 10;
+        }
+
+        // Facteur 3: Paiements consécutifs en retard (20% du score)
+        if ($max_consecutive_late >= 3) {
+            $score += 20;
+        } elseif ($max_consecutive_late >= 2) {
+            $score += 15;
+        } elseif ($max_consecutive_late >= 1) {
+            $score += 10;
+        }
+
+        // Facteur 4: Tendance récente (20% du score)
+        if ($recent_payment_trend == 0) {
+            $score += 20; // Aucun paiement récent
+        } elseif ($recent_payment_trend == 1) {
+            $score += 10; // 1 paiement sur 3
+        }
+
+        $score = min(100, max(0, round($score)));
+
+        // Générer les facteurs positifs et de risque
+        if ($payment_rate >= 80) {
+            $positive_factors[] = "Excellent historique de paiement (" . round($payment_rate) . "%)";
+        } elseif ($payment_rate >= 60) {
+            $positive_factors[] = "Bon historique de paiement (" . round($payment_rate) . "%)";
+        }
+
+        if ($recent_payment_trend >= 2) {
+            $positive_factors[] = "Paiements récents satisfaisants";
+        }
+
+        if ($total_debt < 10000) {
+            $positive_factors[] = "Dette totale faible (" . number_format($total_debt) . " FCFA)";
+        }
+
+        if ($max_consecutive_late == 0) {
+            $positive_factors[] = "Aucun retard consécutif";
+        }
+
+        if ($payment_rate < 50) {
+            $risk_factors[] = "Historique de paiement préoccupant (" . round($payment_rate) . "%)";
+        }
+
+        if ($total_debt > 50000) {
+            $risk_factors[] = "Dette élevée (" . number_format($total_debt) . " FCFA)";
+        }
+
+        if ($max_consecutive_late >= 3) {
+            $risk_factors[] = "Retards consécutifs répétés (" . $max_consecutive_late . " mois)";
+        }
+
+        if ($recent_payment_trend == 0) {
+            $risk_factors[] = "Aucun paiement récent";
+        }
+
+        if ($late_payments > $total_months * 0.5) {
+            $risk_factors[] = "Nombreux retards de paiement";
+        }
+
+        // Générer la recommandation
+        if ($score >= 70) {
+            $recommendation_text = "L'abonné présente un profil de risque élevé. Une pénalité est fortement recommandée pour encourager le paiement.";
+        } elseif ($score >= 40) {
+            $recommendation_text = "L'abonné présente un profil de risque modéré. Une pénalité peut être appliquée selon le contexte local et la situation de l'abonné.";
+        } else {
+            $recommendation_text = "L'abonné présente un bon profil de paiement. Une pénalité n'est pas recommandée dans le contexte rural actuel.";
+        }
+
+        return array(
+            'score' => $score,
+            'positive_factors' => $positive_factors,
+            'risk_factors' => $risk_factors,
+            'recommendation_text' => $recommendation_text,
+            'chart_labels' => array_reverse($chart_labels),
+            'chart_factured' => array_reverse($chart_factured),
+            'chart_paid' => array_reverse($chart_paid),
+            'chart_remaining' => array_reverse($chart_remaining)
+        );
+    }
+
+    public static function handleManualFactureCreation()
+    {
+        if (!isset($_POST['action']) || $_POST['action'] !== 'add_missing_facture') {
+            return;
+        }
+
+        $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+        $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+        $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
+        $ancien_index = isset($_POST['ancien_index']) ? (float) $_POST['ancien_index'] : null;
+        $nouvel_index = isset($_POST['nouvel_index']) ? (float) $_POST['nouvel_index'] : null;
+        $montant_verse = isset($_POST['montant_verse']) ? (float) $_POST['montant_verse'] : 0;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+
+        try {
+            if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
+                throw new Exception("Données invalides.");
+            }
+            if ($ancien_index === null || $nouvel_index === null) {
+                throw new Exception("Veuillez renseigner les index.");
+            }
+            if ($nouvel_index < 0) {
+                throw new Exception("Le nouvel index ne peut pas être négatif.");
+            }
+            if ($nouvel_index < $ancien_index) {
+                throw new Exception("Le nouvel index doit être supérieur ou égal à l'ancien index.");
+            }
+            if ($montant_verse < 0) {
+                throw new Exception("Le montant versé ne peut pas être négatif.");
+            }
+
+            $aboneInfoReq = Manager::prepare_query("
+                SELECT a.id, r.id_aep, ca.id_compteur, c.derniers_index
+                FROM abone a
+                INNER JOIN reseau r ON r.id = a.id_reseau
+                INNER JOIN compteur_abone ca ON ca.id_abone = a.id
+                INNER JOIN compteur c ON c.id = ca.id_compteur
+                WHERE a.id = ?
+                LIMIT 1
+            ", array($id_abone));
+            $aboneInfo = $aboneInfoReq ? $aboneInfoReq->fetch(PDO::FETCH_ASSOC) : false;
+            if (!$aboneInfo) {
+                throw new Exception("Abonné introuvable.");
+            }
+            if ((int) $aboneInfo['id_compteur'] !== $id_compteur) {
+                throw new Exception("Compteur incompatible.");
+            }
+
+            $monthReq = Manager::prepare_query("
+                SELECT mf.mois, cr.id_aep
+                FROM mois_facturation mf
+                INNER JOIN constante_reseau cr ON cr.id = mf.id_constante
+                WHERE mf.id = ?
+                LIMIT 1
+            ", array($id_mois));
+            $monthRow = $monthReq ? $monthReq->fetch(PDO::FETCH_ASSOC) : false;
+            if (!$monthRow) {
+                throw new Exception("Mois de facturation introuvable.");
+            }
+            if ((int) $monthRow['id_aep'] !== (int) $aboneInfo['id_aep']) {
+                throw new Exception("Ce mois n'appartient pas à l'AEP de l'abonné.");
+            }
+
+            $existingReq = Manager::prepare_query("
+                SELECT 1
+                FROM facture f
+                INNER JOIN indexes i ON i.id = f.id_indexes
+                WHERE f.id_abone = ? AND i.id_mois_facturation = ?
+                LIMIT 1
+            ", array($id_abone, $id_mois));
+            if ($existingReq && $existingReq->fetch()) {
+                throw new Exception("Une facture existe déjà pour ce mois.");
+            }
+
+            $facture = new Facture(
+                0,
+                $ancien_index,
+                $nouvel_index,
+                (int) round($montant_verse),
+                '0000-00-00',
+                0,
+                $id_mois,
+                $id_abone,
+                'Ajout manuel depuis info_abone',
+                $id_compteur
+            );
+
+            $saved = $facture->save_facture();
+            if (!$saved) {
+                throw new Exception("La création de la facture a échoué.");
+            }
+
+            if ($nouvel_index > (float) $aboneInfo['derniers_index']) {
+                Manager::prepare_query(
+                    "UPDATE compteur SET derniers_index = ? WHERE id = ?",
+                    array($nouvel_index, $id_compteur)
+                );
+            }
+
+            $volume = $nouvel_index - $ancien_index;
+            $_SESSION['success_message'] = sprintf(
+                "Facture ajoutée pour %s (%.2f m³).",
+                getLetterMonth($monthRow['mois']),
+                $volume
+            );
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Ajout manuel impossible : " . $e->getMessage();
+        }
+
+        header('Location: ' . $redirectUrl);
         exit;
     }
 
-    public static function afficheInputRecouvrementAbone($id_abone){
-        ob_start();
-        $req = Abones::getRecouvrementData($id_abone);
-        $resultats = $req->fetchAll();
-
-    // Affichage des résultats dans un tableau HTML
-    if ($resultats) {
-        echo '<table class="table table-striped table-bordered table-hover">';
-        echo '<thead> <div class="d-flex justify-content-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
-        echo '<tr>';
-        echo '<th>Mois</th>';
-        echo '<th>Penalité</th>';
-        echo '<th>Montant Restant</th>';
-        echo '<th>Montant Versé</th>';
-        echo '</tr>';
-
-
-        foreach ($resultats as $row) {
-            $mois = getLetterMonth($row['mois']);
-            $montant_verse = $row['montant_verse'] != '0'? (int)$row['montant_verse']:'';
-            $impaye = (int)$row['impaye'];
-            $prix_tva = $row['prix_tva'];
-            $prix_entretient_compteur = $row['prix_entretient_compteur'];
-            $prix_metre_cube_eau = $row['prix_metre_cube_eau'];
-            $montant_restant = (int) Facture::calculeMontantRestant(
-                    $row['nouvel_index'],
-                    $row['ancien_index'],
-                    $row['prix_tva'],
-                    $row['prix_entretient_compteur'],
-                    $row['prix_metre_cube_eau'],
-                    $row['impaye'],
-                    $row['penalite'],
-                    $row['montant_verse']
-                );
-            $desabled = $montant_restant == 0?'disabled':'';
-            echo '<tr>';
-            echo '<td>' . htmlspecialchars($mois) . '</td>';
-            echo '<td>' . htmlspecialchars((int)$row['penalite']) . '</td>';
-            echo '<td>' . htmlspecialchars($montant_restant) . '</td>';
-            echo '<td> <input class="form-control"'.$desabled.' value="' . htmlspecialchars($montant_verse) . '" onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
-                            onchange="handleRecouvrement(this.value, '.$row['id'].')"> 
-                            <input type="datetime" id="date_releve_facture_'.$row['id'].'" class="form-control mb-0 " hidden value="'.date('d/m/Y').'">';
-            echo '</tr>';
+    public static function handleManualFactureRemoval()
+    {
+        if (!isset($_POST['action']) || $_POST['action'] !== 'remove_facture_month') {
+            return;
         }
-        echo '</table>';
+
+        $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+        $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
+        $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+
+        try {
+            if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
+                throw new Exception("Données invalides.");
+            }
+
+            $factureReq = Manager::prepare_query("
+                SELECT f.id, f.id_indexes, i.nouvel_index, mf.mois
+                FROM facture f
+                INNER JOIN indexes i ON i.id = f.id_indexes
+                INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                WHERE f.id_abone = ? AND i.id_compteur = ? AND i.id_mois_facturation = ?
+                LIMIT 1
+            ", array($id_abone, $id_compteur, $id_mois));
+            $factureRow = $factureReq ? $factureReq->fetch(PDO::FETCH_ASSOC) : false;
+
+            if (!$factureRow) {
+                throw new Exception("Facture introuvable pour le mois sélectionné.");
+            }
+
+            Manager::prepare_query("DELETE FROM facture WHERE id = ?", array($factureRow['id']));
+            Manager::prepare_query("DELETE FROM indexes WHERE id = ?", array($factureRow['id_indexes']));
+
+            $maxReq = Manager::prepare_query("
+                SELECT MAX(nouvel_index) AS max_index
+                FROM indexes
+                WHERE id_compteur = ?
+            ", array($id_compteur));
+            $maxRow = $maxReq ? $maxReq->fetch(PDO::FETCH_ASSOC) : false;
+            $newLastIndex = ($maxRow && $maxRow['max_index'] !== null) ? (float) $maxRow['max_index'] : 0;
+
+            Manager::prepare_query("UPDATE compteur SET derniers_index = ? WHERE id = ?", array($newLastIndex, $id_compteur));
+
+            $_SESSION['success_message'] = sprintf(
+                "Facture du mois %s supprimée. Dernier index ajusté à %.2f.",
+                getLetterMonth($factureRow['mois']),
+                $newLastIndex
+            );
+        } catch (Exception $e) {
+            $_SESSION['error_message'] = "Suppression impossible : " . $e->getMessage();
+        }
+
+        header('Location: ' . $redirectUrl);
+        exit;
     }
-    return ob_get_clean();
+
+    public static function handleBranchementActions()
+    {
+        if (!isset($_POST['action']))
+            return;
+        $action = $_POST['action'];
+        if ($action === 'create_branchement') {
+            $data = array(
+                'id_abone' => isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0,
+                'quartier' => isset($_POST['quartier']) ? trim($_POST['quartier']) : '',
+                'code_abonne' => isset($_POST['code_abonne']) ? trim($_POST['code_abonne']) : '',
+                'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
+                'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
+                'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0,
+                'cote_reseau' => isset($_POST['cote_reseau']) ? $_POST['cote_reseau'] : null
+            );
+            if ($data['id_abone'] > 0)
+                BranchementAbonne::create($data);
+            header('Location: ../index.php?page=info_abone&id=' . $data['id_abone']);
+            exit;
+        } elseif ($action === 'update_branchement') {
+            $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
+            $id_branchement = isset($_POST['id_branchement']) ? (int) $_POST['id_branchement'] : 0;
+            $data = array(
+                'quartier' => isset($_POST['quartier']) ? trim($_POST['quartier']) : '',
+                'code_abonne' => isset($_POST['code_abonne']) ? trim($_POST['code_abonne']) : '',
+                'telephone' => isset($_POST['telephone']) ? trim($_POST['telephone']) : '',
+                'statut' => isset($_POST['statut']) ? trim($_POST['statut']) : 'OK',
+                'mois' => isset($_POST['mois']) ? trim($_POST['mois']) : '',
+                'versement_fcfa' => isset($_POST['versement_fcfa']) ? (int) $_POST['versement_fcfa'] : 0,
+                'cote_reseau' => isset($_POST['cote_reseau']) ? $_POST['cote_reseau'] : null
+            );
+            if ($id_branchement > 0)
+                BranchementAbonne::update($id_branchement, $data);
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            exit;
+        } elseif ($action === 'delete_branchement') {
+            $id_abone = 0;
+            if (isset($_POST['id_branchement'])) {
+                $id_branchement = (int) $_POST['id_branchement'];
+                // try to get id_abone to redirect properly
+                $row = Manager::prepare_query('SELECT id_abone FROM branchement_abonne WHERE id = ?', array($id_branchement));
+                $r = $row ? $row->fetch() : array('id_abone' => 0);
+                $id_abone = isset($r['id_abone']) ? (int) $r['id_abone'] : 0;
+                BranchementAbonne::delete($id_branchement);
+            }
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            exit;
+        }
     }
 
 }
 
 //var_dump($_POST);
+// Appeler getPenaltyEvaluation en premier pour éviter les conflits de sortie
+Abone_t::getPenaltyEvaluation();
 Abone_t::ajout();
 Abone_t::update();
 Abone_t::delete();
 Abone_t::findUpadate();
 Abone_t::handleSingleFielAboneUpdate();
 Abone_t::getJsonDataToExport();
+Abone_t::applyPenalite();
+Abone_t::cancelPenalite();
+Abone_t::handleManualFactureCreation();
+Abone_t::handleManualFactureRemoval();
+Abone_t::handleBranchementActions();
+Abone_t::updateIndexes();
 //tarif_t::getAll();
 
 

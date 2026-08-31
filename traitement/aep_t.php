@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/_guard.php';
+traitement_guard();
+ob_start();
 
 @include_once("../donnees/aep.php");
 @include_once("donnees/aep.php");
@@ -6,31 +9,38 @@
 
 class Aep_t
 {
+    private static function redirectTo($url)
+    {
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Location: ' . $url);
+        exit;
+    }
 
     public static function ajout()
     {
         if (isset($_GET['ajout'])) {
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                var_dump($_POST);
                 // Récupérer et sécuriser les données
                 $libele = htmlspecialchars(trim($_POST['libele']));
+                $numero_compte = htmlspecialchars(trim($_POST['numero_compte']));
+                $nom_banque = htmlspecialchars(trim($_POST['nom_banque']));
                 $date = htmlspecialchars(trim($_POST['date']));
                 $description = htmlspecialchars(trim($_POST['description']));
                 $fichier_facture = htmlspecialchars(trim($_POST['fichier_facture']));
+                $type_distribution = isset($_POST['type_distribution']) ? trim($_POST['type_distribution']) : '';
 
                 // Valider les données (ajoutez d'autres validations si nécessaire)
                 if (empty($libele) || empty($date) || empty($description) || empty($fichier_facture)) {
-//                    die("Tous les champs sont requis.");
-                    header("location: ../index.php?form=aep&operation=error&message=veuillez saisir tout les champs");
+                    self::redirectTo('../index.php?form=aep&operation=error&message=veuillez saisir tout les champs');
                 }
-                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description);
-                var_dump($date);
-                var_dump($nouvel_aep->getDonnee());
+                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution);
                 $res = $nouvel_aep->ajouter();
-                if (!$res)
-                    header("location: ../index.php?form=aep&operation=error&message=Une erreur es survenu lors de l'enregidtrement");
-                else
-                    header("location: ../index.php?page=home&operation=succes");
+                if (!$res) {
+                    self::redirectTo("../index.php?form=aep&operation=error&message=Une erreur es survenu lors de l'enregidtrement");
+                }
+                self::redirectTo('../index.php?page=home&operation=succes');
 
             }
         }
@@ -80,28 +90,21 @@ class Aep_t
         if(!isset($_GET['select_aep']))
             return;
         if (isset($_GET['id_aep'])) {
-            var_dump($_GET);
             $id_aep = htmlspecialchars(trim($_GET['id_aep'])); // Sécuriser l'entrée
             unset($_SESSION['id_aep']);
             unset($_SESSION['libele_aep']);
-            if($id_aep == 0){
-                header("Location: ../index.php?page=home&operation=succes"); // Changez ceci pour l'URL que vous souhaitez
-                exit();
+            if ($id_aep == 0) {
+                self::redirectTo('../index.php?page=home&operation=succes');
             }
             $res = Aep::getOne($id_aep, 'aep');
             $res = $res->fetch();
-            if($res) {
-                $_SESSION['id_aep'] = $id_aep; // Placer l'ID dans la session
+            if ($res) {
+                $_SESSION['id_aep'] = $id_aep;
                 $_SESSION['libele_aep'] = $res['libele'];
-                $_SESSION['PREVIOUS_REQUEST_HEADER'] = isset($_SESSION['PREVIOUS_REQUEST_HEADER'])?$_SESSION['PREVIOUS_REQUEST_HEADER']:'';
-                header('Location: ../index.php?'.$_SESSION['PREVIOUS_REQUEST_HEADER'].'&operation=succes&message=l\'aep a bien été selectionné'); // Changez ceci pour l'URL que vous souhaitez
-                return true;
-            }else
-                header("Location: ../index.php?page=home&operation=error&message=Cet Aep est innexistant"); // Changez ceci pour l'URL que vous souhaitez
-
-            // Rediriger vers une page de confirmation ou vers la liste des AEP
-
-            exit();
+                $_SESSION['PREVIOUS_REQUEST_HEADER'] = isset($_SESSION['PREVIOUS_REQUEST_HEADER']) ? $_SESSION['PREVIOUS_REQUEST_HEADER'] : '';
+                self::redirectTo('../index.php?page=aep_dashboard&aep_id=' . $id_aep);
+            }
+            self::redirectTo('../index.php?page=home&operation=error&message=Cet Aep est innexistant');
         } else {
             // Gérer le cas où l'ID n'est pas présent
             echo "ID AEP non spécifié.";

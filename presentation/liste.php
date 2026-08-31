@@ -1,14 +1,25 @@
 <?php
 
+function display_printing_button($button_text = "Imprimer", $tooltip_message = "")
+{
+    ?>
+    <button id="printing_button" data-bs-toggle="tooltip" data-bs-placement="left"
+        data-bs-title="<?php echo $tooltip_message ?>"
+        class="end-0 mt-4 me-3 btn btn-success rounded-pill px-4 position-fixed z-3" onclick="imprimer(this)" type="button"
+        style="background-color: #28a745; border: none; transition: background-color 0.3s ease; display: block">
+        <i class="bi bi-printer"></i> <?php echo $button_text ?>
+    </button>
+    <?php
+}
 
 function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form', $action = '', $close_color = 'danger')
 {
+
     ob_start()
-    ?>
-    <div class="modal fade " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
-         aria-labelledby="deleteModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog" role="document">
+        ?>
+    <div class="modal fade  " tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
+        aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
                 <div class="modal-header">
                     <span class="h2"><?php echo $titre ?></span>
@@ -36,10 +47,9 @@ function make_Modal($titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form'
 function make_form($traitement, $titre, $codeHtml, $tab_index = -1, $identifiant = 'my_form')
 {
     ob_start()
-    ?>
+        ?>
     <div class="modal fade" tabindex="<?php echo $tab_index ?>" id="<?php echo $identifiant ?>" role="dialog"
-         aria-labelledby="deleteModalLabel"
-         aria-hidden="true">
+        aria-labelledby="deleteModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <form method="post" action="<?php echo $traitement ?>" enctype="multipart/form-data">
@@ -87,16 +97,31 @@ function create_accordeon($titre, $html_body, $expande, $id)
             ';
 }
 
+if (!isset($_SESSION['user_id'])) {
+    $page = isset($_GET['page']) ? $_GET['page'] : '';
+    $allowed = ($page === 'login' || $page === 'register' || $page === 'logout');
+    if (!$allowed) {
+        if (!headers_sent()) {
+            header('Location: index.php?page=login');
+            exit;
+        }
+        echo '<script>window.location.href="index.php?page=login";</script>';
+        exit;
+    }
+}
+
 if (isset($_GET['list'])) {
-//    var_dump($_SESSION);
-    if ($_GET['list'] == 'abone_simple') {
+    //    var_dump($_SESSION);
+    if ($_GET['list'] == 'compteur_reseau') {
         require_once('traitement/abone_t.php');
-        Abone_t::getListeAboneSimple();
+        Abone_t::getListeAboneSimple('compteur_reseau');
 
     }
     if ($_GET['list'] == 'distribution_simple') {
         require_once('traitement/abone_t.php');
+        echo "<div class='container-fluid'>";
         Abone_t::getListeAboneSimple('distribution');
+        echo "</div>";
 
     }
     if ($_GET['list'] == 'production_simple') {
@@ -104,25 +129,24 @@ if (isset($_GET['list'])) {
         Abone_t::getListeAboneSimple('production');
 
     } elseif ($_GET['list'] == 'liste_facture_month') {
+        //        var_dump($_GET);
+        echo "<div class='container-fluid'><div id=''>";
         require_once("traitement/facture_t.php");
+        display_printing_button("", 'Cette action enclancher l\'impression des factures');
+        //        echo  "ooooooooooooooooooooooooooooooooooooo";
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
+        echo "</div></div>";
     } elseif ($_GET['list'] == 'ajout_abones') {
         require_once("traitement/abone_t.php");
         $data = Abone_t::getData();
         var_dump($data);
 
-    } elseif ($_GET['list'] == 'transaction') {
-        require_once("traitement/flux_financier_t.php");
-//        var_dump('oosodooooooooooooo');
-        Flux_financier_t::afficheFluxFinancier();
-//        var_dump($data);
-
     } elseif ($_GET['list'] == 'insolvables') {
         require_once("traitement/facture_t.php");
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
-    } elseif ($_GET['list'] == 'releve_indexx') {
+    } elseif ($_GET['list'] == 'releve_index') {
         require_once("traitement/facture_t.php");
         if (isset($_GET["id_selected_month"]))
             Facture_t::getListeFactureByMoisId();
@@ -130,123 +154,97 @@ if (isset($_GET['list'])) {
         require_once("traitement/mois_facturation_t.php");
         require_once("traitement/facture_t.php");
         ?>
-        <div class="container d-flex align-items-center justify-content-center pt-5 ">
-            <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
-                <form method="post" action="traitement/mois_facturation_t.php?&get_mois_facturation=true">
-                    <h2>Selectionner le mois de facturation</h2>
-                    <hr>
-                    <div class="">
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
-                            <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
+            <div class="container d-flex align-items-center justify-content-center pt-5 ">
+                <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
+                    <form method="post" action="traitement/mois_facturation_t.php?&get_mois_facturation=true">
+                        <h2>Selectionner le mois de facturation</h2>
+                        <hr>
+                        <div class="">
+                            <div class="input-group mb-3">
+                                <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
+                                <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
                                     aria-describedby="inputGroup-sizing-default" id="">
-                                <option value="">Choisissez une option...</option>
-                                <?php
-                                if (isset($_GET["id_selected_month"]))
-                                    MoisFacturation_t::getoption($_GET["id_selected_month"]);
-                                else
-                                    MoisFacturation_t::getoption();
-                                ?>
-                                <!-- <option value="non_actif">Non Actif</option> -->
-                            </select>
-                        </div>
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25">Date de depot</span>
-                            <input type="date" value="<?php echo date('Y-m-d') ?>" name="date_depot"
-                                   data-bs-toggle="tooltip"
-                                   data-bs-placement="right" class="form-control"
-                                   data-bs-title="Il s'agit de la date du jour ou vous deposerez les facture. Ce cera aujourd'hui ci vous ne le replissez pas.">
-                        </div>
+                                    <option value="">Choisissez une option...</option>
+                                    <?php
+                                    if (isset($_GET["id_selected_month"]))
+                                        MoisFacturation_t::getoption($_GET["id_selected_month"]);
+                                    else
+                                        MoisFacturation_t::getoption();
+                                    ?>
+                                    <!-- <option value="non_actif">Non Actif</option> -->
+                                </select>
+                            </div>
+                            <div class="input-group mb-3">
+                                <span class="input-group-text w-25">Date de depot</span>
+                                <input type="date" value="<?php echo date('Y-m-d') ?>" name="date_depot" data-bs-toggle="tooltip"
+                                    data-bs-placement="right" class="form-control"
+                                    data-bs-title="Il s'agit de la date du jour ou vous deposerez les facture. Ce cera aujourd'hui ci vous ne le replissez pas.">
+                            </div>
 
 
-                        <div style="display:flex;">
-                            <button type="submit" class="btn btn-primary">Facturer</button>
+                            <div style="display:flex;">
+                                <button type="submit" class="btn btn-primary">Facturer</button>
+                            </div>
                         </div>
-                    </div>
 
-                </form>
+                    </form>
+                </div>
             </div>
-        </div>
-        <?php
-        //if(isset($_GET["id_selected_month"]))
-        if (isset($_GET["id_selected_month"])) {
-            //Facture_t::getTableauFactureByMoisId();
-        }
+            <?php
+            //if(isset($_GET["id_selected_month"]))
+            if (isset($_GET["id_selected_month"])) {
+                //Facture_t::getTableauFactureByMoisId();
+            }
 
     } else if ($_GET['list'] == 'releve_manuelle') {
         include_once("traitement/facture_t.php");
         require_once("traitement/mois_facturation_t.php");
         ?>
-        <div class="container d-flex align-items-center justify-content-center pt-5 ">
-            <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
-                <form method="post" action="?list=releve_manuelle">
-                    <h2>Selectionner le mois de facturation</h2>
-                    <hr>
-                    <div class="">
-                        <div class="input-group mb-3">
-                            <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
-                            <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
-                                    aria-describedby="inputGroup-sizing-default" id="">
-                                <option value="">Choisissez une option...</option>
-                                <?php
-                                if (isset($_GET["id_selected_month"]))
-                                    MoisFacturation_t::getoption($_GET["id_selected_month"]);
-                                else
-                                    MoisFacturation_t::getoption();
-                                ?>
-                                <!-- <option value="non_actif">Non Actif</option> -->
-                            </select>
-                            <button type="submit" class="input-group-text btn btn-primary">Afficher</button>
-                        </div>
-                    </div>
+                <div class="container d-flex align-items-center justify-content-center pt-5 ">
+                    <div class="text-center col-10 col-md-7 col-lg-6 col-xl-5 ">
+                        <form method="post" action="?list=releve_manuelle">
+                            <h2>Selectionner le mois de facturation</h2>
+                            <hr>
+                            <div class="">
+                                <div class="input-group mb-3">
+                                    <span class="input-group-text w-25" id="inputGroup-sizing-default">Mois</span>
+                                    <select name="mois_facturation" class="form-select " aria-label="Sizing example input"
+                                        aria-describedby="inputGroup-sizing-default" id="">
+                                        <option value="">Choisissez une option...</option>
+                                    <?php
+                                    if (isset($_GET["id_selected_month"]))
+                                        MoisFacturation_t::getoption($_GET["id_selected_month"]);
+                                    else
+                                        MoisFacturation_t::getoption();
+                                    ?>
+                                        <!-- <option value="non_actif">Non Actif</option> -->
+                                    </select>
+                                    <button type="submit" class="input-group-text btn btn-primary">Afficher</button>
+                                </div>
+                            </div>
 
-                </form>
-            </div>
-        </div>
-        <?php
-        if (isset($_POST["mois_facturation"])) {
-            Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
-        }
+                        </form>
+                    </div>
+                </div>
+            <?php
+            if (isset($_POST["mois_facturation"])) {
+                Facture_t::getTableauFactureactiveForReleve($_POST["mois_facturation"]);
+            }
         //echo $id_mois_listing;
     } else if ($_GET['list'] == 'mois_facturation') {
         include_once("traitement/mois_facturation_t.php");
         //echo $id_mois_listing;
         MoisFacturation_t::getListeMoisFacture();
     } else if ($_GET['list'] == 'recouvrement') {
-        // require_once '../traitement/locataire_t.php';
-        // Locataire_t::getAll('Liste Des Locataires');
-        include_once("traitement/facture_t.php");
-        require_once("traitement/mois_facturation_t.php");
-        $id_mois_listing = 0;
-        if (isset($_GET["id_selected_month"]))
-            $id_mois_listing = $_GET['id_selected_month']
-        ?>
-        <div class="container mt-3 d-flex justify-content-center">
-            <div class="row">
-                <form action="?" method="GET" class="">
-                    <input type="hidden" name="list" value="recouvrement">
-                    <div class="input-group">
-                        <span class="input-group-text">Mois de facturation</span>
-                        <select name="id_selected_month" class="form-select" id="">
-                            <option value="">Veuillez choisir un mois</option>
-                            <?php
-                            //MoisFacturation_t::getOnlyOption($id_mois_listing);
-                            ?>
-                        </select>
-                        <button type="submit" class="btn-primary">Afficher</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        <?php
-        //echo $id_mois_listing;
+        include_once("facture_component.php");
+        display_tab_facture_by_month();
 
-        $id_mois_listing = Facture_t::getTableauFactureByMoisId($id_mois_listing);
-        //echo $id_mois_listing;
-//        echo "<div class='col-12'><a class='btn-primary btn w-25' href='?list=liste_facture_month&id_constante=0&id_mois=$id_mois_listing&id_selected_month=$id_mois_listing'>Facturer</a></div>";
-        ?>
+    } else if ($_GET['list'] == 'recouvrement_v2') {
+        // var_dump("recouvrement_v2");
+        include_once("recouvrement_page_v2.php");
+        // var_dump("recouvrement_v2");
+        display_recouvrement_v2();
 
-        <?php
     } else if ($_GET['list'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
         Proprietaire_t::getAll('Liste Des Prooprietaires');
@@ -263,26 +261,49 @@ if (isset($_GET['list'])) {
     }
 } elseif (isset($_GET['page'])) {
     if ($_GET['page'] == 'info_abone') {
+        require_once 'presentation/info_abone_page.php';
+    } else if (false) {
         include_once('traitement/abone_t.php');
         $id_abone = 0;
         if (isset($_GET['id'])) {
-            $id_abone = (int)$_GET['id'];
+            $id_abone = (int) $_GET['id'];
         }
 
 
         ?>
-        <div class="row">
-            <article
-                    class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
-                <a href="?list=abone_simple" class="btn btn-primary ">< Liste des abones </a>
-                <div class="me-2">
-                    <?php Abone_t::afficheInfoAbone($id_abone); ?>
+        <div class="row container-fluid p-5">
+            <!-- Inclusion du script d'évaluation des pénalités -->
+            <script src="js/penalty_evaluation.js"></script>
+
+            <!-- Affichage des messages de succès/erreur -->
+            <?php if (isset($_SESSION['success_message'])): ?>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['success_message']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+                <?php unset($_SESSION['success_message']); ?>
+            <?php endif; ?>
+
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> <?php echo htmlspecialchars($_SESSION['error_message']); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                <?php unset($_SESSION['error_message']); ?>
+            <?php endif; ?>
+
+            <article class="col-12 col-sm-12 col-md-12 col-xl-5 col-xxl-4 border-3 border-top-0 border-bottom-0 border-start-0">
+                <a href="?page=abonne" class="btn btn-secondary ">
+                    < Liste des abones </a>
+                        <div class="me-2">
+                            <?php $id_compteur = Abone_t::afficheInfoAbone($id_abone); ?>
+                        </div>
             </article>
 
-            <aside class=" col-xl-7">
+            <aside class=" col-xl-8">
                 <?php
-                echo Abone_t::afficheInputRecouvrementAbone($id_abone);
+                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
+                //                echo Abone_t::afficheInputRecouvrementAbone($id_compteur);
                 ?>
                 <!--                <div class="col-12 h-5"> Est ce aue tout le meonde va bien</div>-->
             </aside>
@@ -294,15 +315,36 @@ if (isset($_GET['list'])) {
 
         include_once('traitement/constante_reseau_t.php');
         ?>
-        <a href="?form=constante_reseau">modifier les tarifs</a>
+            <a href="?form=constante_reseau">modifier les tarifs</a>
         <?php
     } else if ($_GET['page'] == 'reseau') {
         include_once('reseau_component.php');
+        @include_once(__DIR__ . '/../donnees/redevance_synopsis_helper.php');
+        @include_once('donnees/redevance_synopsis_helper.php');
         $id_reseau = isset($_GET['id_reseau']) ? $_GET['id_reseau'] : 0;
-        afficherPageReseau($id_reseau);
+        $aepId = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
+        $periodeReseau = ($aepId > 0 && class_exists('RedevanceSynopsisHelper'))
+            ? RedevanceSynopsisHelper::compute($aepId, array())
+            : null;
+        $mois_debut = null;
+        $mois_fin = null;
+        if ($periodeReseau && !empty($periodeReseau['mois_min']) && !empty($periodeReseau['mois_max'])) {
+            $mois_debut = $periodeReseau['mois_min'];
+            $mois_fin = $periodeReseau['mois_max'];
+        } elseif (isset($_GET['mois_debut']) || isset($_GET['mois_fin'])) {
+            $mois_debut = isset($_GET['mois_debut']) && $_GET['mois_debut'] !== '' ? $_GET['mois_debut'] : null;
+            $mois_fin = isset($_GET['mois_fin']) && $_GET['mois_fin'] !== '' ? $_GET['mois_fin'] : null;
+        }
+        $statistiqueReseau = computeStatistiqueReseau($id_reseau, $mois_debut, $mois_fin);
+        afficherPageReseau($id_reseau, $statistiqueReseau, $periodeReseau);
 
+        //        echo "<div class='row d-flex'> ";
+//        echo "<div class='col-12 col-md-4'>".$code_html. "</div>";
+//        echo "<div class='col-12 col-md-8'>";
+//                echo "</div>";
+//        echo "</div>";
 
-    }else if ($_GET['page'] == 'home') {
+    } else if ($_GET['page'] == 'home') {
         include_once('presentation/home.php');
     } else if ($_GET['page'] == 'proprietaire') {
         require_once '../traitement/proprietaire_t.php';
@@ -310,6 +352,92 @@ if (isset($_GET['list'])) {
     } else if ($_GET['page'] == 'tarif') {
         require_once '../traitement/tarif_t.php';
         tarif_t::getAll('Liste Des Tarifs');
+    } else if ($_GET['page'] == 'login') {
+        require_once 'presentation/login_component.php';
+    } else if ($_GET['page'] == 'releves') {
+        display_printing_button("", 'Cette action enclancher l\'impression des index compteur');
+        include "presentation/releve_page.php";
+    } else if ($_GET['page'] == 'aep') {
+        require_once 'presentation/aep_page.php';
+    } else if ($_GET['page'] == 'aep_dashboard') {
+        require_once 'presentation/aep_dashbord.php';
+    } else if ($_GET['page'] == 'aep_detail') {
+        require_once 'presentation/aep_detail_page.php';
+    } else if ($_GET['page'] == 'register') {
+        require_once 'presentation/register_component.php';
+    } else if ($_GET['page'] == 'role') {
+        require_once 'presentation/role_component.php';
+    } else if ($_GET['page'] == 'logout') {
+        AuthManager::logout();
+    } else if ($_GET['page'] == 'backup') {
+        include("presentation/backup_page.php");
+    } else if ($_GET['page'] == 'licence') {
+        require_once 'presentation/licence_page.php';
+    } else if ($_GET['page'] == 'a_propos') {
+        require_once 'presentation/a_propos_page.php';
+    } else if ($_GET['page'] == 'fokoue_data') {
+        include("presentation/import_fokoue_data.php");
+    } else if ($_GET['page'] == 'download_index') {
+        header("location: traitement/abone_t.php?action=export_index&id_mois=" . (isset($_GET['id_mois']) ? $_GET['id_mois'] : 0));
+    } else if ($_GET['page'] == 'role_detail') {
+        require_once 'presentation/role_detail_component.php';
+    } else if ($_GET['page'] == 'clefs') {
+        require_once 'presentation/clef_page.php';
+    } else if ($_GET['page'] == 'redevance_details') {
+        require_once 'presentation/redevance_deatails_page.php';
+    } else if ($_GET['page'] == 'redevance') {
+        require_once 'presentation/redevance_page.php';
+    } else if ($_GET['page'] == 'redevance_versements') {
+        require_once 'presentation/redevance_versements_page.php';
+    } else if ($_GET['page'] == 'redevance_versements_detail') {
+        require_once 'presentation/redevance_versements_detail_page.php';
+    } else if ($_GET['page'] == 'tarif_aep') {
+        require_once 'presentation/tarif_page.php';
+    } else if ($_GET['page'] == 'detail_tarif') {
+        require_once 'presentation/detail_tarif_page.php';
+    } else if ($_GET['page'] == 'recouvrement') {
+        require_once 'presentation/recouvrement_page.php';
+    } else if ($_GET['page'] == 'penalites') {
+        require_once 'presentation/penalites_page.php';
+    } else if ($_GET['page'] == 'abonne') {
+        require_once 'presentation/abonne_page.php';
+    } else if ($_GET['page'] == 'borne_fontaine') {
+        require_once 'presentation/borne_fontaine_page.php';
+    } else if ($_GET['page'] == 'info_bf') {
+        require_once 'presentation/info_bf_page.php';
+    } else if ($_GET['page'] == 'reseaux') {
+
+        require_once 'presentation/reseaux_page.php';
+    } else if ($_GET['page'] == 'reseau_detail') {
+        require_once 'presentation/reseau_detail_page.php';
+    } else if ($_GET['page'] == 'versement') {
+        require_once 'presentation/versments_page.php';
+    } else if ($_GET['page'] == 'ressources') {
+        require_once 'presentation/ressources_page.php';
+    } else if ($_GET['page'] == 'interventions') {
+        require_once 'presentation/interventions_page.php';
+    } else if ($_GET['page'] == 'user_details') {
+        require_once 'presentation/user_detail_component.php';
+    } elseif ($_GET['page'] == 'transaction') {
+        require_once "presentation/transactions_component.php";
+    } else if ($_GET['page'] == 'compte_rendu_financier') {
+        require_once 'presentation/compte_rendu_financier_page.php';
+    } else if ($_GET['page'] == 'compte_rendu_tableau') {
+        require_once 'presentation/compte_rendu_financier_tableau_page.php';
+    } else if ($_GET['page'] == 'nouveau_compte_exploitation') {
+        require_once 'presentation/nouveau_compte_exploitation_page.php';
+    } else if ($_GET['page'] == 'synthese_compte_exploitation') {
+        require_once 'presentation/synthese_compte_exploitation_page.php';
+    } else if ($_GET['page'] == 'analyse_financiere') {
+        require_once 'presentation/analyse_financiere_page.php';
+    } else if ($_GET['page'] == 'config_compte_rendu') {
+        require_once 'presentation/config_compte_rendu_page.php';
+    } else if ($_GET['page'] == 'categories_flux_manuel') {
+        require_once 'presentation/categories_flux_manuel_page.php';
+    } else if ($_GET['page'] == 'branchements') {
+        require_once 'presentation/branchements_page.php';
+    } else if ($_GET['page'] == 'edit_aep') {
+        require_once 'presentation/aep_edit.php';
     } else if ($_GET['page'] == 'cle') {
         if ($_SESSION['id'] == '1') {
             require_once '../traitement/admin_t.php';
@@ -326,7 +454,7 @@ if (isset($_GET['list'])) {
         include_once('traitement/abone_t.php');
         Abone_t::getJsonDataToExport();
     } else {
-        echo "<strong>Erreur 404: La pae que vous recherchez n'existe pas</strong>";
+        echo "<strong>Erreur 404: La page que vous recherchez n'existe pas</strong>";
     }
 
 } else if (count($_GET) == 0) {

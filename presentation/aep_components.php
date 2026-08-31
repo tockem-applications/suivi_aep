@@ -5,35 +5,306 @@ function display_aep_to_select()
 {
     $aep_list = Aep_t::getAll();
     ?>
-    <h2>Liste des AEP</h2>
-    <div class="row">
-        <?php if (empty($aep_list)): ?>
-            <div class="col-12">
-                <div class="alert alert-warning" role="alert">
-                    Aucun AEP trouvé.
-                </div>
-            </div>
-        <?php else: ?>
-            <?php foreach ($aep_list as $aep): ?>
-                <div class="col-md-4 mb-4">
-                    <div class="card card-hover h-100">
-                        <div class="card-body">
-                            <h5 class="card-title"><?php echo htmlspecialchars($aep['libele']); ?></h5>
-                            <p class="card-text">crée le: <?php echo htmlspecialchars($aep['date']); ?></p>
-                            <p class="card-text">Description: <?php echo htmlspecialchars($aep['description']); ?></p>
-                            <p class="card-text">Modèle de
-                                facture: <?php echo htmlspecialchars($aep['fichier_facture']); ?></p>
-
-                        </div>
-                        <div class="card-footer">
-                            <a href="traitement/aep_t.php?select_aep=true&id_aep=<?php echo $aep['id']; ?>"
-                               class="btn btn-primary w-100">Selectionner</a>
-                        </div>
+    <div class="container-fluid">
+        <h2 class="d-flex justify-content-center p-3">Liste des AEP</h2>
+        <div class="row">
+            <?php if (empty($aep_list)): ?>
+                <div class="col-12">
+                    <div class="alert alert-warning" role="alert">
+                        Aucun AEP trouvé.
                     </div>
                 </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-        <div class="col-md-4 mb-4">
+            <?php else: ?>
+                <?php foreach ($aep_list as $aep): ?>
+                    <?php
+                    // Récupérer stats utiles pour l'AEP
+                    $aepId = isset($aep['id']) ? (int) $aep['id'] : 0;
+                    $libele = isset($aep['libele']) ? $aep['libele'] : '';
+
+                    // Nb réseaux
+                    $nbReseaux = 0;
+                    $resReseaux = Manager::prepare_query("SELECT COUNT(*) as c FROM reseau WHERE id_aep = ?", array($aepId));
+                    if ($resReseaux) {
+                        $row = $resReseaux->fetch();
+                        $nbReseaux = isset($row['c']) ? (int) $row['c'] : 0;
+                    }
+
+                    // Nb abonnés (via réseaux)
+                    $nbAbonnes = 0;
+                    $resAb = Manager::prepare_query(
+                        "SELECT COUNT(*) as c FROM abone a INNER JOIN reseau r ON r.id = a.id_reseau WHERE r.id_aep = ?",
+                        array($aepId)
+                    );
+                    if ($resAb) {
+                        $row = $resAb->fetch();
+                        $nbAbonnes = isset($row['c']) ? (int) $row['c'] : 0;
+                    }
+
+                    // Dernier mois de facturation de l'AEP
+                    $lastMois = '';
+                    $lastMoisId = 0;
+                    $resMois = Manager::prepare_query(
+                        "SELECT mf.id, mf.mois, mf.est_actif FROM mois_facturation mf INNER JOIN constante_reseau c ON c.id = mf.id_constante WHERE c.id_aep = ? ORDER BY mf.mois DESC LIMIT 1",
+                        array($aepId)
+                    );
+                    if ($resMois) {
+                        $row = $resMois->fetch();
+                        if ($row) {
+                            $lastMoisId = isset($row['id']) ? (int) $row['id'] : 0;
+                            $lastMois = getLetterMonth($row['mois']);
+                        }
+                    }
+
+                    // Montants facturé/recouvré du dernier mois (tous abonnés)
+                    $montantTotal = 0;
+                    $montantVerse = 0;
+                    $taux = 0;
+                    $consoTotale = 0;
+                    // Bilan dernier mois par type : BP (branchements privés) / BF (bornes fontaine)
+                    $mtBp = 0.0;
+                    $mvBp = 0.0;
+                    $consoBp = 0.0;
+                    $tauxBp = 0;
+                    $mtBf = 0.0;
+                    $mvBf = 0.0;
+                    $consoBf = 0.0;
+                    $tauxBf = 0;
+                    if ($lastMoisId > 0) {
+                        $resV = Manager::prepare_query(
+                            "SELECT SUM(vaf.montant_total) as mt, SUM(vaf.montant_verse) as mv, SUM(vaf.consommation) as cs FROM vue_abones_facturation vaf WHERE vaf.id_mois = ? AND vaf.id_aep = ?",
+                            array($lastMoisId, $aepId)
+                        );
+                        if ($resV) {
+                            $row = $resV->fetch();
+                            $montantTotal = isset($row['mt']) ? (float) $row['mt'] : 0;
+                            $montantVerse = isset($row['mv']) ? (float) $row['mv'] : 0;
+                            $consoTotale = isset($row['cs']) ? (float) $row['cs'] : 0;
+                            $taux = ($montantTotal > 0) ? round(($montantVerse * 100.0) / $montantTotal) : 0;
+                        }
+                        try {
+                            $resBp = Manager::prepare_query(
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv, SUM(vaf.consommation) AS cs
+                                 FROM vue_abones_facturation vaf
+                                 INNER JOIN abone a ON a.id = vaf.id_abone
+                                 WHERE vaf.id_mois = ? AND vaf.id_aep = ?
+                                   AND (a.type_abone IS NULL OR a.type_abone = '' OR a.type_abone = 'BP')",
+                                array($lastMoisId, $aepId)
+                            );
+                            if ($resBp) {
+                                $r = $resBp->fetch();
+                                $mtBp = isset($r['mt']) ? (float) $r['mt'] : 0.0;
+                                $mvBp = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $consoBp = isset($r['cs']) ? (float) $r['cs'] : 0.0;
+                                $tauxBp = ($mtBp > 0) ? (int) round(($mvBp * 100.0) / $mtBp) : 0;
+                            }
+                            $resBf = Manager::prepare_query(
+                                "SELECT SUM(vaf.montant_total) AS mt, SUM(vaf.montant_verse) AS mv, SUM(vaf.consommation) AS cs
+                                 FROM vue_abones_facturation vaf
+                                 INNER JOIN abone a ON a.id = vaf.id_abone
+                                 WHERE vaf.id_mois = ? AND vaf.id_aep = ? AND a.type_abone = 'BF'",
+                                array($lastMoisId, $aepId)
+                            );
+                            if ($resBf) {
+                                $r = $resBf->fetch();
+                                $mtBf = isset($r['mt']) ? (float) $r['mt'] : 0.0;
+                                $mvBf = isset($r['mv']) ? (float) $r['mv'] : 0.0;
+                                $consoBf = isset($r['cs']) ? (float) $r['cs'] : 0.0;
+                                $tauxBf = ($mtBf > 0) ? (int) round(($mvBf * 100.0) / $mtBf) : 0;
+                            }
+                        } catch (Exception $e) {
+                            $mtBp = $mvBp = $consoBp = $mtBf = $mvBf = $consoBf = 0.0;
+                            $tauxBp = $tauxBf = 0;
+                        }
+                    }
+
+                    // Rendement production (distribution) : vol. abonnés / vol. compteurs réseau « distribution »
+                    $volDistribution = 0.0;
+                    $volAbonnesIndexes = 0.0;
+                    $tauxRendementProd = null;
+                    if ($lastMoisId > 0) {
+                        try {
+                            $resVD = Manager::prepare_query(
+                                "SELECT SUM(i.nouvel_index - i.ancien_index) AS vd
+                                 FROM indexes i
+                                 INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                                 INNER JOIN constante_reseau c ON c.id = mf.id_constante
+                                 INNER JOIN compteur_reseau cr ON cr.id_compteur = i.id_compteur AND cr.type_compteur = 'distribution'
+                                 WHERE c.id_aep = ? AND mf.id = ?",
+                                array($aepId, $lastMoisId)
+                            );
+                            if ($resVD) {
+                                $rVD = $resVD->fetch();
+                                $volDistribution = isset($rVD['vd']) ? (float) $rVD['vd'] : 0.0;
+                            }
+                            $resVA = Manager::prepare_query(
+                                "SELECT SUM(i.nouvel_index - i.ancien_index) AS va
+                                 FROM indexes i
+                                 INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+                                 INNER JOIN constante_reseau c ON c.id = mf.id_constante
+                                 INNER JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
+                                 WHERE c.id_aep = ? AND mf.id = ?",
+                                array($aepId, $lastMoisId)
+                            );
+                            if ($resVA) {
+                                $rVA = $resVA->fetch();
+                                $volAbonnesIndexes = isset($rVA['va']) ? (float) $rVA['va'] : 0.0;
+                            }
+                            if ($volDistribution > 0) {
+                                $tauxRendementProd = round(($volAbonnesIndexes * 100.0) / $volDistribution, 1);
+                            }
+                        } catch (Exception $e) {
+                            $tauxRendementProd = null;
+                            $volDistribution = 0.0;
+                            $volAbonnesIndexes = 0.0;
+                        }
+                    }
+
+                    // Styles utilitaires (en-tête carte)
+                    $badgeClass = $lastMoisId <= 0 ? 'bg-secondary' : ($taux >= 95 ? 'bg-success' : ($taux >= 70 ? 'bg-warning' : 'bg-danger'));
+                    $badgeProdClass = 'bg-secondary';
+                    if ($tauxRendementProd !== null) {
+                        $badgeProdClass = ($tauxRendementProd >= 85 && $tauxRendementProd <= 115) ? 'bg-success' : (($tauxRendementProd >= 60) ? 'bg-warning' : 'bg-danger');
+                    }
+                    ?>
+                    <?php
+                    $typeDistribution = isset($aep['type_distribution'])
+                        ? Aep::normaliserTypeDistribution($aep['type_distribution'])
+                        : null;
+                    $typeDistributionLabel = '';
+                    $typeDistributionClass = 'bg-light text-muted border';
+                    if ($typeDistribution === 'RDS') {
+                        $typeDistributionLabel = 'RDS';
+                        $typeDistributionClass = 'bg-primary';
+                    } elseif ($typeDistribution === 'RDC') {
+                        $typeDistributionLabel = 'RDC';
+                        $typeDistributionClass = 'bg-info text-dark';
+                    }
+                    $typeDistributionTitle = $typeDistribution === 'RDS'
+                        ? 'Refoulement Distribution Séparé'
+                        : ($typeDistribution === 'RDC' ? 'Refoulement Distribution Confondu' : 'Type de réseau non défini');
+                    ?>
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card shadow-sm border-0 h-100">
+                            <div class="card-header bg-light d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <strong class="text-primary"><?php echo htmlspecialchars($libele); ?></strong>
+                                    <span class="badge <?php echo $typeDistributionClass; ?>"
+                                        title="<?php echo htmlspecialchars($typeDistributionTitle); ?>">
+                                        <?php echo $typeDistributionLabel !== '' ? $typeDistributionLabel : '— type'; ?>
+                                    </span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                    <span class="badge <?php echo $badgeClass; ?>" title="Taux de recouvrement sur le dernier mois de facturation">
+                                        <?php echo $lastMoisId > 0 ? $taux . '%' : '—'; ?> financier
+                                    </span>
+                                    <span class="badge <?php echo $badgeProdClass; ?>" title="Volume index abonnés / volume compteurs réseau distribution (dernier mois)">
+                                        <?php echo $tauxRendementProd !== null ? $tauxRendementProd . '% prod.' : '— prod.'; ?>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <div>
+                                        <div class="small text-muted">Réseaux</div>
+                                        <div class="fs-5"><?php echo $nbReseaux; ?></div>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Abonnés</div>
+                                        <div class="fs-5"><?php echo $nbAbonnes; ?></div>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted">Mois</div>
+                                        <div class="fs-6"><?php echo $lastMois ? htmlspecialchars($lastMois) : '—'; ?></div>
+                                    </div>
+                                </div>
+                                <div class="row g-2">
+                                    <div class="col-6">
+                                        <div class="p-2 bg-light rounded border">
+                                            <div class="small text-muted">Facturé (dernier mois)</div>
+                                            <div class="fw-bold"><?php echo number_format($montantTotal, 0, ',', ' '); ?> FCFA</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="p-2 bg-light rounded border">
+                                            <div class="small text-muted">Recouvré</div>
+                                            <div class="fw-bold text-success">
+                                                <?php echo number_format($montantVerse, 0, ',', ' '); ?> FCFA
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-2 bg-light rounded border">
+                                            <div class="small text-muted">Consommation facturée (dernier mois)</div>
+                                            <div class="fw-bold"><?php echo number_format($consoTotale, 2, ',', ' '); ?> m³</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="border-top pt-2 mt-2">
+                                    <div class="small text-uppercase text-muted mb-2">Bilan par type (dernier mois<?php echo $lastMois ? ' : ' . htmlspecialchars($lastMois) : ''; ?>)</div>
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <div class="p-2 rounded border-start border-4 border-success bg-body-secondary bg-opacity-25">
+                                                <div class="small text-muted">Branchements privés (BP)</div>
+                                                <div class="fs-5 fw-bold text-dark">
+                                                    <?php if ($lastMoisId > 0 && $mtBp > 0): ?>
+                                                        <?php echo $tauxBp; ?> %
+                                                    <?php elseif ($lastMoisId > 0): ?>
+                                                        <span class="text-muted fs-6">0 F facturé</span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted fs-6">—</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Facturé · <?php echo $lastMoisId > 0 ? number_format($mtBp, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBp, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Volume consommé · <?php echo $lastMoisId > 0 ? number_format($consoBp, 2, ',', ' ') . ' m³' : '—'; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="p-2 rounded border-start border-4 border-info bg-body-secondary bg-opacity-25">
+                                                <div class="small text-muted">Bornes fontaine (BF)</div>
+                                                <div class="fs-5 fw-bold text-dark">
+                                                    <?php if ($lastMoisId > 0 && $mtBf > 0): ?>
+                                                        <?php echo $tauxBf; ?> %
+                                                    <?php elseif ($lastMoisId > 0): ?>
+                                                        <span class="text-muted fs-6">0 F facturé</span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted fs-6">—</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Facturé · <?php echo $lastMoisId > 0 ? number_format($mtBf, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted">
+                                                    Recouvré · <?php echo $lastMoisId > 0 ? number_format($mvBf, 0, ',', ' ') . ' FCFA' : '—'; ?>
+                                                </div>
+                                                <div class="small text-muted mt-1">
+                                                    Volume consommé · <?php echo $lastMoisId > 0 ? number_format($consoBf, 2, ',', ' ') . ' m³' : '—'; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-white d-flex gap-2">
+                                <a href="traitement/aep_t.php?select_aep=true&id_aep=<?php echo $aepId; ?>"
+                                    class="btn btn-primary flex-fill">
+                                    Sélectionner
+                                </a>
+<!--                                <a href="?page=aep_detail&aep_id=--><?php //echo $aepId; ?><!--" class="btn btn-outline-secondary flex-fill">-->
+<!--                                    Détails AEP-->
+<!--                                </a>-->
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
             <div class="card card-hover h-100">
                 <div class="card-body">
                     <h5 class="card-title">Nouvel AEP</h5>
@@ -56,8 +327,8 @@ function display_li_aep_to_select()
     $aep_list = Aep_t::getAll();
     ?>
     <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button"
-           data-bs-toggle="dropdown" aria-expanded="false">
+        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown"
+            aria-expanded="false">
             <?php echo htmlspecialchars($_SESSION['libele_aep']) ?>
         </a>
         <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
@@ -70,8 +341,8 @@ function display_li_aep_to_select()
                 </div>
             <?php else: ?>
                 <?php foreach ($aep_list as $aep): ?>
-                    <li><a class="dropdown-item <?php echo $aep['id']==$_SESSION['id_aep']?'disabled':''; ?>"
-                           href="traitement/aep_t.php?select_aep=true&id_aep=<?php echo $aep['id']; ?>"><?php echo htmlspecialchars($aep['libele']); ?></a>
+                    <li><a class="dropdown-item <?php /*echo $aep['id']==$_SESSION['id_aep']?'disabled':''; */ ?>"
+                            href="traitement/aep_t.php?select_aep=true&id_aep=<?php echo $aep['id']; ?>"><?php echo htmlspecialchars($aep['libele']); ?></a>
                     </li>
                 <?php endforeach; ?>
                 <li>
@@ -80,8 +351,7 @@ function display_li_aep_to_select()
                 <li>
                     <a class="dropdown-item" href="?form=aep">Nouvel Aep</a>
                 </li>
-                <li><a class="dropdown-item"
-                       href="traitement/aep_t.php?select_aep=true&id_aep=0">tout fermer</a>
+                <li><a class="dropdown-item" href="traitement/aep_t.php?select_aep=true&id_aep=0">tout fermer</a>
                 </li>
             <?php endif; ?>
 
