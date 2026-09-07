@@ -2,8 +2,6 @@
 require_once __DIR__ . '/_guard.php';
 traitement_guard();
 
-<?php
-
 @include_once("../donnees/Abones.php");
 @include_once("donnees/Abones.php");
 

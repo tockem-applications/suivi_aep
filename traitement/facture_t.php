@@ -998,7 +998,8 @@ class Facture_t
                                 addZeros($data['id_facture'], 6),
                                 self::addDaysAndFormat($data['date_releve'], 0),
                                 $data['numero_compte'],
-                                $data['nom_banque']
+                                $data['nom_banque'],
+                                $curent_aep ? Aep::codesMarchands($curent_aep) : array()
                             ) . '</div>';
                     }
                     echo $mes_facture;
@@ -1250,7 +1251,8 @@ class Facture_t
         $id_facture = 0,
         $date_releve = '',
         $numero_compte_bancaire = '',
-        $nom_banque = ''
+        $nom_banque = '',
+        $codes_marchands = array()
     ) {
         switch ($type_facture) {
             case 'model_fokoue':
@@ -1304,7 +1306,8 @@ class Facture_t
                     $id_facture,
                     $numero_compte_bancaire,
                     $date_releve,
-                    $nom_banque
+                    $nom_banque,
+                    $codes_marchands
                 );
                 break;
             default:
@@ -1795,7 +1798,8 @@ class Facture_t
         $id_facture = 0,
         $numero_compte_banque = "---------------",
         $date_releve = '',
-        $nom_banque = ''
+        $nom_banque = '',
+        $codes_marchands = array()
     ) {
         ob_start();
         ?>
@@ -1969,6 +1973,22 @@ class Facture_t
                             </td>
                         </tr>
                     </table>
+
+                    <?php if (!empty($codes_marchands)): ?>
+                        <!-- Paiement mobile : la syntaxe USSD est reproduite telle
+                             quelle, l'abonne la recopie chiffre pour chiffre. -->
+                        <div class="d-flex justify-content-center my-2">
+                            <div class="col-11 text-center"
+                                style="border: 2px dashed #2F5597; border-radius: 10px; padding: 6px 10px;">
+                                <div class="fw-bold" style="color: #2F5597;">Payer par téléphone</div>
+                                <?php foreach ($codes_marchands as $code): ?>
+                                    <div class="fs-5 fw-bold" style="font-family: Consolas, monospace;">
+                                        <?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="text-center fs-">
                         <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 670 02 90 33</span><br>

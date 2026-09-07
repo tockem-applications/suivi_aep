@@ -70,6 +70,17 @@ class Compteur extends Manager
         return self::prepare_query("DELETE FROM compteur WHERE id = ?", array($this->id));
     }
 
+    /**
+     * Met à jour la position GPS d'un compteur (relevé mobile ou saisie manuelle).
+     */
+    public static function updateCoordonnees($id_compteur, $latitude, $longitude)
+    {
+        return self::prepare_query(
+            "UPDATE compteur SET latitude = ?, longitude = ? WHERE id = ?",
+            array((float) $latitude, (float) $longitude, (int) $id_compteur)
+        );
+    }
+
     function getConstraint()
     {
         return array('value' => $this->id, 'column' => 'id');

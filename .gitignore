@@ -77,3 +77,19 @@ composer.lock
 *.swp
 *.swo
 *.orig
+
+# --- Donnees produites a l'execution par la collecte mobile -------------------
+# Photos des compteurs rapportees par les agents : ce sont des cliches pris chez
+# des abonnes reels. Elles n'ont rien a faire dans un depot distant.
+/donnees/photos_releve/
+# Depot d'attente des imports : contient des releves dechiffres, en clair.
+/donnees/imports_temp/
+# Fonds de carte hors ligne : plusieurs dizaines de Mo de tuiles binaires,
+# regenerables a volonte depuis QGIS ou l'import ZIP.
+/donnees/tuiles/
+
+# --- Reecriture v2 -----------------------------------------------------------
+# suivi-reseau-v2/ est un projet PERSONNEL, distinct de la v1 qui appartient a
+# Tockem. Il partage seulement ce dossier de travail, pas ce depot : rien de ce
+# qu'il contient ne doit partir sur le distant de Tockem.
+/suivi-reseau-v2/

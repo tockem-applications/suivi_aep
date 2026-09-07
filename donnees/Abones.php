@@ -157,11 +157,11 @@ class Abones extends Manager
 
     {
 
-            $query = "select a.id, co.id as id_compteur, i.id as id_index,  coalesce(a.nom, concat('compteur ', r.nom )) as libele, numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone, 
+            $query = "select a.id, co.id as id_compteur, i.id as id_index,  coalesce(a.nom, concat('compteur ', r.nom )) as libele, numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone,
                            ancien_index, 0.0 as nouvel_index,
-                            r.nom as reseau, 0.0 as latitude, 0.0 as longitude, Date_format(now(), '%d/%m/%y') as date_releve 
-                            
-                    from indexes i 
+                            r.nom as reseau, coalesce(co.latitude, 0.0) as latitude, coalesce(co.longitude, 0.0) as longitude, Date_format(now(), '%d/%m/%y') as date_releve
+
+                    from indexes i
                         #inner join mois_facturation mf on i.id_mois_facturation = mf.id
                         inner join compteur co on i.id_compteur = co.id
                         left join compteur_abone c_a on c_a.id_compteur = co.id
@@ -218,9 +218,9 @@ class Abones extends Manager
     {
 
             $query = "select a.id, co.id as id_compteur, i.id as id_index,  coalesce(a.nom, concat('compteur ', r.nom )) as libele,
-                            numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone, 
-                           ancien_index, 0.0 as nouvel_index, r.nom as reseau, 0.0 as latitude, 0.0 as longitude, 
-                           Date_format(now(), '%d/%m/%y') as date_releve 
+                            numero_compteur as numero, coalesce(numero_telephone, '000000000') as numero_abone,
+                           ancien_index, 0.0 as nouvel_index, r.nom as reseau, coalesce(co.latitude, 0.0) as latitude, coalesce(co.longitude, 0.0) as longitude,
+                           Date_format(now(), '%d/%m/%y') as date_releve
                             
                     from indexes i 
                         inner join compteur co on i.id_compteur = co.id
@@ -303,8 +303,9 @@ class Abones extends Manager
         if (is_int($id))
             $res = self::query("
             select a.nom, c.id as id_compteur, count(f.id) duree, r.nom reseau, numero_telephone, r.id id_reseau, sum(nouvel_index - ancien_index)
-                    consommation, derniers_index, sum(i.montant) as impaye,  numero_compteur, sum(montant_verse) montant_verse, 
-                    max(date_paiement)date_paiement, a.etat , 'distribution' as type_compteur
+                    consommation, derniers_index, sum(i.montant) as impaye,  numero_compteur, sum(montant_verse) montant_verse,
+                    max(date_paiement)date_paiement, a.etat , 'distribution' as type_compteur,
+                    c.latitude, c.longitude
                 from abone a
                     inner join compteur_abone c_ab on c_ab.id_abone = a.id
                     inner join compteur c on c.id = c_ab.id_compteur

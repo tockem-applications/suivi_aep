@@ -430,6 +430,10 @@ if (isset($_GET['list'])) {
         require_once 'presentation/synthese_compte_exploitation_page.php';
     } else if ($_GET['page'] == 'analyse_financiere') {
         require_once 'presentation/analyse_financiere_page.php';
+    } else if ($_GET['page'] == 'cartographie') {
+        require_once 'presentation/cartographie_page.php';
+    } else if ($_GET['page'] == 'affectation_coordonnees') {
+        require_once 'presentation/affectation_coordonnees_page.php';
     } else if ($_GET['page'] == 'config_compte_rendu') {
         require_once 'presentation/config_compte_rendu_page.php';
     } else if ($_GET['page'] == 'categories_flux_manuel') {

@@ -3,6 +3,8 @@
 //require_once("manager.php");
 @include_once("../donnees/manager.php");
 @include_once("donnees/manager.php");
+@include_once(__DIR__ . "/compteur.php");
+@include_once("donnees/compteur.php");
 
 
 class MoisFacturation extends Manager
@@ -248,10 +250,15 @@ class MoisFacturation extends Manager
         return false;
     }
 
-    public static function updateIndexFronFile($data, $id_mois)
+    /**
+     * @param array $data           le tableau 'releve' du fichier
+     * @param int   $id_mois
+     * @param array $photosRangees  chemin relatif dans l'archive => chemin sur disque
+     */
+    public static function updateIndexFronFile($data, $id_mois, $photosRangees = array())
     {
-        //        var_dump($data);
         try {
+            self::ensureTableComplementReleve();
             foreach ($data as $value) {
                 $aep = $value['data'];
 
@@ -260,18 +267,245 @@ class MoisFacturation extends Manager
                     $id_compteur = $ligne['id_compteur'];
                     $ancien_index = $ligne['ancien_index'];
                     $nouvel_index = $ligne['nouvel_index'];
-                    self::updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index);
-                    //                var_dump($ligne);
+                    $latitude = isset($ligne['latitude']) ? $ligne['latitude'] : null;
+                    $longitude = isset($ligne['longitude']) ? $ligne['longitude'] : null;
+                    self::updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index, $latitude, $longitude);
+
+                    // Informations complémentaires rapportées du terrain. Elles
+                    // n'entrent pas dans la facturation : un défaut ici ne doit
+                    // jamais faire échouer l'import de l'index lui-même.
+                    self::enregistrerComplementReleve($id_mois, $ligne, $photosRangees);
                 }
             }
         } catch (Exception $e) {
             return false;
         }
-        //        exit();
         return true;
     }
 
-    public static function updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index)
+    /**
+     * Informations de terrain d'un mois, indexées par identifiant de relevé.
+     *
+     * Une seule requête pour toute la page : la liste des relevés compte
+     * couramment plusieurs centaines de lignes.
+     *
+     * @return array id_index => array('telephone', 'observation', 'photos' => array)
+     */
+    public static function getComplementsReleve($id_mois)
+    {
+        self::ensureTableComplementReleve();
+        $complements = array();
+        try {
+            $rows = self::prepare_query(
+                "SELECT id_index, telephone, observation, photos
+                 FROM releve_complement WHERE id_mois_facturation = ?",
+                array((int) $id_mois)
+            );
+            if (!$rows) {
+                return $complements;
+            }
+            foreach ($rows->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $photos = array();
+                if (!empty($row['photos'])) {
+                    foreach (explode('|', $row['photos']) as $chemin) {
+                        if ($chemin !== '') {
+                            $photos[] = $chemin;
+                        }
+                    }
+                }
+                $complements[(int) $row['id_index']] = array(
+                    'telephone' => $row['telephone'],
+                    'observation' => $row['observation'],
+                    'photos' => $photos,
+                );
+            }
+        } catch (Exception $e) {
+        }
+        return $complements;
+    }
+
+    /**
+     * Table des informations complémentaires remontées par le mobile :
+     * observation de l'agent, téléphone corrigé, photos du compteur.
+     *
+     * Une table à part plutôt que des colonnes sur `indexes` : ces données sont
+     * facultatives, propres à la collecte mobile, et n'ont aucun rôle dans le
+     * calcul des factures.
+     */
+    public static function ensureTableComplementReleve()
+    {
+        try {
+            self::prepare_query(
+                "CREATE TABLE IF NOT EXISTS releve_complement (
+                    id INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
+                    id_mois_facturation INT(10) UNSIGNED NOT NULL,
+                    id_index INT(10) UNSIGNED NOT NULL DEFAULT 0,
+                    id_compteur INT(10) UNSIGNED NOT NULL DEFAULT 0,
+                    telephone VARCHAR(32) DEFAULT NULL,
+                    observation TEXT,
+                    photos TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (id),
+                    UNIQUE KEY uniq_releve (id_mois_facturation, id_index, id_compteur),
+                    KEY idx_mois (id_mois_facturation)
+                ) ENGINE=InnoDB DEFAULT CHARSET=latin1",
+                array()
+            );
+        } catch (Exception $e) {
+        }
+    }
+
+    /**
+     * Enregistre observation, téléphone et photos d'une ligne de relevé.
+     *
+     * Rien n'est écrit si l'agent n'a rien ajouté : la table ne doit pas se
+     * remplir d'enregistrements vides à chaque import.
+     */
+    private static function enregistrerComplementReleve($id_mois, $ligne, $photosRangees)
+    {
+        $observation = isset($ligne['observation']) ? trim((string) $ligne['observation']) : '';
+        $telephone = isset($ligne['numero_abone']) ? trim((string) $ligne['numero_abone']) : '';
+
+        // Ne retenir que les photos réellement présentes dans l'archive : une
+        // référence sans fichier ne sert à rien et induirait en erreur.
+        $photos = array();
+        if (isset($ligne['photos']) && is_array($ligne['photos'])) {
+            foreach ($ligne['photos'] as $relatif) {
+                $relatif = (string) $relatif;
+                if (isset($photosRangees[$relatif])) {
+                    $photos[] = $photosRangees[$relatif];
+                }
+            }
+        }
+
+        if ($observation === '' && count($photos) === 0) {
+            return;
+        }
+
+        $id_index = (int) (isset($ligne['id_index']) ? $ligne['id_index'] : 0);
+        $id_compteur = (int) (isset($ligne['id_compteur']) ? $ligne['id_compteur'] : 0);
+
+        try {
+            self::prepare_query(
+                "INSERT INTO releve_complement
+                    (id_mois_facturation, id_index, id_compteur, telephone, observation, photos)
+                 VALUES (?, ?, ?, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    telephone = VALUES(telephone),
+                    observation = VALUES(observation),
+                    photos = VALUES(photos)",
+                array(
+                    (int) $id_mois,
+                    $id_index,
+                    $id_compteur,
+                    $telephone === '' ? null : substr($telephone, 0, 32),
+                    $observation === '' ? null : $observation,
+                    count($photos) === 0 ? null : implode('|', $photos),
+                )
+            );
+        } catch (Exception $e) {
+            // Voir plus haut : l'index prime, le complément est un bonus.
+        }
+    }
+
+    /**
+     * Écrit sur disque les photos extraites de l'archive.
+     *
+     * Le nom d'origine n'est jamais réutilisé tel quel : il vient d'un fichier
+     * reçu, donc potentiellement construit pour sortir du dossier ou pour être
+     * servi comme script. On ne garde que l'extension, validée, et on rebaptise.
+     *
+     * @return array chemin relatif dans l'archive => chemin relatif au projet
+     */
+    public static function rangerPhotosImportees($photos, $id_mois)
+    {
+        if (!is_array($photos) || count($photos) === 0) {
+            return array();
+        }
+
+        $dossier = __DIR__ . '/photos_releve/' . (int) $id_mois;
+        if (!is_dir($dossier) && !@mkdir($dossier, 0777, true)) {
+            return array();
+        }
+        self::protegerDossierPhotos(__DIR__ . '/photos_releve');
+
+        $extensionsValides = array('jpg' => 'jpg', 'jpeg' => 'jpg', 'png' => 'png');
+        $ranges = array();
+        $rang = 0;
+
+        foreach ($photos as $relatif => $contenu) {
+            $extension = strtolower(pathinfo($relatif, PATHINFO_EXTENSION));
+            if (!isset($extensionsValides[$extension])) {
+                continue;
+            }
+            // Le contenu doit vraiment être une image, pas seulement en porter
+            // l'extension : getimagesize() lit l'en-tête réel du fichier.
+            $temporaire = tempnam(sys_get_temp_dir(), 'rlv');
+            if ($temporaire === false) {
+                continue;
+            }
+            file_put_contents($temporaire, $contenu);
+            $info = @getimagesize($temporaire);
+            @unlink($temporaire);
+            if ($info === false) {
+                continue;
+            }
+
+            $rang++;
+            $base = preg_replace('/[^A-Za-z0-9_-]/', '', basename($relatif, '.' . $extension));
+            if ($base === '') {
+                $base = 'photo';
+            }
+            $nom = $base . '_' . $rang . '.' . $extensionsValides[$extension];
+            if (@file_put_contents($dossier . '/' . $nom, $contenu) === false) {
+                continue;
+            }
+            $ranges[$relatif] = 'donnees/photos_releve/' . (int) $id_mois . '/' . $nom;
+        }
+
+        return $ranges;
+    }
+
+    /**
+     * Interdit l'exécution de tout script dans le dossier des photos.
+     *
+     * Ceinture et bretelles : le contenu y est déjà validé comme image, mais le
+     * dossier vit sous la racine web et une seule faille en amont suffirait.
+     */
+    private static function protegerDossierPhotos($dossier)
+    {
+        $htaccess = $dossier . '/.htaccess';
+        if (file_exists($htaccess)) {
+            return;
+        }
+        @file_put_contents(
+            $htaccess,
+            "# Photos de releve : contenu statique uniquement, jamais execute.\n"
+            . "php_flag engine off\n"
+            . "RemoveHandler .php .phtml .php3 .php4 .php5\n"
+            . "AddType text/plain .php .phtml .php3 .php4 .php5\n"
+        );
+    }
+
+    /**
+     * Coordonnées GPS remontées par le mobile plausibles : non vides, pas (0,0)
+     * (= non capturé côté mobile), et dans une emprise large couvrant le Cameroun
+     * (garde-fou contre une position aberrante, pas une vérification précise par AEP).
+     */
+    private static function coordonneesMobilesValides($latitude, $longitude)
+    {
+        if ($latitude === null || $longitude === null || $latitude === '' || $longitude === '') {
+            return false;
+        }
+        $lat = (float) $latitude;
+        $lon = (float) $longitude;
+        if ($lat === 0.0 && $lon === 0.0) {
+            return false;
+        }
+        return $lat >= 1.0 && $lat <= 14.0 && $lon >= 7.0 && $lon <= 17.0;
+    }
+
+    public static function updateOneIndexByIdIdMoisIdCompteur($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index, $latitude = null, $longitude = null)
     {
         $index = max($nouvel_index, $ancien_index);
         var_dump(array($id_mois, $id_index, $id_compteur, $ancien_index, $nouvel_index));
@@ -288,6 +522,9 @@ class MoisFacturation extends Manager
                 set i.nouvel_index = ?, co.derniers_index = ?
                 where i.id=? and co.id = ? and i.id_mois_facturation = ? and i.nouvel_index <> ? and i.ancien_index <> ?
             ", array($index, $index, $id_index, $id_compteur, $id_mois, $index, $index));
+            if (self::coordonneesMobilesValides($latitude, $longitude)) {
+                Compteur::updateCoordonnees($id_compteur, $latitude, $longitude);
+            }
             //            var_dump();
             return true;
         } catch (Exception $e) {

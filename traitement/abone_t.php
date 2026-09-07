@@ -252,20 +252,20 @@ class Abone_t
         ?>
 
         <?php if (self::infoAboneShowSection($section, 'header')): ?>
-                <div class="card shadow-sm mb-3">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div class="ia-card mb-3">
+                    <div class="ia-card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <div class="d-flex align-items-center flex-wrap gap-2">
-                            <h5 class="mb-0 me-2"><?php echo htmlspecialchars($data['nom']); ?></h5>
-                            <span class="badge bg-light text-dark">Réseau:
+                            <span class="fw-semibold me-1"><?php echo htmlspecialchars($data['nom']); ?></span>
+                            <span class="badge bg-light text-dark border">Réseau:
                                 <?php echo htmlspecialchars($data['reseau']); ?></span>
                             <?php $etatClass = ($data['etat'] === 'actif') ? 'bg-success' : (($data['etat'] === 'suspendu') ? 'bg-warning' : 'bg-secondary'); ?>
                             <span
                                 class="badge <?php echo $etatClass; ?> text-uppercase"><?php echo htmlspecialchars($data['etat']); ?></span>
                         </div>
                         <div>
-                            <span class="badge bg-info">Tél: <a class="text-white text-decoration-none"
+                            <a class="btn btn-outline-success btn-sm"
                                     href="https://wa.me/237<?php echo htmlspecialchars($data['numero_telephone']); ?>"
-                                    target="_blank"><?php echo htmlspecialchars($data['numero_telephone']); ?></a></span>
+                                    target="_blank"><i class="bi bi-whatsapp"></i> <?php echo htmlspecialchars($data['numero_telephone']); ?></a>
                         </div>
                     </div>
                 </div>
@@ -274,23 +274,23 @@ class Abone_t
                 <!-- <div class="fs-4">reseau de <span>Mbou</span></div>
                 <div class="fs-4">telephone: <a href="https://wa.me/237654190514">655784982</a></div> -->
                 <?php if (self::infoAboneShowSection($section, 'branchement')): ?>
-                <div class="card mb-3">
-                    <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="ia-card mb-3">
+                    <div class="ia-card-header d-flex justify-content-between align-items-center">
                         <strong>Branchement</strong>
-                        <div>
+                        <div class="d-flex gap-2">
                             <?php if ($branchement): ?>
-                                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#modalEditBranchement">Modifier</button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalEditBranchement"><i class="bi bi-pencil"></i> Modifier</button>
                             <?php endif; ?>
-                            <button type="button" class="btn btn-outline-light btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#modalCreateBranchement" <?php echo $branchement ? 'disabled' : '' ?>>Créer</button>
+                            <button type="button" class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalCreateBranchement" <?php echo $branchement ? 'disabled' : '' ?>><i class="bi bi-plus-lg"></i> Créer</button>
                             <?php if ($branchement): ?>
-                                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#modalDeleteBranchement">Supprimer</button>
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalDeleteBranchement"><i class="bi bi-trash"></i> Supprimer</button>
                             <?php endif; ?>
                         </div>
                     </div>
-                    <div class="card-body">
+                    <div class="ia-card-body">
                         <?php if ($branchement): ?>
                             <div class="row g-3">
                                 <div class="col-md-4">
@@ -333,15 +333,15 @@ class Abone_t
 
                 <?php if (self::infoAboneShowSection($section, 'index')): ?>
 <!-- Section Gestion des Index par Mois -->
-                <div class="card mb-3">
-                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <div class="ia-card mb-3">
+                    <div class="ia-card-header d-flex justify-content-between align-items-center">
                         <strong>Gestion des Index par Mois</strong>
-                        <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal"
+                        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
                             data-bs-target="#modalEditIndexes">
                             <i class="fas fa-edit"></i> Modifier les index
                         </button>
                     </div>
-                    <div class="card-body">
+                    <div class="ia-card-body">
                         <?php
                         // Récupérer l'historique des index pour ce compteur
                         $indexes = self::getIndexesByCompteur($idCompteur);
@@ -509,131 +509,123 @@ class Abone_t
                 <?php endif; ?>
 
                 <?php if (self::infoAboneShowSection($section, 'fiche')): ?>
-                <table class="table table-bordered">
-                    <h1 class="text-center text-dark my-3 h1"><?php echo $data['nom'] ?></h1>
-                    <thead class="text-center">
-                        <tr>
-                            <th>Attribut</th>
-                            <th>Valeur</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <th>Reseau</th>
-                            <th><?php echo $data['reseau'] ?></th>
-                            <th><select name="" class="form-select"
-                                    onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'id_reseau', this.value)" id="">
-                                    <option value="0">changer ?</option>
-                                    <?php
-                                    Reseau_t::getoption($data['id_reseau']);
-                                    ?>
-                                </select></th>
-                        </tr>
-                        <tr>
-                            <th>Nº compteur</th>
-                            <th> <?php echo $data['numero_compteur'] ?> </th>
-                            <th> <input type="number" step="0.01" placeholder="modifier le Nº compteur"
-                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)"
-                                    class="form-control">
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Numero</th>
-                            <th><a data-bs-toggle="tooltip" data-bs-placement="top"
-                                    data-bs-title="cliquer pour envoyer un message sur mobile"
-                                    href="https://wa.me/237<?php echo $data['numero_telephone'] ?>"><?php echo $data['numero_telephone'] ?></a>
-                            </th>
-                            <th> <input type="tel" placeholder="modifier le numero" class="form-control"
-                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)">
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Index</th>
-                            <th><?php echo $data['derniers_index'] ?></th>
-                            <th> <input type="number" step="0.01" placeholder="nouvel index" class="form-control"
-                                    data-bs-toggle="tooltip" data-bs-placement="right"
-                                    data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
-                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)">
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Etat</th>
-                            <th><?php echo $data['etat'] ?></th>
-                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $id_abone ?>"
-                                    class="btn form-control <?php echo $data['etat'] == 'actif' ? 'btn-danger' : 'btn-primary' ?>">
-                                    <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a></th>
-                        </tr>
-                        <?php
-                        // Récupérer tarif_differencie_autorise depuis la base de données
-                        $tarifDiffAutorise = Manager::prepare_query(
-                            "SELECT tarif_differencie_autorise FROM abone WHERE id = ?",
-                            array($id_abone)
-                        )->fetch();
-                        $tarifDiffAutorise = $tarifDiffAutorise ? (int) $tarifDiffAutorise['tarif_differencie_autorise'] : 1;
-                        ?>
-                        <tr>
-                            <th>Tarif différencié</th>
-                            <th>
-                                <span class="badge <?php echo $tarifDiffAutorise ? 'bg-success' : 'bg-secondary'; ?>">
-                                    <?php echo $tarifDiffAutorise ? 'Autorisé' : 'Non autorisé'; ?>
-                                </span>
-                            </th>
-                            <th>
-                                <select class="form-select"
-                                    onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
-                                    <option value="1" <?php echo $tarifDiffAutorise ? 'selected' : ''; ?>>Autorisé</option>
-                                    <option value="0" <?php echo !$tarifDiffAutorise ? 'selected' : ''; ?>>Non autorisé</option>
-                                </select>
-                                <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la
-                                    consommation</small>
-                            </th>
-                        </tr>
-                        <!--                        <tr>-->
-                        <!--                            <th>Type</th>-->
-                        <!--                            <th>--><?php //echo strtoupper($data['type_compteur']) ?><!--</th>-->
-                        <!--                            <th> <a href="traitement/abone_t.php?single_update_abone=true&key=type_compteur&value=--><?php //echo $data['type_compteur']=='distribution'?'production':'distribution' ?><!--&id_abone=--><?php //echo $id_abone ?><!--" class="btn form-control --><?php //echo $data['type_compteur'] == 'distribution' ? 'btn-success' : 'btn-primary' ?><!--"> --><?php //echo 'Mettre en '.($data['type_compteur']=='production'?'distribution':'production') ?><!--</a></th>-->
-                        <!--                        </tr>-->
-                        <tr>
-                            <th colspan="3" class=""> <input type="text" placeholder="modifier le nom" class="form-control m-0"
-                                    data-bs-toggle="tooltip" data-bs-placement="right"
-                                    data-bs-title="Modifiez le nom de l'aboné"
-                                    onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)">
-                            </th>
-                        </tr>
-                        <tr>
-                            <th>Consommation</th>
-                            <th colspan="2" class="text-end px-5"><?php echo $data['consommation'] ?> M<sup>3</sup></th>
-                        </tr>
-                        <tr>
-                            <th>Paiement</th>
-                            <th colspan="2" class="text-end px-5"><?php echo (int) $data['montant_verse'] ?> FCFA</sub></th>
-
-                        </tr>
-                        <!-- <tr>
-                            <th>Impayé</th>
-                            <th colspan="2" class="text-end px-5"><?php echo ((int) $data['impaye'] - (int) $data['montant_verse']) ?> FCFA</sub></th>
-                        </tr> -->
-                        <tr>
-                            <th colspan="2">Derniers paiement</th>
-                            <th class="text-end px-5"><?php echo $data['date_paiement'] ?></sub></th>
-                        </tr>
-                        <tr>
-                            <th colspan="2">nombre de factures</th>
-                            <th class="text-end px-5"><?php echo $data['duree'] ?></sub></th>
-                        </tr>
-                        <tr>
-                            <th colspan="3" class="">
-                                <button type="button" class="form-control m-0 bg-danger text-center text-white border-0"
-                                    data-bs-toggle="modal" data-bs-target="#modalSuppressionAbone<?php echo $id_abone ?>"
-                                    data-bs-toggle="tooltip" data-bs-placement="right"
-                                    data-bs-title="Cette action va supprimer définitivement l'abonné de la liste">
-                                    <i class="fas fa-trash"></i> Supprimer
-                                </button>
-                            </th>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="ia-card mb-3">
+                    <div class="ia-card-header"><strong>Fiche abonné</strong> — <?php echo htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8') ?></div>
+                    <div class="ia-card-body p-0">
+                    <table class="table table-borderless mb-0 align-middle">
+                        <thead class="text-center border-bottom">
+                            <tr>
+                                <th>Attribut</th>
+                                <th>Valeur</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <th scope="row">Reseau</th>
+                                <td><?php echo $data['reseau'] ?></td>
+                                <td><select name="" class="form-select form-select-sm"
+                                        onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'id_reseau', this.value)" id="">
+                                        <option value="0">changer ?</option>
+                                        <?php
+                                        Reseau_t::getoption($data['id_reseau']);
+                                        ?>
+                                    </select></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Nº compteur</th>
+                                <td> <?php echo $data['numero_compteur'] ?> </td>
+                                <td> <input type="number" step="0.01" placeholder="modifier le Nº compteur"
+                                        onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_compteur', this.value)"
+                                        class="form-control form-control-sm">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Numero</th>
+                                <td><a data-bs-toggle="tooltip" data-bs-placement="top"
+                                        data-bs-title="cliquer pour envoyer un message sur mobile"
+                                        href="https://wa.me/237<?php echo $data['numero_telephone'] ?>"><?php echo $data['numero_telephone'] ?></a>
+                                </td>
+                                <td> <input type="tel" placeholder="modifier le numero" class="form-control form-control-sm"
+                                        onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'numero_telephone', this.value)">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Index</th>
+                                <td><?php echo $data['derniers_index'] ?></td>
+                                <td> <input type="number" step="0.01" placeholder="nouvel index" class="form-control form-control-sm"
+                                        data-bs-toggle="tooltip" data-bs-placement="right"
+                                        data-bs-title="Il est déconseillé de modifier cet index si l'aboné a déja fait l'objet d'une relève"
+                                        onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'derniers_index', this.value)">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Etat</th>
+                                <td><?php echo $data['etat'] ?></td>
+                                <td> <a href="traitement/abone_t.php?single_update_abone=true&key=etat&value=<?php echo $data['etat'] == 'actif' ? 'non actif' : 'actif' ?>&id_abone=<?php echo $id_abone ?>&section=fiche"
+                                        class="btn btn-sm <?php echo $data['etat'] == 'actif' ? 'btn-outline-danger' : 'btn-outline-primary' ?>">
+                                        <?php echo 'Rendre ' . ($data['etat'] == 'actif' ? 'non actif' : 'actif') ?></a></td>
+                            </tr>
+                            <?php
+                            // Récupérer tarif_differencie_autorise depuis la base de données
+                            $tarifDiffAutorise = Manager::prepare_query(
+                                "SELECT tarif_differencie_autorise FROM abone WHERE id = ?",
+                                array($id_abone)
+                            )->fetch();
+                            $tarifDiffAutorise = $tarifDiffAutorise ? (int) $tarifDiffAutorise['tarif_differencie_autorise'] : 1;
+                            ?>
+                            <tr>
+                                <th scope="row">Tarif différencié</th>
+                                <td>
+                                    <span class="badge <?php echo $tarifDiffAutorise ? 'bg-success' : 'bg-secondary'; ?>">
+                                        <?php echo $tarifDiffAutorise ? 'Autorisé' : 'Non autorisé'; ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm"
+                                        onchange="HandleAboneUpdate(<?php echo $id_abone ?>, 'tarif_differencie_autorise', this.value)">
+                                        <option value="1" <?php echo $tarifDiffAutorise ? 'selected' : ''; ?>>Autorisé</option>
+                                        <option value="0" <?php echo !$tarifDiffAutorise ? 'selected' : ''; ?>>Non autorisé</option>
+                                    </select>
+                                    <small class="form-text text-muted">Permet d'appliquer des tarifs différenciés selon la
+                                        consommation</small>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="pt-3"> <input type="text" placeholder="modifier le nom" class="form-control form-control-sm"
+                                        data-bs-toggle="tooltip" data-bs-placement="right"
+                                        data-bs-title="Modifiez le nom de l'aboné"
+                                        onkeyup="HandleAboneUpdateKeyPressedEnter(event, <?php echo $id_abone ?>, 'nom', this.value)">
+                                </td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Consommation</th>
+                                <td colspan="2" class="text-end"><?php echo $data['consommation'] ?> M<sup>3</sup></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Paiement</th>
+                                <td colspan="2" class="text-end"><?php echo (int) $data['montant_verse'] ?> FCFA</td>
+                            </tr>
+                            <tr>
+                                <th scope="row" colspan="2">Derniers paiement</th>
+                                <td class="text-end"><?php echo $data['date_paiement'] ?></td>
+                            </tr>
+                            <tr>
+                                <th scope="row" colspan="2">nombre de factures</th>
+                                <td class="text-end"><?php echo $data['duree'] ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                <div class="ia-card mb-3">
+                    <div class="ia-card-body">
+                        <button type="button" class="btn btn-outline-danger btn-sm"
+                            data-bs-toggle="modal" data-bs-target="#modalSuppressionAbone<?php echo $id_abone ?>">
+                            <i class="fas fa-trash"></i> Supprimer l'abonné
+                        </button>
+                    </div>
+                </div>
                 <?php endif; ?>
 
                                 <?php if (self::infoAboneShowSection($section, 'modals') || self::infoAboneShowSection($section, 'branchement') || self::infoAboneShowSection($section, 'index') || self::infoAboneShowSection($section, 'fiche')): ?>
@@ -885,7 +877,7 @@ class Abone_t
                         btnConfirmer.addEventListener('click', function () {
                             if (!btnConfirmer.disabled) {
                                 // Redirection vers la suppression
-                                window.location.href = 'traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>';
+                                window.location.href = 'traitement/abone_t.php?abone_deleting=true&id_abone=<?php echo $id_abone ?>&section=fiche';
                             }
                         });
                     })();
@@ -924,6 +916,14 @@ class Abone_t
             else
                 $sendedData = json_decode(file_get_contents('php://input'), true);
             //self::writeToFile('tito.txt',  '555555555555555555555555');
+            // Ces deux actions sont declenchees depuis la section "fiche" de
+            // info_abone (lien de bascule d'etat, bouton de suppression) : la
+            // redirection y ramene, sauf suppression reussie qui n'a plus de
+            // fiche a afficher.
+            $section = isset($sendedData['section']) ? preg_replace('/[^a-z_]/', '', $sendedData['section']) : 'fiche';
+            if ($section === '') {
+                $section = 'fiche';
+            }
             if (isset($_GET['abone_deleting'])) {
                 if (isset($sendedData['id_abone'])) {
                     $id_abone = (int) htmlspecialchars($sendedData['id_abone']);
@@ -931,7 +931,7 @@ class Abone_t
                     if ($res) {
                         header("location: ../index.php?page=abonne&message='aboné suprimé'");
                     } else {
-                        header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=echec de supression de l'aboné");
+                        header("location: ../index.php?page=info_abone&id=$id_abone&section=$section&operation=error&message=echec de supression de l'aboné");
                     }
                     return;
                 }
@@ -954,9 +954,9 @@ class Abone_t
 
             $res = Abones::updateSingleValue($id_abone, $key, $value);
             if (!$res)
-                header("location: ../index.php?page=info_abone&id=$id_abone&operation=error&message=");
+                header("location: ../index.php?page=info_abone&id=$id_abone&section=$section&operation=error&message=");
             else
-                header("location: ../index.php?page=info_abone&id=$id_abone&operation=success");
+                header("location: ../index.php?page=info_abone&id=$id_abone&section=$section&operation=success");
 
         }
     }
@@ -1114,20 +1114,45 @@ class Abone_t
         return $tab;
     }
 
+    /**
+     * Export du releve vers l'application mobile.
+     *
+     * Deux options, toutes deux facultatives et transmises en POST :
+     *  - un code d'acces, qui chiffre le fichier (l'agent devra le saisir dans
+     *    l'application pour l'ouvrir) ;
+     *  - la demande de geolocalisation, qui fait relever la position de chaque
+     *    compteur au moment de la saisie.
+     *
+     * L'appel historique en GET, sans option, reste accepte : les fichiers
+     * produits sont alors identiques a ceux d'avant, en clair.
+     */
     public static function getJsonDataToExport()
     {
-        //        var_dump($_GET);
-        if (!isset($_GET['action'], $_GET['id_mois']))
+        $action = isset($_POST['action']) ? $_POST['action'] : (isset($_GET['action']) ? $_GET['action'] : '');
+        if ($action != 'export_index') {
             return;
-        elseif ($_GET['action'] != 'export_index')
+        }
+        if (isset($_POST['action'])) {
+            // Le code d'acces voyage en POST : une URL finirait dans
+            // l'historique du navigateur et les journaux du serveur.
+            Csrf::requireValid();
+            $id_mois = isset($_POST['id_mois']) ? $_POST['id_mois'] : 0;
+        } elseif (isset($_GET['id_mois'])) {
+            $id_mois = $_GET['id_mois'];
+        } else {
             return;
-        //        echo "<br><br><br><br>ooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo<br><br><br><br>";
-        $req = Abones::getJsonDataFromIdMois($_GET['id_mois']);
-        //        $req2 = Abones::getLastmonthIndex($_SESSION['id_aep']);
-        //var_dump($req);
+        }
+
+        $code = isset($_POST['code_acces']) ? trim($_POST['code_acces']) : '';
+        $localiser = isset($_POST['localiser']) && $_POST['localiser'] !== '' && $_POST['localiser'] !== '0';
+
+        $req = Abones::getJsonDataFromIdMois($id_mois);
         $date_export = new DateTime();
-        $data = json_encode($req);
         $all = array(
+            // Version du format : signale a l'application qu'elle peut
+            // s'attendre a `localiser` et renvoyer les champs enrichis.
+            "format_version" => 2,
+            "localiser" => $localiser,
             "releve" => array(array("nom_feuille" => "nom_aep", "data" => $req)),
             "info_reseau" => array(
                 "nom_reseau" => $_SESSION['libele_aep'],
@@ -1137,18 +1162,44 @@ class Abone_t
             )
         );
 
-        //$all = var_dump($all);
+        if ($code !== '') {
+            @include_once(__DIR__ . '/../donnees/enveloppe_chiffree.php');
+            if (!EnveloppeChiffree::estDisponible()) {
+                Abone_t::echecExport(
+                    "Le chiffrement n'est pas disponible sur ce serveur : "
+                    . "l'extension OpenSSL de PHP est desactivee. Lance "
+                    . "app-setup/enable_openssl_php.bat puis redemarre Wamp."
+                );
+            }
+            $all = EnveloppeChiffree::chiffrer($all, $code);
+        }
+
         $data = json_encode($all, 128);
-        //echo $data;
-        //echo $date_export->format('d/m/Y:H/i/s');
-        //$boo = json_decode($data, true);
-        //var_dump($boo);
-        $fileName = '../donnees/exports/export_index_' . $_SESSION['libele_aep'] . '_' . $date_export->format('d-F-Y_H-i-s') . '.json';
+        $suffixe = ($code !== '' ? '_protege' : '');
+        $fileName = '../donnees/exports/export_index_' . $_SESSION['libele_aep'] . '_'
+            . $date_export->format('d-F-Y_H-i-s') . $suffixe . '.json';
         Abones::writeToFile($fileName, $data);
         Abones::telecharger($fileName);
         header('location: ' . $_SESSION['PREVIOUS_REQUEST_HEADER']);
         exit;
-        //        unlink($fileName);
+    }
+
+    /**
+     * Interrompt l'export en expliquant pourquoi, plutot que de livrer un
+     * fichier en clair alors qu'une protection a ete demandee.
+     */
+    private static function echecExport($message)
+    {
+        if (!headers_sent()) {
+            header('HTTP/1.1 500 Internal Server Error');
+            header('Content-Type: text/html; charset=utf-8');
+        }
+        echo '<!doctype html><meta charset="utf-8">'
+            . '<p style="font-family:sans-serif;padding:24px">'
+            . htmlspecialchars($message, ENT_QUOTES, 'UTF-8')
+            . '</p><p style="font-family:sans-serif;padding:0 24px">'
+            . '<a href="../index.php?page=releve">Retour</a></p>';
+        exit;
     }
 
     private static function recouvrementShowSection($section, $name)
@@ -1232,7 +1283,7 @@ class Abone_t
         // Graphiques (au-dessus du tableau)
         // echo '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>';
         // echo '<script src="https://unpkg.com/chart.js@4.4.1/dist/chart.umd.js"></script>';
-        echo '<div class="card mb-3 col-md-12"><div class="card-header bg-primary text-white"><strong>Comportement de paiement</strong></div><div class="card-body">';
+        echo '<div class="ia-card mb-3"><div class="ia-card-header"><strong>Comportement de paiement</strong></div><div class="ia-card-body">';
         echo '<div class="row g-3">';
         echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_bar_recouvrement' . $id_compteur . '"></canvas></div></div>';
         echo '<div class="col-md-6"><div style="height:320px"><canvas id="abonne_line_cumule' . $id_compteur . '"></canvas></div></div>';
@@ -1248,11 +1299,9 @@ class Abone_t
         $moisActifLibelle = $ctx['moisActifLibelle'];
         $penaliteActuelle = $ctx['penaliteActuelle'];
 
-        echo '<div class="card mb-3">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Gestion des pénalités</h5>
-            </div>
-            <div class="card-body">
+        echo '<div class="ia-card mb-3">
+            <div class="ia-card-header"><i class="fas fa-exclamation-triangle"></i> Gestion des pénalités</div>
+            <div class="ia-card-body">
                 <div class="row align-items-center">
                     <div class="col-md-4">
                         <div class="text-center">
@@ -1298,13 +1347,11 @@ class Abone_t
         echo '</div></div>';
 
         // Section d'analyse des pénalités avec graphiques
-        echo '<div class="card mb-3">
-            <div class="card-header bg-info text-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-chart-line"></i> Analyse avant pénalité
-                </h5>
+        echo '<div class="ia-card mb-3">
+            <div class="ia-card-header">
+                <i class="fas fa-chart-line"></i> Analyse avant pénalité
             </div>
-            <div class="card-body">
+            <div class="ia-card-body">
                 <div id="penaltyAnalysisContent' . $id_compteur . '">
                     <div class="text-center">
                         <div class="spinner-border text-info" role="status">
@@ -1400,8 +1447,9 @@ class Abone_t
         $sum = 0;
         // Affichage des résultats dans un tableau HTML
         if ($resultats) {
-            echo '<table class="table table-bordered table-hover">';
-            echo '<thead> <div class="d-flex justify-content55.json-center"><h3 class="">Liste des recouvrements <hr></h3> </div>';
+            echo '<div class="ia-card mb-3"><div class="ia-card-header"><strong>Liste des recouvrements</strong></div><div class="ia-card-body p-0">';
+            echo '<table class="table table-hover mb-0">';
+            echo '<thead>';
             echo '<tr>';
             echo '<th>Mois</th>';
             echo '<th>Penalité</th>';
@@ -1409,6 +1457,8 @@ class Abone_t
             echo '<th>Montant Versé</th>';
             echo '<th>Reste</th>';
             echo '</tr>';
+            echo '</thead>';
+            echo '<tbody>';
 
             //        var_dump($resultats);
             foreach ($resultats as $row) {
@@ -1457,7 +1507,9 @@ class Abone_t
                 //            onkeyup="handleRecouvrement_pressed_enter(event, this.value, '. $row['id'].')"
             }
             echo '<tr class="  border border-dark" style="font-weight: bold"><td colspan="2">Total</td><td colspan="3" class="text-center">' . htmlspecialchars($sum) . '</td></tr>';
+            echo '</tbody>';
             echo '</table>';
+            echo '</div></div>';
         }
         }
 
@@ -1467,14 +1519,14 @@ class Abone_t
         $existingMonthsTools = $ctx['existingMonthsTools'];
         $lastKnownIndexTools = $ctx['lastKnownIndexTools'];
         if ($idAboneForTools > 0) {
-            echo '<div class="card mb-3">
-                <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            echo '<div class="ia-card mb-3">
+                <div class="ia-card-header d-flex justify-content-between align-items-center">
                     <strong>Ajouter une facture manquante</strong>';
             if (!empty($availableMonthsTools)) {
-                echo '<span class="badge bg-light text-dark">' . count($availableMonthsTools) . ' mois disponibles</span>';
+                echo '<span class="badge bg-light text-dark border">' . count($availableMonthsTools) . ' mois disponibles</span>';
             }
             echo '</div>
-                <div class="card-body">';
+                <div class="ia-card-body">';
 
             if (empty($availableMonthsTools)) {
                 echo '<div class="alert alert-secondary mb-0">
@@ -1524,7 +1576,7 @@ class Abone_t
                         </div>
 
                         <div class="col-12 text-end">
-                            <button type="submit" class="btn btn-secondary">
+                            <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-plus-circle me-1"></i> Créer la facture manquante
                             </button>
                         </div>
@@ -1533,11 +1585,11 @@ class Abone_t
 
             echo '</div></div>';
 
-            echo '<div class="card mb-3">
-                <div class="card-header bg-dark text-white">
+            echo '<div class="ia-card mb-3">
+                <div class="ia-card-header">
                     <strong>Retirer une facture existante</strong>
                 </div>
-                <div class="card-body">';
+                <div class="ia-card-body">';
 
             if (empty($existingMonthsTools)) {
                 echo '<div class="alert alert-secondary mb-0">
@@ -1588,13 +1640,14 @@ class Abone_t
             $id_compteur = (int) $_POST['id_compteur'];
             $id_mois = (int) $_POST['id_mois'];
             $penalite_montant = (int) $_POST['penalite_montant'];
+            $redirectUrl = '../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur) . '&section=analyse_penalite';
 
             if ($id_compteur > 0 && $id_mois > 0 && $penalite_montant > 0) {
                 try {
                     // Récupérer l'ID de l'index pour ce compteur et ce mois
                     $indexReq = Manager::prepare_query("
-                        SELECT i.id 
-                        FROM indexes i 
+                        SELECT i.id
+                        FROM indexes i
                         WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
                     ", array($id_compteur, $id_mois));
                     $indexData = $indexReq->fetchAll();
@@ -1604,30 +1657,28 @@ class Abone_t
 
                         // Mettre à jour la pénalité dans la facture
                         $updateReq = Manager::prepare_query("
-                            UPDATE facture 
-                            SET penalite = ? 
+                            UPDATE facture
+                            SET penalite = ?
                             WHERE id_indexes = ?
                         ", array($penalite_montant, $id_indexes));
 
                         if ($updateReq) {
                             $_SESSION['success_message'] = "Pénalité de " . Facture::formatFinancier($penalite_montant) . " appliquée avec succès.";
-                            header("location: ../index.php?list=recouvrement&operation=succes");
-                            //                            header("location: ../index.php?list=tarif&operation=error");
                         } else {
                             $_SESSION['error_message'] = "Erreur lors de l'application de la pénalité.";
-                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'application de la pénalité");
                         }
                     } else {
                         $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
-                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
                     }
                 } catch (Exception $e) {
                     $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
                 }
             } else {
                 $_SESSION['error_message'] = "Données invalides pour l'application de la pénalité.";
-                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'application de la pénalité.");
             }
+
+            header('Location: ' . $redirectUrl);
+            exit;
         }
     }
 
@@ -1636,13 +1687,14 @@ class Abone_t
         if (isset($_POST['action']) && $_POST['action'] === 'cancel_penalite') {
             $id_compteur = (int) $_POST['id_compteur'];
             $id_mois = (int) $_POST['id_mois'];
+            $redirectUrl = '../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur) . '&section=analyse_penalite';
 
             if ($id_compteur > 0 && $id_mois > 0) {
                 try {
                     // Récupérer l'ID de l'index pour ce compteur et ce mois
                     $indexReq = Manager::prepare_query("
-                        SELECT i.id 
-                        FROM indexes i 
+                        SELECT i.id
+                        FROM indexes i
                         WHERE i.id_compteur = ? AND i.id_mois_facturation = ?
                     ", array($id_compteur, $id_mois));
                     $indexData = $indexReq->fetchAll();
@@ -1652,30 +1704,28 @@ class Abone_t
 
                         // Annuler la pénalité (mettre à 0)
                         $updateReq = Manager::prepare_query("
-                            UPDATE facture 
-                            SET penalite = 0 
+                            UPDATE facture
+                            SET penalite = 0
                             WHERE id_indexes = ?
                         ", array($id_indexes));
 
                         if ($updateReq) {
                             $_SESSION['success_message'] = "Pénalité annulée avec succès.";
-                            header("location: ../index.php?list=recouvrement&operation=succes");
                         } else {
                             $_SESSION['error_message'] = "Erreur lors de l'annulation de la pénalité.";
-                            header("location: ../index.php?list=recouvrement&operation=error&message=Erreur lors de l'annulation de la pénalité");
                         }
                     } else {
                         $_SESSION['error_message'] = "Aucune facture trouvée pour ce compteur et ce mois.";
-                        header("location: ../index.php?list=recouvrement&operation=error&message=Aucune facture trouvée pour ce compteur et ce mois.");
                     }
                 } catch (Exception $e) {
                     $_SESSION['error_message'] = "Erreur: " . $e->getMessage();
-                    header("location: ../index.php?list=recouvrement&operation=error&message=" . $e->getMessage());
                 }
             } else {
                 $_SESSION['error_message'] = "Données invalides pour l'annulation de la pénalité.";
-                header("location: ../index.php?list=recouvrement&operation=error&message=Données invalides pour l'annulation de la pénalité.");
             }
+
+            header('Location: ' . $redirectUrl);
+            exit;
         }
     }
 
@@ -1786,7 +1836,7 @@ class Abone_t
 
             if ($id_compteur <= 0) {
                 $_SESSION['error_message'] = "ID compteur invalide.";
-                header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur) . '&section=index');
                 exit;
             }
 
@@ -1800,7 +1850,7 @@ class Abone_t
                     // Validation : nouvel index doit être >= ancien index
                     if ($nouvel_index < $ancien_index) {
                         $_SESSION['error_message'] = "Le nouvel index ne peut pas être inférieur à l'ancien index.";
-                        header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+                        header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur) . '&section=index');
                         exit;
                     }
 
@@ -1852,7 +1902,7 @@ class Abone_t
                 $_SESSION['error_message'] = "Erreur lors de la modification : " . $e->getMessage();
             }
 
-            header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur));
+            header('Location: ../index.php?page=info_abone&id=' . self::getAboneIdByCompteur($id_compteur) . '&section=index');
             exit;
         }
     }
@@ -2134,7 +2184,7 @@ class Abone_t
         $ancien_index = isset($_POST['ancien_index']) ? (float) $_POST['ancien_index'] : null;
         $nouvel_index = isset($_POST['nouvel_index']) ? (float) $_POST['nouvel_index'] : null;
         $montant_verse = isset($_POST['montant_verse']) ? (float) $_POST['montant_verse'] : 0;
-        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone . '&section=factures';
 
         try {
             if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
@@ -2244,7 +2294,7 @@ class Abone_t
         $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
         $id_compteur = isset($_POST['id_compteur']) ? (int) $_POST['id_compteur'] : 0;
         $id_mois = isset($_POST['id_mois_facturation']) ? (int) $_POST['id_mois_facturation'] : 0;
-        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone;
+        $redirectUrl = '../index.php?page=info_abone&id=' . $id_abone . '&section=factures';
 
         try {
             if ($id_abone <= 0 || $id_compteur <= 0 || $id_mois <= 0) {
@@ -2309,7 +2359,7 @@ class Abone_t
             );
             if ($data['id_abone'] > 0)
                 BranchementAbonne::create($data);
-            header('Location: ../index.php?page=info_abone&id=' . $data['id_abone']);
+            header('Location: ../index.php?page=info_abone&id=' . $data['id_abone'] . '&section=branchement');
             exit;
         } elseif ($action === 'update_branchement') {
             $id_abone = isset($_POST['id_abone']) ? (int) $_POST['id_abone'] : 0;
@@ -2325,7 +2375,7 @@ class Abone_t
             );
             if ($id_branchement > 0)
                 BranchementAbonne::update($id_branchement, $data);
-            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone . '&section=branchement');
             exit;
         } elseif ($action === 'delete_branchement') {
             $id_abone = 0;
@@ -2337,7 +2387,7 @@ class Abone_t
                 $id_abone = isset($r['id_abone']) ? (int) $r['id_abone'] : 0;
                 BranchementAbonne::delete($id_branchement);
             }
-            header('Location: ../index.php?page=info_abone&id=' . $id_abone);
+            header('Location: ../index.php?page=info_abone&id=' . $id_abone . '&section=branchement');
             exit;
         }
     }

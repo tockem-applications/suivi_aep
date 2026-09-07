@@ -54,6 +54,27 @@ $data = $ctx['data'];
 $id_compteur = (int) $ctx['id_compteur'];
 $branchement = $ctx['branchement'];
 
+/**
+ * Position GPS du compteur, ou null si aucune position exploitable.
+ *
+ * Même garde-fou qu'ailleurs dans le projet : (0,0) est ce qu'écrit
+ * l'application mobile quand elle n'a rien capté, et l'emprise du Cameroun
+ * écarte une latitude et une longitude inversées — l'erreur la plus courante
+ * sur ce type de donnée. Bornes distinctes par axe, sinon l'inversion passe.
+ */
+$ia_position = null;
+$ia_lat = isset($data['latitude']) ? (float) $data['latitude'] : 0.0;
+$ia_lon = isset($data['longitude']) ? (float) $data['longitude'] : 0.0;
+if ($ia_lat >= 1.0 && $ia_lat <= 14.0 && $ia_lon >= 7.0 && $ia_lon <= 17.0) {
+    $ia_position = array(
+        'texte' => number_format($ia_lat, 6, ',', ' ') . ' · ' . number_format($ia_lon, 6, ',', ' '),
+        // Le point décimal reste anglo-saxon dans l'URL : c'est ce qu'attend OSM.
+        'osm' => 'https://www.openstreetmap.org/?mlat=' . rawurlencode(sprintf('%.6F', $ia_lat))
+            . '&mlon=' . rawurlencode(sprintf('%.6F', $ia_lon)) . '#map=18/'
+            . sprintf('%.6F', $ia_lat) . '/' . sprintf('%.6F', $ia_lon),
+    );
+}
+
 $stats = Manager::prepare_query(
     "SELECT
         COUNT(DISTINCT vaf.id_mois) AS nb_mois,
@@ -87,6 +108,8 @@ $etatClass = ($data['etat'] === 'actif') ? 'success' : (($data['etat'] === 'susp
 $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
 ?>
 
+<link rel="stylesheet" href="presentation/assets/css/info_abone.css">
+
 <?php if ($layout_classic): ?>
 <div class="container-fluid p-4">
     <a href="<?php echo ia_section_url($id_abone, 'accueil'); ?>" class="btn btn-outline-primary btn-sm mb-3">
@@ -119,13 +142,6 @@ $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
     .ia-breadcrumb { font-size: 0.8rem; color: #5f6368; margin-bottom: 0.25rem; }
     .ia-breadcrumb a { color: #1a73e8; text-decoration: none; }
     .ia-page-title { font-size: 1.35rem; font-weight: 400; color: #202124; margin: 0; }
-    .ia-kpi { background: #fff; border: 1px solid #dadce0; border-radius: 8px; padding: 1rem; height: 100%; }
-    .ia-kpi-label { font-size: 0.75rem; color: #5f6368; margin-bottom: 0.25rem; }
-    .ia-kpi-value { font-size: 1.25rem; font-weight: 500; color: #202124; }
-    .ia-card { background: #fff; border: 1px solid #dadce0; border-radius: 8px; }
-    .ia-card-header { padding: 0.85rem 1.25rem; border-bottom: 1px solid #e8eaed; font-weight: 500; font-size: 0.95rem; }
-    .ia-card-body { padding: 1.25rem; }
-    .ia-section-content .card { border-radius: 8px; }
     @media (max-width: 991.98px) {
         .ia-shell { flex-direction: column; }
         .ia-nav { width: 100%; border-right: none; border-bottom: 1px solid #dadce0; }
@@ -271,6 +287,22 @@ $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
                                 </dd>
                                 <dt class="col-sm-4 text-muted">Réseau</dt>
                                 <dd class="col-sm-8"><?php echo htmlspecialchars($data['reseau'], ENT_QUOTES, 'UTF-8'); ?></dd>
+                                <dt class="col-sm-4 text-muted">Position GPS</dt>
+                                <dd class="col-sm-8">
+                                    <?php if ($ia_position !== null): ?>
+                                        <span class="font-monospace"><?php echo $ia_position['texte']; ?></span>
+                                        <a class="ms-2 text-decoration-none"
+                                            href="<?php echo htmlspecialchars($ia_position['osm'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            target="_blank" rel="noopener"
+                                            title="Ouvrir dans OpenStreetMap (nécessite une connexion)">
+                                            <i class="bi bi-geo-alt-fill"></i> Voir
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-muted">Non relevée</span>
+                                        <i class="bi bi-info-circle text-muted ms-1"
+                                            title="La position est captée par l'application mobile lors d'un relevé, quand le GPS est activé pour la tournée."></i>
+                                    <?php endif; ?>
+                                </dd>
                                 <dt class="col-sm-4 text-muted">État</dt>
                                 <dd class="col-sm-8">
                                     <span class="badge bg-<?php echo $etatClass; ?>"><?php echo htmlspecialchars($data['etat'], ENT_QUOTES, 'UTF-8'); ?></span>

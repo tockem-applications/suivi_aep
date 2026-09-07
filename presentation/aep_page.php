@@ -208,7 +208,9 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
-    <a href="?form=aep" class="btn btn-primary mb-3">Creer un Aep</a>
+    <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createAepModal">
+        <i class="bi bi-plus-lg me-1"></i> Créer un AEP
+    </button>
 
     <!-- Tableau des AEP -->
     <div class="table-responsive">
@@ -422,6 +424,29 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                                             </div>
                                         </section>
 
+                                        <!-- Paiement mobile -->
+                                        <section class="aep-edit-section card border-0 shadow-sm mb-3">
+                                            <div class="card-body">
+                                                <h6 class="text-uppercase text-muted small fw-bold mb-3">
+                                                    <i class="bi bi-phone me-1"></i> Paiement mobile
+                                                    <span class="text-muted fw-normal text-lowercase">— optionnel</span>
+                                                </h6>
+                                                <p class="text-muted small mb-3">
+                                                    Reproduits tels quels sur la facture. Saisis la syntaxe complète
+                                                    ainsi que le nom qui s'affichera à la validation&nbsp;: c'est ce
+                                                    qui permet à l'abonné de vérifier qu'il paie au bon destinataire.
+                                                </p>
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <label for="code_marchand_1_<?php echo $aid; ?>" class="form-label">Code marchand</label>
+                                                        <textarea class="form-control" rows="2" maxlength="255"
+                                                            id="code_marchand_1_<?php echo $aid; ?>" name="code_marchand_1"><?php echo htmlspecialchars(isset($aep['code_marchand_1']) ? $aep['code_marchand_1'] : ''); ?></textarea>
+                                                        <div class="form-text">Modèle&nbsp;: <code class="user-select-all">MOMO: *126*14*NUMERO*Montant#. Nom: NOM DU BENEFICIAIRE</code></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </section>
+
                                         <!-- Modèle de facture -->
                                         <section class="aep-edit-section card border-0 shadow-sm">
                                             <div class="card-body">
@@ -473,10 +498,6 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
                                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">
                                             <i class="bi bi-x-lg me-1"></i> Annuler
                                         </button>
-                                        <a href="?page=edit_aep&id=<?php echo $aid; ?>"
-                                            class="btn btn-outline-secondary" title="Ouvrir la page complète">
-                                            <i class="bi bi-arrows-fullscreen me-1"></i> Page complète
-                                        </a>
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-check2 me-1"></i> Enregistrer
                                         </button>
@@ -580,52 +601,9 @@ $aeps = Manager::prepare_query("SELECT * FROM aep", array())->fetchAll();
     </div>
 </div>
 
-<style>
-    /* Modal de modification d'AEP — apparence moderne */
-    .aep-edit-modal .modal-content { border-radius: 1rem; overflow: hidden; }
-    .aep-edit-header {
-        background: linear-gradient(135deg, #0d6efd 0%, #4dabf7 100%);
-        padding: 1.1rem 1.5rem;
-    }
-    .aep-edit-icon {
-        width: 2.75rem; height: 2.75rem;
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.35);
-    }
-    .aep-edit-section { transition: box-shadow .2s ease, transform .2s ease; }
-    .aep-edit-section:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.06) !important; }
-
-    /* Cartes radio (type de réseau) */
-    .aep-type-card {
-        cursor: pointer;
-        transition: border-color .15s ease, background-color .15s ease, transform .15s ease, box-shadow .15s ease;
-        background-color: #fff;
-    }
-    .aep-type-card .aep-type-check { opacity: 0; transform: scale(.7); transition: opacity .15s ease, transform .15s ease; }
-    .aep-type-card:hover { border-color: #0d6efd; transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(13,110,253,.08); }
-    .aep-type-input:checked + .aep-type-card {
-        border-color: #0d6efd; border-width: 2px;
-        background-color: #f1f7ff;
-        box-shadow: 0 .25rem .75rem rgba(13,110,253,.12);
-    }
-    .aep-type-input:checked + .aep-type-card .aep-type-check { opacity: 1; transform: scale(1); }
-    .aep-type-input:focus-visible + .aep-type-card { outline: 2px solid #0d6efd; outline-offset: 2px; }
-
-    /* Cartes radio (modèle de facture) */
-    .aep-model-card {
-        cursor: pointer;
-        transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
-        background-color: #fff;
-    }
-    .aep-model-card .aep-model-check { opacity: 0; transform: scale(.7); transition: opacity .15s ease, transform .15s ease; }
-    .aep-model-card:hover { border-color: #0d6efd; transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(13,110,253,.08); }
-    .aep-model-input:checked + .aep-model-card {
-        border-color: #0d6efd; border-width: 2px;
-        box-shadow: 0 .25rem .75rem rgba(13,110,253,.12);
-    }
-    .aep-model-input:checked + .aep-model-card .aep-model-check { opacity: 1; transform: scale(1); }
-    .aep-model-input:focus-visible + .aep-model-card { outline: 2px solid #0d6efd; outline-offset: 2px; }
-</style>
+<!-- Les styles des modales AEP sont dans presentation/aep_components.php :
+     la modale de creation peut s'ouvrir depuis n'importe quelle page, ils
+     doivent donc etre charges avec elle et non avec cette page-ci. -->
 <script>
     // Activation du bouton de suppression quand les deux saisies correspondent exactement au nom attendu
     (function () {

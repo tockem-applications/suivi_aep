@@ -77,43 +77,160 @@ function generateOptionGraphique($selectedValue)
 class MoisFacturation_t
 {
 
+    /**
+     * Premier temps de l'import : lire le fichier et le mettre en attente.
+     *
+     * Rien n'est écrit en base ici. Le responsable voit d'abord ce que le
+     * fichier contient — index, écarts suspects, observations, photos — et
+     * confirme ensuite. Un relevé erroné corrige mal : une fois les index
+     * enregistrés, la facturation du mois s'appuie dessus.
+     *
+     * Accepte indifféremment un JSON en clair (ancienne application), un JSON
+     * chiffré, ou une archive ZIP contenant le relevé et les photos.
+     * @see FichierReleveMobile
+     */
     public static function update_indexes_mois()
     {
         if (!isset($_GET['update_indexes_mois'], $_GET['id_mois']))
             return;
         $id_mois = (int) $_GET['id_mois'];
-        if (!isset($_FILES['fichier_index'])) {
-            header("location: ../index.php?page=releves&operation=error&message=Veillez selectionner le fichier des index");
+
+        if (!isset($_FILES['fichier_index']) || !isset($_FILES['fichier_index']['tmp_name'])) {
+            self::retourImport('error', 'Veuillez sélectionner le fichier des index.');
         }
-        $file_path = MoisFacturation::uploadImage('fichier_index');
-        if ($file_path == '') {
-            header("location: ../index.php?page=releves&operation=error&message=Veuillez importer un fichier de releve valide");
-            exit();
+        if ($_FILES['fichier_index']['error'] !== UPLOAD_ERR_OK) {
+            self::retourImport('error', self::messageErreurTeleversement($_FILES['fichier_index']['error']));
         }
-        $file_content = file_get_contents($file_path);
-        $data = json_decode($file_content, true);
-        //                    var_dump($data['releve']['data']);
-//        $id_constante = ConstanteReseau::getIdConstanteActive($_SESSION['id_aep']);
-//        var_dump($data['releve'][0]['data']);
+
+        @include_once(__DIR__ . '/../donnees/fichier_releve_mobile.php');
+        @include_once('../donnees/fichier_releve_mobile.php');
+        @include_once(__DIR__ . '/../donnees/import_temporaire.php');
+        @include_once('../donnees/import_temporaire.php');
+
+        $code = isset($_POST['code_acces']) ? trim($_POST['code_acces']) : '';
+        $lecture = FichierReleveMobile::lire($_FILES['fichier_index']['tmp_name'], $code);
+        if (!$lecture['ok']) {
+            self::retourImport('error', $lecture['erreur']);
+        }
+
+        $data = $lecture['document'];
+        self::verifierReseau($data);
+
+        $jeton = ImportTemporaire::deposer($data, $lecture['photos'], $id_mois);
+        if ($jeton === false) {
+            self::retourImport('error', "Le fichier n'a pas pu être mis en attente sur le serveur.");
+        }
+
+        header('location: ../index.php?page=releves&mois_facturation=' . $id_mois
+            . '&apercu_import=' . $jeton);
+        exit();
+    }
+
+    /**
+     * Second temps : le responsable a vu l'aperçu et confirme.
+     */
+    public static function confirmer_import_indexes()
+    {
+        if (!isset($_POST['confirmer_import_indexes'])) {
+            return;
+        }
+        Csrf::requireValid();
+
+        @include_once(__DIR__ . '/../donnees/import_temporaire.php');
+        @include_once('../donnees/import_temporaire.php');
+
+        $jeton = isset($_POST['jeton']) ? $_POST['jeton'] : '';
+        $depot = ImportTemporaire::reprendre($jeton);
+        if ($depot === false) {
+            self::retourImport(
+                'error',
+                "Cet aperçu a expiré ou n'est plus disponible. Recommencez l'import."
+            );
+        }
+
+        // L'agent a pu annuler depuis l'aperçu.
+        if (isset($_POST['annuler']) && $_POST['annuler'] === '1') {
+            ImportTemporaire::supprimer($jeton);
+            self::retourImport('succes', "Import annulé, rien n'a été modifié.");
+        }
+
+        $data = $depot['document'];
+        $id_mois = $depot['id_mois'];
+        self::verifierReseau($data);
+
+        // Les photos sont écrites avant la mise à jour : si l'enregistrement
+        // échoue, on aura des fichiers orphelins (récupérables) plutôt que des
+        // références en base pointant vers du vide.
+        $photosRangees = MoisFacturation::rangerPhotosImportees($depot['photos'], $id_mois);
+
+        $res = MoisFacturation::updateIndexFronFile($data['releve'], $id_mois, $photosRangees);
+        ImportTemporaire::supprimer($jeton);
+
+        if (!$res) {
+            self::retourImport('error', "La structure du fichier que vous avez importé ne correspond pas.");
+        }
+
+        $complement = count($photosRangees) > 0
+            ? ' (' . count($photosRangees) . ' photo(s) jointe(s))'
+            : '';
+        self::retourImport('succes', 'Les données ont été mises à jour' . $complement . '.');
+    }
+
+    /**
+     * Le fichier concerne-t-il bien le réseau de la session ?
+     *
+     * Vérifié aux deux temps : entre le dépôt et la confirmation, l'utilisateur
+     * a pu changer d'AEP dans un autre onglet.
+     */
+    private static function verifierReseau($data)
+    {
         if (!isset($data['info_reseau']['id_reseau'], $data['info_reseau']['nom_reseau'])) {
-            header("location: ../index.php?page=releves&operation=error&message=La structure du fichier que vous avez importé ne correspond pas");
-            exit();
+            self::retourImport('error', "La structure du fichier que vous avez importé ne correspond pas.");
         }
         $id_reseau_input = $data['info_reseau']['id_reseau'];
-        $nom_reseau_input = $data['info_reseau']['nom_reseau'];
         $aep_value = Aep::getOne($id_reseau_input, 'aep');
         $aep_value = $aep_value->fetchAll();
         if (count($aep_value) != 1 || $id_reseau_input != $_SESSION['id_aep']) {
-            header("location: ../index.php?page=releves&operation=error&message=Les données que vous souhaitez enregistrer ne sont pas celles de ce reseau");
-            exit();
+            self::retourImport('error', "Les données que vous souhaitez enregistrer ne sont pas celles de ce réseau.");
         }
+    }
 
-        $res = MoisFacturation::updateIndexFronFile($data['releve'], $id_mois);
-        if (!$res)
-            header("location: ../index.php?page=releves&operation=error&message=La structure du fichier que vous avez importé ne correspond pas");
-        else
-            header("location: ../index.php?page=releves&operation=succes&message=les donnee ont ete mise a jour");
+    /**
+     * Renvoie l'utilisateur sur la page des relevés avec un message, et
+     * interrompt le traitement.
+     */
+    private static function retourImport($operation, $message)
+    {
+        header('location: ../index.php?page=releves&operation=' . $operation
+            . '&message=' . urlencode($message));
+        exit();
+    }
 
+    /**
+     * Traduit un code d'erreur de $_FILES en phrase compréhensible.
+     *
+     * Le dépassement de taille est de loin le plus fréquent : une archive avec
+     * photos dépasse vite les limites par défaut de PHP.
+     */
+    private static function messageErreurTeleversement($code)
+    {
+        switch ($code) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                return 'Le fichier dépasse la taille maximale autorisée par le serveur ('
+                    . ini_get('upload_max_filesize') . '). '
+                    . 'Augmentez upload_max_filesize et post_max_size dans php.ini.';
+            case UPLOAD_ERR_PARTIAL:
+                return "Le fichier n'a été que partiellement envoyé. Réessayez.";
+            case UPLOAD_ERR_NO_FILE:
+                return 'Veuillez sélectionner le fichier des index.';
+            case UPLOAD_ERR_NO_TMP_DIR:
+                return "Le dossier temporaire du serveur est introuvable.";
+            case UPLOAD_ERR_CANT_WRITE:
+                return "Le serveur n'a pas pu écrire le fichier sur le disque.";
+            default:
+                return "Le téléversement a échoué (code $code).";
+        }
     }
     public static function ajout()
     {
@@ -826,6 +943,7 @@ class MoisFacturation_t
 //var_dump($_POST);
 MoisFacturation_t::ajout();
 MoisFacturation_t::update_indexes_mois();
+MoisFacturation_t::confirmer_import_indexes();
 MoisFacturation_t::update();
 //exit();
 MoisFacturation_t::delete();

@@ -11,6 +11,7 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // Récupérer l'AEP à modifier
+Aep::ensureColonnesCodeMarchand();
 $aep_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $aep_data = Manager::prepare_query("SELECT * FROM aep WHERE id = ?", array($aep_id))->fetch();
 if (!$aep_data) {
@@ -27,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $numero_compte = trim($_POST['numero_compte']);
     $fichier_facture = trim($_POST['fichier_facture']);
     $type_distribution = isset($_POST['type_distribution']) ? trim($_POST['type_distribution']) : '';
+    $code_marchand_1 = isset($_POST['code_marchand_1']) ? substr(trim($_POST['code_marchand_1']), 0, 255) : '';
 
     // Validation
     $errors = array();
@@ -44,11 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $aep = new Aep($aep_id, $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution);
+        $aep = new Aep($aep_id, $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution, $code_marchand_1);
         $data = $aep->getDonnee();
         $query = Manager::prepare_query(
-            "UPDATE aep SET libele = ?, fichier_facture = ?, date = ?, description = ?, nom_banque = ?, numero_compte = ?, type_distribution = ? WHERE id = ?",
-            array($data['libele'], $data['fichier_facture'], $data['date'], $data['description'], $data['nom_banque'], $data['numero_compte'], $data['type_distribution'], $aep_id)
+            "UPDATE aep SET libele = ?, fichier_facture = ?, date = ?, description = ?, nom_banque = ?, numero_compte = ?, type_distribution = ?, code_marchand_1 = ? WHERE id = ?",
+            array($data['libele'], $data['fichier_facture'], $data['date'], $data['description'], $data['nom_banque'], $data['numero_compte'], $data['type_distribution'], $data['code_marchand_1'], $aep_id)
         );
         if ($query) {
             header('Location: ?page=aep');
@@ -95,6 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="mb-3">
                     <label for="numero_compte" class="form-label">Numéro de compte</label>
                     <input type="text" class="form-control" id="numero_compte" name="numero_compte" value="<?php echo htmlspecialchars($aep_data['numero_compte']); ?>">
+                </div>
+                <div class="mb-3">
+                    <label for="code_marchand_1" class="form-label">Code marchand (paiement mobile)</label>
+                    <textarea class="form-control" rows="2" maxlength="255"
+                        id="code_marchand_1" name="code_marchand_1"><?php echo htmlspecialchars(isset($aep_data['code_marchand_1']) ? $aep_data['code_marchand_1'] : ''); ?></textarea>
+                    <div class="form-text">Modèle&nbsp;: <code class="user-select-all">MOMO: *126*14*NUMERO*Montant#. Nom: NOM DU BENEFICIAIRE</code></div>
+                    <div class="form-text">Reproduit tel quel sur la facture de l'abonné.</div>
                 </div>
                 <?php $type_dist_actuel = isset($aep_data['type_distribution']) ? Aep::normaliserTypeDistribution($aep_data['type_distribution']) : null; ?>
                 <div class="mb-3">

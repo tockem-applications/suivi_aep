@@ -42,6 +42,10 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                     (BP)</a></li>
                             <li><a class="dropdown-item" href="?page=borne_fontaine"><i
                                         class="bi bi-droplet me-2"></i>Bornes Fontaines</a></li>
+                            <li><a class="dropdown-item" href="?page=cartographie"><i
+                                        class="bi bi-geo-alt me-2"></i>Cartographie</a></li>
+                            <li><a class="dropdown-item" href="?page=affectation_coordonnees"><i
+                                        class="bi bi-pin-map me-2"></i>Affecter des coordonnées</a></li>
                             <!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
                             <li><a class="dropdown-item" href="?page=aep"><i class="bi bi-building me-2"></i>AEPs</a></li>
                             <!--                            <li><a class="dropdown-item" href="?form=abone">Ajouter un abonné</a></li>-->

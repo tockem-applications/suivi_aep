@@ -2,7 +2,9 @@
 @include_once("../donnees/user.php");
 @include_once("donnees/user.php");
 @include_once("../donnees/role.php");
-@require_once("donnees/role.php");
+// Chemin absolu : ce fichier est aussi inclus depuis traitement/, où le chemin
+// relatif "donnees/role.php" échoue et provoquait une erreur fatale silencieuse.
+@require_once(__DIR__ . "/../donnees/role.php");
 //require_once 'User.php';
 //require_once 'Role.php';
 

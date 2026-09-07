@@ -99,11 +99,11 @@ function addDaysAndFormat($string_date, $days = 10)
                         <i class="bi bi-file-earmark-arrow-up"></i>
                     </button>
                 </div>
-                <div class="m-0 p-0"><a href="?page=download_index&action=export_index&id_mois=<?php echo $id ?>"
-                        type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="tooltip"
-                        data-bs-placement="top" data-bs-title="telecharger les index dans votre machine">
+                <div class="m-0 p-0">
+                    <button type="button" class="btn btn-success mb-3 shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#exportMobileModal" title="Exporter les index vers l'application mobile">
                         <i class="bi bi-file-earmark-arrow-down"></i>
-                    </a>
+                    </button>
                 </div>
                 <!--                <li><a class="dropdown-item" href="" target="_blank">Exporter vers mobile</a></li>-->
             </div>
@@ -289,8 +289,14 @@ function addDaysAndFormat($string_date, $days = 10)
                             <th>Nouvel index</th>
                             <th>Conso</th>
                             <th>Cumul</th>
+                            <th class="text-center" title="Observations et photos rapportées du terrain">
+                                <i class="bi bi-clipboard-check"></i>
+                            </th>
                         </tr>
                         <?php
+                        // Informations rapportees par l'application mobile,
+                        // chargees en une fois pour tout le tableau.
+                        $complements_terrain = MoisFacturation::getComplementsReleve($id);
                         $somme_conso = 0;
                         // Intégration du code de creerLigneTableauReleveManuelle
                         foreach ($req2 as $data) {
@@ -334,6 +340,31 @@ function addDaysAndFormat($string_date, $days = 10)
                                 </td>
                                 <td><?php echo $ecart_attr?> </td>
                                 <td><?php echo $somme_conso?> </td>
+                                <td class="text-center">
+                                    <?php
+                                    $terrain = isset($complements_terrain[(int) $data['id']])
+                                        ? $complements_terrain[(int) $data['id']]
+                                        : null;
+                                    if ($terrain !== null):
+                                        $nb_photos = count($terrain['photos']);
+                                        ?>
+                                        <button type="button"
+                                            class="btn btn-sm btn-link p-0 text-decoration-none"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#terrainModal<?php echo (int) $data['id']; ?>"
+                                            title="Voir ce que l'agent a rapporté">
+                                            <?php if (!empty($terrain['observation'])): ?>
+                                                <i class="bi bi-chat-left-text text-primary"></i>
+                                            <?php endif; ?>
+                                            <?php if ($nb_photos > 0): ?>
+                                                <i class="bi bi-camera text-success"></i><span
+                                                    class="small text-muted"><?php echo $nb_photos; ?></span>
+                                            <?php endif; ?>
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="text-muted">&ndash;</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                             <?php
                         }
@@ -451,9 +482,29 @@ function addDaysAndFormat($string_date, $days = 10)
                                                 class="text-danger">*</span></label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light"><i
-                                                    class="fas fa-file-upload"></i></span>
+                                                    class="bi bi-file-earmark-arrow-up"></i></span>
                                             <input type="file" class="form-control shadow-sm" id="fichier_index"
-                                                name="fichier_index" accept=".json,.csv" required>
+                                                name="fichier_index" accept=".json,.csv,.zip" required>
+                                        </div>
+                                        <div class="form-text">
+                                            Fichier renvoyé par l'agent : JSON, ou archive ZIP si des photos
+                                            accompagnent le relevé.
+                                        </div>
+                                    </div>
+
+                                    <!-- N'apparait que pour un fichier protege : inutile de l'imposer a tous. -->
+                                    <div class="col-md-12 d-none" id="import_code_bloc">
+                                        <label for="import_code_acces" class="form-label fw-bold">
+                                            Code d'accès
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-lock"></i></span>
+                                            <input type="password" class="form-control shadow-sm"
+                                                id="import_code_acces" name="code_acces" autocomplete="off"
+                                                placeholder="Code communiqué à l'agent lors de l'export">
+                                        </div>
+                                        <div class="form-text" id="import_code_aide">
+                                            Ce fichier est protégé. Saisis le code utilisé au moment de l'export.
                                         </div>
                                     </div>
                                 </div>
@@ -802,28 +853,92 @@ function addDaysAndFormat($string_date, $days = 10)
                         return rows;
                     }
 
+                    var codeBloc = document.getElementById('import_code_bloc');
+                    var codeAide = document.getElementById('import_code_aide');
+
+                    function afficherCode(visible, aide) {
+                        if (!codeBloc) return;
+                        codeBloc.classList.toggle('d-none', !visible);
+                        if (visible && aide && codeAide) codeAide.textContent = aide;
+                    }
+
+                    function masquerApercu() {
+                        previewSection.classList.add('d-none');
+                        rawRows = [];
+                        previewTableBody.innerHTML = '';
+                        previewCount.textContent = '';
+                    }
+
+                    // Une archive commence par la signature « PK\x03\x04 ». On lit
+                    // les quatre premiers octets plutot que de se fier au nom : un
+                    // fichier passe par WhatsApp arrive souvent renomme.
+                    function estArchive(file, suite) {
+                        var lecteur = new FileReader();
+                        lecteur.onload = function (e) {
+                            var o = new Uint8Array(e.target.result);
+                            suite(o.length >= 4 && o[0] === 0x50 && o[1] === 0x4B && o[2] === 0x03 && o[3] === 0x04);
+                        };
+                        lecteur.onerror = function () { suite(false); };
+                        lecteur.readAsArrayBuffer(file.slice(0, 4));
+                    }
+
                     function handleFile(file) {
-                        var reader = new FileReader();
-                        reader.onload = function (e) {
-                            try {
+                        estArchive(file, function (archive) {
+                            if (archive) {
+                                // Le contenu d'un ZIP n'est pas lisible ici sans
+                                // bibliotheque : le serveur s'en charge. On laisse
+                                // le champ code disponible, au cas ou.
+                                masquerApercu();
+                                afficherCode(true, "Archive ZIP. Si le releve qu'elle contient est protege, saisis le code ; sinon laisse vide.");
+                                return;
+                            }
+
+                            var reader = new FileReader();
+                            reader.onload = function (e) {
                                 var ext = (file.name || '').toLowerCase();
                                 if (ext.indexOf('.csv') !== -1) {
-                                    rawRows = parseCsv(e.target.result);
-                                } else {
-                                    var json = JSON.parse(e.target.result);
-                                    rawRows = parseIncomingJson(json);
+                                    try {
+                                        rawRows = parseCsv(e.target.result);
+                                        afficherCode(false);
+                                        previewSection.classList.remove('d-none');
+                                        render();
+                                    } catch (err) {
+                                        masquerApercu();
+                                        alert('Fichier invalide: ' + err);
+                                    }
+                                    return;
                                 }
-                                previewSection.classList.remove('d-none');
-                                render();
-                            } catch (err) {
-                                previewSection.classList.add('d-none');
-                                rawRows = [];
-                                previewTableBody.innerHTML = '';
-                                previewCount.textContent = '';
-                                alert('Fichier invalide: ' + err);
-                            }
-                        };
-                        reader.readAsText(file);
+
+                                var json;
+                                try {
+                                    json = JSON.parse(e.target.result);
+                                } catch (err) {
+                                    masquerApercu();
+                                    afficherCode(false);
+                                    alert('Fichier invalide: ' + err);
+                                    return;
+                                }
+
+                                // Enveloppe chiffree : le contenu ne peut pas etre
+                                // previsualise, mais on sait qu'un code est requis.
+                                if (json && json.chiffrement && json.donnees) {
+                                    masquerApercu();
+                                    afficherCode(true, "Ce fichier est protege. Saisis le code utilise au moment de l'export.");
+                                    return;
+                                }
+
+                                afficherCode(false);
+                                try {
+                                    rawRows = parseIncomingJson(json);
+                                    previewSection.classList.remove('d-none');
+                                    render();
+                                } catch (err) {
+                                    masquerApercu();
+                                    alert('Fichier invalide: ' + err);
+                                }
+                            };
+                            reader.readAsText(file);
+                        });
                     }
 
                     if (fileInput) {
@@ -998,3 +1113,385 @@ function addDaysAndFormat($string_date, $days = 10)
         </div>
     </div>
 </div>
+
+<!-- Options d'export vers l'application mobile de collecte -->
+<div class="modal fade" id="exportMobileModal" tabindex="-1" aria-labelledby="exportMobileModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form method="post" action="traitement/abone_t.php" class="modal-content">
+            <?php echo Csrf::hiddenField(); ?>
+            <input type="hidden" name="action" value="export_index">
+            <input type="hidden" name="id_mois" value="<?php echo (int) $id; ?>">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="exportMobileModalLabel">
+                    <i class="bi bi-phone me-1"></i> Exporter vers l'application mobile
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+
+            <div class="modal-body">
+                <p class="text-muted small mb-3">
+                    Le fichier telecharge se transmet a l'agent de terrain (WhatsApp, courriel, cle USB).
+                    Il l'importe dans l'application, releve hors connexion, puis renvoie le fichier complete.
+                </p>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="exportLocaliser"
+                        name="localiser" value="1">
+                    <label class="form-check-label" for="exportLocaliser">
+                        Relever la position GPS de chaque compteur
+                    </label>
+                    <div class="form-text">
+                        L'agent captera les coordonnees pendant la saisie. Elles alimentent la cartographie.
+                    </div>
+                </div>
+
+                <hr>
+
+                <label for="exportCodeAcces" class="form-label">
+                    Code d'acces <span class="text-muted fw-normal">(facultatif)</span>
+                </label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" class="form-control" id="exportCodeAcces" name="code_acces"
+                        autocomplete="new-password" placeholder="Laisser vide pour un fichier non protege">
+                    <button class="btn btn-outline-secondary" type="button" id="exportVoirCode"
+                        title="Afficher le code"><i class="bi bi-eye"></i></button>
+                </div>
+                <div class="form-text">
+                    Si tu renseignes un code, le fichier est chiffre : l'agent devra le saisir dans
+                    l'application pour l'ouvrir. Communique-le lui par un autre canal que le fichier lui-meme.
+                    <strong>Il n'est pas conserve ici : note-le.</strong>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-download me-1"></i> Telecharger le fichier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var bouton = document.getElementById('exportVoirCode');
+        var champ = document.getElementById('exportCodeAcces');
+        if (!bouton || !champ) return;
+        bouton.addEventListener('click', function () {
+            var cache = champ.type === 'password';
+            champ.type = cache ? 'text' : 'password';
+            bouton.innerHTML = cache ? '<i class="bi bi-eye-slash"></i>' : '<i class="bi bi-eye"></i>';
+        });
+    })();
+</script>
+
+<?php
+// -----------------------------------------------------------------------------
+// Fiches « terrain » : ce que l'agent a rapporte en plus de l'index.
+// Placees en fin de document, hors du tableau : une modale imbriquee dans un
+// <tbody> produit un HTML invalide que les navigateurs deplacent silencieusement.
+// -----------------------------------------------------------------------------
+if (isset($complements_terrain) && count($complements_terrain) > 0 && isset($req2)):
+    foreach ($req2 as $ligne_terrain):
+        $id_ligne = (int) $ligne_terrain['id'];
+        if (!isset($complements_terrain[$id_ligne])) {
+            continue;
+        }
+        $terrain = $complements_terrain[$id_ligne];
+        ?>
+        <div class="modal fade" id="terrainModal<?php echo $id_ligne; ?>" tabindex="-1"
+            aria-labelledby="terrainModalLabel<?php echo $id_ligne; ?>" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="terrainModalLabel<?php echo $id_ligne; ?>">
+                            <i class="bi bi-clipboard-check me-1"></i>
+                            <?php echo htmlspecialchars($ligne_terrain['nom'], ENT_QUOTES, 'UTF-8'); ?>
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">N° compteur</dt>
+                            <dd class="col-sm-9">
+                                <?php echo htmlspecialchars($ligne_terrain['numero_compteur'], ENT_QUOTES, 'UTF-8'); ?>
+                            </dd>
+
+                            <?php if (!empty($terrain['telephone'])): ?>
+                                <dt class="col-sm-3">Téléphone relevé</dt>
+                                <dd class="col-sm-9">
+                                    <?php echo htmlspecialchars($terrain['telephone'], ENT_QUOTES, 'UTF-8'); ?>
+                                </dd>
+                            <?php endif; ?>
+
+                            <?php if (!empty($terrain['observation'])): ?>
+                                <dt class="col-sm-3">Observation</dt>
+                                <dd class="col-sm-9">
+                                    <div class="border rounded bg-light p-2">
+                                        <?php echo nl2br(htmlspecialchars($terrain['observation'], ENT_QUOTES, 'UTF-8')); ?>
+                                    </div>
+                                </dd>
+                            <?php endif; ?>
+                        </dl>
+
+                        <?php if (count($terrain['photos']) > 0): ?>
+                            <hr>
+                            <div class="d-flex flex-wrap gap-2">
+                                <?php foreach ($terrain['photos'] as $photo): ?>
+                                    <a href="<?php echo htmlspecialchars($photo, ENT_QUOTES, 'UTF-8'); ?>"
+                                        target="_blank" rel="noopener" class="d-block border rounded overflow-hidden"
+                                        title="Ouvrir en grand">
+                                        <img src="<?php echo htmlspecialchars($photo, ENT_QUOTES, 'UTF-8'); ?>"
+                                            alt="Photo du compteur" style="height:140px;width:auto;object-fit:cover;">
+                                    </a>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    endforeach;
+endif;
+?>
+
+<?php
+// -----------------------------------------------------------------------------
+// Apercu avant import : ce que le fichier de l'agent va changer, avant d'y
+// toucher. Affiche uniquement quand on revient du depot avec un jeton.
+// -----------------------------------------------------------------------------
+if (isset($_GET['apercu_import'])):
+    @include_once("../donnees/import_temporaire.php");
+    @include_once("donnees/import_temporaire.php");
+
+    $depot_apercu = ImportTemporaire::reprendre($_GET['apercu_import']);
+    if ($depot_apercu === false):
+        ?>
+        <div class="alert alert-warning m-4">
+            <i class="bi bi-hourglass-bottom me-1"></i>
+            Cet aperçu a expiré ou n'est plus disponible. Relancez l'import.
+        </div>
+        <?php
+    else:
+        $doc_apercu = $depot_apercu['document'];
+        $lignes_apercu = array();
+        if (isset($doc_apercu['releve']) && is_array($doc_apercu['releve'])) {
+            foreach ($doc_apercu['releve'] as $feuille_apercu) {
+                if (!isset($feuille_apercu['data']) || !is_array($feuille_apercu['data'])) {
+                    continue;
+                }
+                foreach ($feuille_apercu['data'] as $ligne_apercu) {
+                    $lignes_apercu[] = $ligne_apercu;
+                }
+            }
+        }
+
+        // Repartition, calculee une fois pour le bandeau de synthese.
+        $nb_releve = 0;
+        $nb_identique = 0;
+        $nb_incoherent = 0;
+        $nb_absent = 0;
+        $nb_photos_total = 0;
+        $nb_observations = 0;
+        $nb_positions = 0;
+        $conso_totale = 0;
+
+        foreach ($lignes_apercu as $l) {
+            $ancien = isset($l['ancien_index']) ? (float) $l['ancien_index'] : 0;
+            $nouveau = isset($l['nouvel_index']) ? (float) $l['nouvel_index'] : 0;
+            if ($nouveau <= 0) {
+                $nb_absent++;
+            } elseif ($nouveau < $ancien) {
+                $nb_incoherent++;
+            } elseif ($nouveau == $ancien) {
+                $nb_identique++;
+            } else {
+                $nb_releve++;
+                $conso_totale += ($nouveau - $ancien);
+            }
+            if (isset($l['photos']) && is_array($l['photos'])) {
+                $nb_photos_total += count($l['photos']);
+            }
+            if (isset($l['observation']) && trim((string) $l['observation']) !== '') {
+                $nb_observations++;
+            }
+            $lat = isset($l['latitude']) ? (float) $l['latitude'] : 0;
+            $lon = isset($l['longitude']) ? (float) $l['longitude'] : 0;
+            if ($lat >= 1 && $lat <= 14 && $lon >= 7 && $lon <= 17) {
+                $nb_positions++;
+            }
+        }
+
+        $agent_apercu = isset($doc_apercu['info_reseau']['agent_export'])
+            ? $doc_apercu['info_reseau']['agent_export'] : 'Non précisé';
+        $date_apercu = isset($doc_apercu['info_reseau']['date_export'])
+            ? $doc_apercu['info_reseau']['date_export'] : '';
+        ?>
+
+        <div class="modal fade show d-block" id="apercuImportModal" tabindex="-1"
+            style="background: rgba(0,0,0,.55);" role="dialog" aria-modal="true">
+            <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">
+                            <i class="bi bi-eye me-1"></i> Vérifier avant d'importer
+                        </h5>
+                    </div>
+
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Rien n'a encore été enregistré. Relevé rapporté par
+                            <strong><?php echo htmlspecialchars($agent_apercu, ENT_QUOTES, 'UTF-8'); ?></strong><?php
+                            if ($date_apercu !== '') {
+                                echo ', le ' . htmlspecialchars($date_apercu, ENT_QUOTES, 'UTF-8');
+                            }
+                            ?>.
+                        </p>
+
+                        <!-- Synthese : ce que l'on regarde en premier. -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-6 col-md">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="fs-4 fw-bold text-success"><?php echo $nb_releve; ?></div>
+                                    <div class="small text-muted">relevés</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="fs-4 fw-bold text-secondary"><?php echo $nb_identique; ?></div>
+                                    <div class="small text-muted">inchangés</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="border rounded p-2 text-center h-100 <?php echo $nb_incoherent > 0 ? 'border-danger' : ''; ?>">
+                                    <div class="fs-4 fw-bold text-danger"><?php echo $nb_incoherent; ?></div>
+                                    <div class="small text-muted">incohérents</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="fs-4 fw-bold text-warning"><?php echo $nb_absent; ?></div>
+                                    <div class="small text-muted">non relevés</div>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md">
+                                <div class="border rounded p-2 text-center h-100">
+                                    <div class="fs-4 fw-bold"><?php echo number_format($conso_totale, 0, ',', ' '); ?></div>
+                                    <div class="small text-muted">m³ consommés</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php if ($nb_incoherent > 0): ?>
+                            <div class="alert alert-danger py-2 px-3 small">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                <?php echo $nb_incoherent; ?> compteur(s) ont un nouvel index
+                                <strong>inférieur</strong> à l'ancien. Ces lignes seront ignorées à
+                                l'enregistrement : un index d'eau ne recule pas. Vérifiez-les avec
+                                l'agent avant de confirmer.
+                            </div>
+                        <?php endif; ?>
+
+                        <div class="d-flex flex-wrap gap-3 small text-muted mb-2">
+                            <span><i class="bi bi-camera me-1"></i><?php echo $nb_photos_total; ?> photo(s)</span>
+                            <span><i class="bi bi-chat-left-text me-1"></i><?php echo $nb_observations; ?> observation(s)</span>
+                            <span><i class="bi bi-geo-alt me-1"></i><?php echo $nb_positions; ?> position(s) GPS</span>
+                            <span class="ms-auto"><?php echo count($lignes_apercu); ?> ligne(s) au total</span>
+                        </div>
+
+                        <div class="table-responsive border rounded" style="max-height: 46vh;">
+                            <table class="table table-sm table-hover mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>N° compteur</th>
+                                        <th>Nom</th>
+                                        <th class="text-end">Ancien</th>
+                                        <th class="text-end">Nouveau</th>
+                                        <th class="text-end">Conso</th>
+                                        <th class="text-center">Terrain</th>
+                                        <th>État</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($lignes_apercu as $l):
+                                        $ancien = isset($l['ancien_index']) ? (float) $l['ancien_index'] : 0;
+                                        $nouveau = isset($l['nouvel_index']) ? (float) $l['nouvel_index'] : 0;
+                                        $conso = $nouveau - $ancien;
+
+                                        if ($nouveau <= 0) {
+                                            $classe = 'table-warning';
+                                            $etat = 'Non relevé';
+                                        } elseif ($nouveau < $ancien) {
+                                            $classe = 'table-danger';
+                                            $etat = 'Incohérent — sera ignoré';
+                                        } elseif ($nouveau == $ancien) {
+                                            $classe = '';
+                                            $etat = 'Inchangé';
+                                        } else {
+                                            $classe = 'table-success';
+                                            $etat = 'Relevé';
+                                        }
+
+                                        $obs = isset($l['observation']) ? trim((string) $l['observation']) : '';
+                                        $nb_ph = (isset($l['photos']) && is_array($l['photos'])) ? count($l['photos']) : 0;
+                                        $lat = isset($l['latitude']) ? (float) $l['latitude'] : 0;
+                                        $lon = isset($l['longitude']) ? (float) $l['longitude'] : 0;
+                                        $a_position = ($lat >= 1 && $lat <= 14 && $lon >= 7 && $lon <= 17);
+                                        ?>
+                                        <tr class="<?php echo $classe; ?>">
+                                            <td class="small"><?php echo htmlspecialchars(isset($l['numero']) ? $l['numero'] : '', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="small"><?php echo htmlspecialchars(isset($l['libele']) ? $l['libele'] : '', ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="text-end small"><?php echo $ancien; ?></td>
+                                            <td class="text-end small fw-bold"><?php echo $nouveau > 0 ? $nouveau : '—'; ?></td>
+                                            <td class="text-end small"><?php echo $nouveau > 0 ? $conso : '—'; ?></td>
+                                            <td class="text-center small">
+                                                <?php if ($obs !== ''): ?>
+                                                    <i class="bi bi-chat-left-text text-primary"
+                                                        title="<?php echo htmlspecialchars($obs, ENT_QUOTES, 'UTF-8'); ?>"></i>
+                                                <?php endif; ?>
+                                                <?php if ($nb_ph > 0): ?>
+                                                    <i class="bi bi-camera text-success"></i><span class="text-muted"><?php echo $nb_ph; ?></span>
+                                                <?php endif; ?>
+                                                <?php if ($a_position): ?>
+                                                    <i class="bi bi-geo-alt text-secondary"
+                                                        title="<?php echo $lat . ', ' . $lon; ?>"></i>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="small"><?php echo $etat; ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <form method="post" action="traitement/mois_facturation_t.php" class="d-flex gap-2 m-0">
+                            <?php echo Csrf::hiddenField(); ?>
+                            <input type="hidden" name="confirmer_import_indexes" value="1">
+                            <input type="hidden" name="jeton"
+                                value="<?php echo htmlspecialchars($_GET['apercu_import'], ENT_QUOTES, 'UTF-8'); ?>">
+                            <button type="submit" name="annuler" value="1" class="btn btn-light">
+                                Annuler
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check2-circle me-1"></i>
+                                Confirmer l'import
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+    endif;
+endif;
+?>

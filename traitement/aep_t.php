@@ -30,15 +30,18 @@ class Aep_t
                 $description = htmlspecialchars(trim($_POST['description']));
                 $fichier_facture = htmlspecialchars(trim($_POST['fichier_facture']));
                 $type_distribution = isset($_POST['type_distribution']) ? trim($_POST['type_distribution']) : '';
+                // Le code marchand contient des « * » et des « # » que
+                // htmlspecialchars laisse intacts ; on borne seulement la longueur.
+                $code_marchand_1 = isset($_POST['code_marchand_1']) ? htmlspecialchars(substr(trim($_POST['code_marchand_1']), 0, 255)) : '';
 
                 // Valider les données (ajoutez d'autres validations si nécessaire)
                 if (empty($libele) || empty($date) || empty($description) || empty($fichier_facture)) {
-                    self::redirectTo('../index.php?form=aep&operation=error&message=veuillez saisir tout les champs');
+                    self::redirectTo('../index.php?page=aep&operation=error&message=' . urlencode('Veuillez renseigner tous les champs obligatoires.'));
                 }
-                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution);
+                $nouvel_aep = new Aep('', $libele, $fichier_facture, $date, $description, $nom_banque, $numero_compte, $type_distribution, $code_marchand_1);
                 $res = $nouvel_aep->ajouter();
                 if (!$res) {
-                    self::redirectTo("../index.php?form=aep&operation=error&message=Une erreur es survenu lors de l'enregidtrement");
+                    self::redirectTo('../index.php?page=aep&operation=error&message=' . urlencode("Une erreur est survenue lors de l'enregistrement."));
                 }
                 self::redirectTo('../index.php?page=home&operation=succes');
 
