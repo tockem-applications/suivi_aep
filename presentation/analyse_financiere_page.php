@@ -178,10 +178,13 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
             </div>
         </form>
 
+        <!-- Bouton de configuration des charges, masqué pour le moment :
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
             data-bs-target="#chargesCoutServiceModal">
             <i class="bi bi-sliders me-1"></i>Configurer les charges
         </button>
+        -->
+        <?php /* le bouton est retiré, le reste de la logique (modale, JS) est intact */ ?>
     </div>
 
     <!-- Indicateurs de la période : auparavant enfouis dans le pied du tableau de détail -->
@@ -227,7 +230,11 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 sur le suivant tant qu'on ne les modifie pas.
             </p>
 
-            <!-- Simulation : rattachée au graphique sur lequel elle agit, plutôt qu'isolée plus bas -->
+            <?php /* Barre de simulation, masquée pour le moment. Les identifiants
+                     (cscSimBtn, cscSimMoisSource, ...) restent référencés par le
+                     JS plus bas ; celui-ci se contente de ne rien trouver via
+                     document.getElementById et de ne rien faire. */ ?>
+            <!--
             <div class="af-sim">
                 <span class="af-sim-label"><i class="bi bi-beaker me-1"></i>Simulation</span>
                 <select id="cscSimMoisSource" class="form-select form-select-sm" style="width: auto;">
@@ -243,6 +250,7 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 </div>
                 <span class="small text-muted ms-auto" id="cscSimStatus">Aperçu uniquement — rien n'est enregistré.</span>
             </div>
+            -->
 
             <canvas id="coutRecouvrementChart" style="max-height: 380px;"></canvas>
         </div>

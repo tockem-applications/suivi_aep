@@ -289,9 +289,9 @@ function addDaysAndFormat($string_date, $days = 10)
                             <th>Nouvel index</th>
                             <th>Conso</th>
                             <th>Cumul</th>
-                            <th class="text-center" title="Observations et photos rapportées du terrain">
+                            <!-- <th class="text-center" title="Observations et photos rapportées du terrain">
                                 <i class="bi bi-clipboard-check"></i>
-                            </th>
+                            </th> -->
                         </tr>
                         <?php
                         // Informations rapportees par l'application mobile,
@@ -340,6 +340,7 @@ function addDaysAndFormat($string_date, $days = 10)
                                 </td>
                                 <td><?php echo $ecart_attr?> </td>
                                 <td><?php echo $somme_conso?> </td>
+                                <?php /* Colonne observations/photos du terrain, masquée pour le moment :
                                 <td class="text-center">
                                     <?php
                                     $terrain = isset($complements_terrain[(int) $data['id']])
@@ -365,6 +366,7 @@ function addDaysAndFormat($string_date, $days = 10)
                                         <span class="text-muted">&ndash;</span>
                                     <?php endif; ?>
                                 </td>
+                                */ ?>
                             </tr>
                             <?php
                         }
