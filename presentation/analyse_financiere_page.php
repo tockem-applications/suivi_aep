@@ -57,6 +57,14 @@ function getDonneesGraphiqueCoutRecouvrement($id_aep, $mois_debut, $mois_fin)
 
 $donnees_graphique = getDonneesGraphiqueCoutRecouvrement($id_aep, $mois_debut, $mois_fin);
 
+// Palette du camembert de detail. Definie ici et transmise au JS pour que la
+// pastille affichee dans le tableau soit exactement la couleur du graphique.
+$af_pie_colors = array(
+    '#1a73e8', '#34a853', '#fbbc04', '#ea4335', '#9c27b0',
+    '#00acc1', '#ff7043', '#8d6e63', '#5c6bc0', '#26a69a',
+    '#d81b60', '#7cb342'
+);
+
 // Préparer les données pour Chart.js
 $chart_labels = array();
 $chart_cout_par_m3 = array();
@@ -149,6 +157,34 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
     .mois-row:hover { background-color: #f0f4f8 !important; }
     .mois-row td { user-select: none; }
     .af-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+
+    /* --- Depliage du detail d'un mois --- */
+    .mois-row .af-chevron { transition: transform .25s ease; display: inline-block; }
+    .mois-row.is-open .af-chevron { transform: rotate(180deg); }
+
+    /* La ligne de detail est une <tr> : on ne peut pas l'animer, on anime donc
+       le panneau qu'elle contient. */
+    .af-detail-panel {
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: max-height .3s ease, opacity .25s ease, padding .3s ease;
+        padding-top: 0; padding-bottom: 0;
+    }
+    .details-row.is-open .af-detail-panel {
+        max-height: 2000px;
+        opacity: 1;
+        padding-top: 1rem; padding-bottom: 1rem;
+    }
+    /* Hauteur fixe : Chart.js en maintainAspectRatio:false a besoin d'un parent mesurable. */
+    .af-detail-pie { height: 280px; }
+    .af-detail-pie canvas { max-height: 260px; }
+    /* Pastille de legende : la couleur du camembert est rappelee dans le tableau,
+       ce qui evite une legende separee sous le graphique. */
+    .af-pie-dot {
+        display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+        margin-right: 6px; vertical-align: middle; flex: none;
+    }
 </style>
 
 <div class="af-page">
@@ -178,13 +214,10 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
             </div>
         </form>
 
-        <!-- Bouton de configuration des charges, masqué pour le moment :
         <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
             data-bs-target="#chargesCoutServiceModal">
             <i class="bi bi-sliders me-1"></i>Configurer les charges
         </button>
-        -->
-        <?php /* le bouton est retiré, le reste de la logique (modale, JS) est intact */ ?>
     </div>
 
     <!-- Indicateurs de la période : auparavant enfouis dans le pied du tableau de détail -->
@@ -230,19 +263,12 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 sur le suivant tant qu'on ne les modifie pas.
             </p>
 
-            <?php /* Barre de simulation, masquée pour le moment. Les identifiants
-                     (cscSimBtn, cscSimMoisSource, ...) restent référencés par le
-                     JS plus bas ; celui-ci se contente de ne rien trouver via
-                     document.getElementById et de ne rien faire. */ ?>
-            <!--
             <div class="af-sim">
                 <span class="af-sim-label"><i class="bi bi-beaker me-1"></i>Simulation</span>
-                <select id="cscSimMoisSource" class="form-select form-select-sm" style="width: auto;">
-                    <?php foreach ($mois_options_desc as $opt): ?>
-                        <option value="<?php echo htmlspecialchars($opt['mois']); ?>"><?php echo htmlspecialchars($opt['label']); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="button" class="btn btn-success btn-sm" id="cscSimBtn">Appliquer à tous les mois</button>
+                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal"
+                    data-bs-target="#simulationCoutServiceModal">
+                    <i class="bi bi-sliders me-1"></i>Choisir les charges à simuler
+                </button>
                 <button type="button" class="btn btn-light btn-sm border" id="cscSimResetBtn" style="display:none;">Réinitialiser</button>
                 <div class="form-check form-switch mb-0" id="cscSimHideRealWrap" style="display:none;">
                     <input class="form-check-input" type="checkbox" id="cscSimHideReal">
@@ -250,7 +276,6 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 </div>
                 <span class="small text-muted ms-auto" id="cscSimStatus">Aperçu uniquement — rien n'est enregistré.</span>
             </div>
-            -->
 
             <canvas id="coutRecouvrementChart" style="max-height: 380px;"></canvas>
         </div>
@@ -290,6 +315,43 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 <span class="small text-muted me-auto" id="cscSaveStatus"></span>
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 <button type="button" class="btn btn-primary" id="cscSaveBtn">Enregistrer pour ce mois</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : simulation — meme selection de charges que la configuration, mais
+     appliquee a toute la periode et jamais enregistree. Pas de choix du mois :
+     la liste est pre-cochee avec la selection du dernier mois. -->
+<div class="modal fade" id="simulationCoutServiceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-beaker me-2"></i>Simuler un coût du service</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="af-hint mb-3">
+                    Les charges cochées ici sont appliquées à <strong>tous les mois</strong> de la période affichée.
+                    Le résultat s'ajoute au graphique en pointillé : rien n'est enregistré.
+                </p>
+                <div class="alert alert-info small py-2" id="cscSimBaseInfo" style="display:none;"></div>
+                <div id="cscSimLoading" class="text-muted small">Chargement…</div>
+                <div id="cscSimForm" style="display:none;">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="cscSimSansCategorie">
+                        <label class="form-check-label" for="cscSimSansCategorie">Sorties sans catégorie</label>
+                    </div>
+                    <h6 class="text-muted mt-3">Catégories de charges</h6>
+                    <div id="cscSimCategories" class="row mb-3"></div>
+                    <h6 class="text-muted">Redevances</h6>
+                    <div id="cscSimRedevances" class="row row-cols-1 row-cols-md-2 g-1"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <span class="small text-muted me-auto" id="cscSimModalStatus"></span>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-success" id="cscSimRunBtn">Afficher la simulation</button>
             </div>
         </div>
     </div>
@@ -408,7 +470,9 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
     var cscActiviteLabels = { vente_eau: 'Vente d\'eau (VE)', branchements: 'Abonnement service (AS)', autre: 'Autre' };
     var cscActiviteOrder = ['vente_eau', 'branchements', 'autre'];
 
-    function cscMakeCheckboxCol(item, nameAttr, labelKey) {
+    // idPrefix : les deux modales affichent la meme liste, sans prefixe les id
+    // HTML des cases seraient dupliques et les <label> pointeraient au mauvais endroit.
+    function cscMakeCheckboxCol(item, nameAttr, labelKey, idPrefix) {
         var col = document.createElement('div');
         col.className = 'col';
         var wrap = document.createElement('div');
@@ -418,7 +482,7 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
         input.className = 'form-check-input';
         input.value = item.id;
         input.checked = !!item.checked;
-        input.id = nameAttr + '_' + item.id;
+        input.id = (idPrefix || '') + nameAttr + '_' + item.id;
         input.setAttribute('data-csc-el', nameAttr);
         var label = document.createElement('label');
         label.className = 'form-check-label small';
@@ -430,16 +494,16 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
         return col;
     }
 
-    function cscBuildCheckboxes(container, items, nameAttr, labelKey) {
+    function cscBuildCheckboxes(container, items, nameAttr, labelKey, idPrefix) {
         container.innerHTML = '';
         items.forEach(function (item) {
-            container.appendChild(cscMakeCheckboxCol(item, nameAttr, labelKey));
+            container.appendChild(cscMakeCheckboxCol(item, nameAttr, labelKey, idPrefix));
         });
     }
 
     // Catégories groupées par activité associée (Vente d'eau / Abonnement service / Autre)
     // pour qu'on distingue clairement à quoi chaque charge est rattachée.
-    function cscBuildCategoriesGrouped(container, items) {
+    function cscBuildCategoriesGrouped(container, items, idPrefix) {
         container.innerHTML = '';
         var byActivite = {};
         items.forEach(function (item) {
@@ -460,9 +524,20 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
             var row = document.createElement('div');
             row.className = 'row row-cols-1 row-cols-md-2 g-1 col-12';
             list.forEach(function (item) {
-                row.appendChild(cscMakeCheckboxCol(item, 'cscCat', 'nom'));
+                row.appendChild(cscMakeCheckboxCol(item, 'cscCat', 'nom', idPrefix));
             });
             container.appendChild(row);
+        });
+    }
+
+    // Ajoute les cases cochees d'un conteneur donne dans un FormData.
+    function cscCollectSelection(scope, formData) {
+        if (!scope) return;
+        [].slice.call(scope.querySelectorAll('[data-csc-el="cscCat"]:checked')).forEach(function (el) {
+            formData.append('categories[]', el.value);
+        });
+        [].slice.call(scope.querySelectorAll('[data-csc-el="cscRed"]:checked')).forEach(function (el) {
+            formData.append('redevances[]', el.value);
         });
     }
 
@@ -481,8 +556,8 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                 }
                 cscEl('cscForm').style.display = '';
                 cscEl('cscSansCategorie').checked = !!data.sans_categorie_checked;
-                cscBuildCategoriesGrouped(cscEl('cscCategories'), data.categories);
-                cscBuildCheckboxes(cscEl('cscRedevances'), data.redevances, 'cscRed', 'libele');
+                cscBuildCategoriesGrouped(cscEl('cscCategories'), data.categories, 'cfg_');
+                cscBuildCheckboxes(cscEl('cscRedevances'), data.redevances, 'cscRed', 'libele', 'cfg_');
                 if (data.herite_de) {
                     var lbl = cscMoisLabels[data.herite_de] || data.herite_de;
                     cscEl('cscHeriteInfo').style.display = '';
@@ -513,12 +588,9 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
             formData.append('_csrf', cscCsrfToken);
             formData.append('mois', mois);
             formData.append('sans_categorie', cscEl('cscSansCategorie').checked ? '1' : '');
-            [].slice.call(document.querySelectorAll('[data-csc-el="cscCat"]:checked')).forEach(function (el) {
-                formData.append('categories[]', el.value);
-            });
-            [].slice.call(document.querySelectorAll('[data-csc-el="cscRed"]:checked')).forEach(function (el) {
-                formData.append('redevances[]', el.value);
-            });
+            // Recherche limitee a la modale de configuration : celle de simulation
+            // porte les memes attributs data-csc-el.
+            cscCollectSelection(cscEl('chargesCoutServiceModal'), formData);
             cscEl('cscSaveStatus').textContent = 'Enregistrement…';
             fetch(cscAjaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
@@ -536,11 +608,15 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
         });
     }
 
-    // Simulation : aperçu non enregistré, superposé sur le graphique existant.
-    var cscSimBtn = cscEl('cscSimBtn');
+    // Simulation : apercu non enregistre, superpose sur le graphique existant.
+    // Les charges se choisissent dans une modale, pre-cochee avec la selection
+    // du dernier mois de la periode.
     var cscSimResetBtn = cscEl('cscSimResetBtn');
     var cscSimHideReal = cscEl('cscSimHideReal');
     var cscSimHideRealWrap = cscEl('cscSimHideRealWrap');
+    var cscSimModalEl = cscEl('simulationCoutServiceModal');
+    var cscSimDernierMois = <?php echo json_encode(isset($mois_options_desc[0]['mois']) ? $mois_options_desc[0]['mois'] : $mois_fin); ?>;
+    var cscSimFormCharge = false;
 
     function cscRemoveSimDataset() {
         var chart = window._afChart;
@@ -556,28 +632,65 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
         cscEl('cscSimStatus').textContent = '';
     }
 
-    if (cscSimBtn) {
-        cscSimBtn.addEventListener('click', function () {
-            var moisSource = cscEl('cscSimMoisSource').value;
-            cscEl('cscSimStatus').textContent = 'Calcul en cours…';
-            var url = cscAjaxUrl + '?action=simulate'
-                + '&mois_source=' + encodeURIComponent(moisSource)
-                + '&mois_debut=' + encodeURIComponent(cscMoisDebut)
-                + '&mois_fin=' + encodeURIComponent(cscMoisFin);
-            fetch(url, { credentials: 'same-origin' })
+    // Charge la liste des charges une seule fois : le formulaire garde ensuite
+    // les cases telles que l'utilisateur les a laissees d'une ouverture a l'autre.
+    function cscSimLoadForm() {
+        if (cscSimFormCharge) return;
+        cscEl('cscSimForm').style.display = 'none';
+        cscEl('cscSimLoading').style.display = '';
+        cscEl('cscSimModalStatus').textContent = '';
+        fetch(cscAjaxUrl + '?action=get_form&mois=' + encodeURIComponent(cscSimDernierMois), { credentials: 'same-origin' })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                cscEl('cscSimLoading').style.display = 'none';
+                if (!data || !data.ok) {
+                    cscEl('cscSimModalStatus').textContent = (data && data.error) ? data.error : 'Erreur de chargement.';
+                    return;
+                }
+                cscEl('cscSimForm').style.display = '';
+                cscEl('cscSimSansCategorie').checked = !!data.sans_categorie_checked;
+                cscBuildCategoriesGrouped(cscEl('cscSimCategories'), data.categories, 'sim_');
+                cscBuildCheckboxes(cscEl('cscSimRedevances'), data.redevances, 'cscRed', 'libele', 'sim_');
+                var lbl = cscMoisLabels[cscSimDernierMois] || cscSimDernierMois;
+                cscEl('cscSimBaseInfo').style.display = '';
+                cscEl('cscSimBaseInfo').textContent = 'Pré-sélection reprise du dernier mois (' + lbl + ').';
+                cscSimFormCharge = true;
+            })
+            .catch(function () {
+                cscEl('cscSimLoading').style.display = 'none';
+                cscEl('cscSimModalStatus').textContent = 'Erreur réseau.';
+            });
+    }
+
+    if (cscSimModalEl) {
+        cscSimModalEl.addEventListener('show.bs.modal', cscSimLoadForm);
+    }
+
+    var cscSimRunBtn = cscEl('cscSimRunBtn');
+    if (cscSimRunBtn) {
+        cscSimRunBtn.addEventListener('click', function () {
+            var formData = new FormData();
+            formData.append('action', 'simulate_selection');
+            formData.append('_csrf', cscCsrfToken);
+            formData.append('mois_debut', cscMoisDebut);
+            formData.append('mois_fin', cscMoisFin);
+            formData.append('sans_categorie', cscEl('cscSimSansCategorie').checked ? '1' : '');
+            cscCollectSelection(cscSimModalEl, formData);
+
+            cscEl('cscSimModalStatus').textContent = 'Calcul en cours…';
+            fetch(cscAjaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (!data || !data.ok) {
-                        cscEl('cscSimStatus').textContent = (data && data.error) ? data.error : 'Échec de la simulation.';
+                        cscEl('cscSimModalStatus').textContent = (data && data.error) ? data.error : 'Échec de la simulation.';
                         return;
                     }
                     var chart = window._afChart;
                     if (!chart) return;
-                    var label = 'Simulation (mois modèle : ' + (cscMoisLabels[moisSource] || moisSource) + ')';
                     chart.data.datasets = chart.data.datasets.filter(function (ds) { return ds.id !== 'cscSimulation'; });
                     chart.data.datasets.push({
                         id: 'cscSimulation',
-                        label: label,
+                        label: 'Simulation (' + data.nb_charges + ' charge' + (data.nb_charges > 1 ? 's' : '') + ')',
                         data: data.cout_par_m3,
                         borderColor: 'rgb(111, 66, 193)',
                         backgroundColor: 'rgba(111, 66, 193, 0.1)',
@@ -590,9 +703,14 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                     cscSimResetBtn.style.display = '';
                     cscSimHideRealWrap.style.display = '';
                     cscEl('cscSimStatus').textContent = 'Aperçu affiché — rien n’a été enregistré.';
+                    cscEl('cscSimModalStatus').textContent = '';
+                    if (window.bootstrap && bootstrap.Modal) {
+                        var inst = bootstrap.Modal.getInstance(cscSimModalEl);
+                        if (inst) inst.hide();
+                    }
                 })
                 .catch(function () {
-                    cscEl('cscSimStatus').textContent = 'Erreur réseau.';
+                    cscEl('cscSimModalStatus').textContent = 'Erreur réseau.';
                 });
         });
     }
@@ -638,8 +756,11 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                             <?php
                             // Les totaux de la période sont calculés en tête de fichier
                             // (ils alimentent aussi les indicateurs), pas ici.
+                            // Tableau presente du mois le plus recent au plus ancien ; le
+                            // graphique garde l'ordre chronologique, d'ou la copie inversee.
+                            $donnees_tableau = array_reverse($donnees_graphique);
                             $mois_index = 0;
-                            foreach ($donnees_graphique as $data):
+                            foreach ($donnees_tableau as $data):
                                 $ecart = $data['cout_par_m3'] - $data['prix_moyen_m3'];
                                 $ratio = $data['prix_moyen_m3'] > 0 ? (($data['cout_par_m3'] / $data['prix_moyen_m3']) * 100) : 0;
                                 $class_ecart = $ecart > 0 ? 'text-danger' : ($ecart < 0 ? 'text-success' : 'text-muted');
@@ -651,7 +772,7 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                                 <tr class="mois-row" data-mois-id="<?php echo $mois_id; ?>" style="cursor: pointer;" onclick="toggleDetails('<?php echo $mois_id; ?>')">
                                     <td class="text-center">
                                         <?php if ($has_details): ?>
-                                            <i class="bi bi-chevron-down" id="icon_<?php echo $mois_id; ?>"></i>
+                                            <i class="bi bi-chevron-down af-chevron" id="icon_<?php echo $mois_id; ?>"></i>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
@@ -688,10 +809,12 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                                 <?php if ($has_details): ?>
                                 <tr id="details_<?php echo $mois_id; ?>" class="details-row" style="display: none;">
                                     <td colspan="8" class="p-0">
-                                        <div class="p-3 bg-light">
+                                        <div class="af-detail-panel px-3 bg-light">
                                             <h6 class="mb-3 text-primary">
                                                 <i class="bi bi-list-ul me-2"></i>Détail des catégories de dépenses
                                             </h6>
+                                            <div class="row g-3">
+                                            <div class="col-12 col-xl-8">
                                             <table class="table table-sm table-bordered mb-0">
                                                 <thead class="table-secondary">
                                                     <tr>
@@ -703,8 +826,11 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                                                 </thead>
                                                 <tbody>
                                                     <?php
+                                                    $detail_index = 0;
                                                     foreach ($data['details_categories'] as $detail):
                                                         $pourcentage = $data['total_depenses'] > 0 ? (($detail['montant'] / $data['total_depenses']) * 100) : 0;
+                                                        $couleur_detail = $af_pie_colors[$detail_index % count($af_pie_colors)];
+                                                        $detail_index++;
                                                     ?>
                                                         <tr>
                                                             <td>
@@ -714,7 +840,10 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                                                                     <span class="text-muted">-</span>
                                                                 <?php endif; ?>
                                                             </td>
-                                                            <td><?php echo htmlspecialchars($detail['nom']); ?></td>
+                                                            <td>
+                                                                <span class="af-pie-dot" style="background: <?php echo $couleur_detail; ?>;"></span>
+                                                                <?php echo htmlspecialchars($detail['nom']); ?>
+                                                            </td>
                                                             <td class="text-end">
                                                                 <strong><?php echo number_format($detail['montant'], 0, ',', ' '); ?></strong>
                                                             </td>
@@ -738,6 +867,26 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
                                                     </tr>
                                                 </tfoot>
                                             </table>
+                                            </div>
+                                            <div class="col-12 col-xl-4">
+                                                <?php
+                                                // Proportions des charges du mois : les donnees voyagent
+                                                // dans un data-* pour que le camembert soit construit a
+                                                // la premiere ouverture (un canvas cache mesure 0 px).
+                                                $pie_labels = array();
+                                                $pie_values = array();
+                                                foreach ($data['details_categories'] as $detail) {
+                                                    $pie_labels[] = $detail['nom'];
+                                                    $pie_values[] = round((float) $detail['montant'], 2);
+                                                }
+                                                ?>
+                                                <div class="af-detail-pie h-100 d-flex align-items-center justify-content-center bg-white border rounded p-2">
+                                                    <canvas id="pie_<?php echo $mois_id; ?>"
+                                                        data-labels="<?php echo htmlspecialchars(json_encode($pie_labels), ENT_QUOTES, 'UTF-8'); ?>"
+                                                        data-values="<?php echo htmlspecialchars(json_encode($pie_values), ENT_QUOTES, 'UTF-8'); ?>"></canvas>
+                                                </div>
+                                            </div>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -793,20 +942,85 @@ $ratio_moyen = $prix_moyen_global > 0 ? (($cout_moyen / $prix_moyen_global) * 10
 </div><!-- /.af-page -->
 
 <script>
+    // Meme palette que les pastilles du tableau (definie en PHP plus haut) :
+    // l'index de la categorie choisit la couleur des deux cotes.
+    var AF_PIE_COLORS = <?php echo json_encode($af_pie_colors); ?>;
+
+    var afPieCharts = {};
+
+    function afBuildPie(moisId) {
+        if (afPieCharts[moisId] || typeof Chart === 'undefined') return;
+        var canvas = document.getElementById('pie_' + moisId);
+        if (!canvas) return;
+
+        var labels, values;
+        try {
+            labels = JSON.parse(canvas.getAttribute('data-labels') || '[]');
+            values = JSON.parse(canvas.getAttribute('data-values') || '[]');
+        } catch (e) {
+            return;
+        }
+        if (!labels.length) return;
+
+        var total = values.reduce(function (a, b) { return a + b; }, 0);
+        var colors = labels.map(function (_, i) { return AF_PIE_COLORS[i % AF_PIE_COLORS.length]; });
+
+        afPieCharts[moisId] = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: colors, borderColor: '#fff', borderWidth: 1 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    // Pas de legende : les couleurs sont rappelees par une pastille
+                    // en face de chaque categorie dans le tableau de gauche.
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function (ctx) {
+                                var v = ctx.parsed;
+                                var pct = total > 0 ? (v / total * 100) : 0;
+                                return ctx.label + ' : ' + v.toLocaleString('fr-FR') + ' FCFA ('
+                                    + pct.toFixed(1).replace('.', ',') + ' %)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     function toggleDetails(moisId) {
         const detailsRow = document.getElementById('details_' + moisId);
         const icon = document.getElementById('icon_' + moisId);
-        
-        if (detailsRow && icon) {
-            if (detailsRow.style.display === 'none' || detailsRow.style.display === '') {
-                detailsRow.style.display = '';
-                icon.classList.remove('bi-chevron-down');
-                icon.classList.add('bi-chevron-up');
-            } else {
-                detailsRow.style.display = 'none';
-                icon.classList.remove('bi-chevron-up');
-                icon.classList.add('bi-chevron-down');
-            }
+        const moisRow = document.querySelector('.mois-row[data-mois-id="' + moisId + '"]');
+
+        if (!detailsRow) return;
+
+        // L'etat vit dans une classe, pas dans style.display : une chaine vide se
+        // relisait comme « ferme » et la ligne ne se refermait jamais.
+        const ouvre = !detailsRow.classList.contains('is-open');
+
+        if (ouvre) {
+            detailsRow.style.display = 'table-row';
+            // Laisse le navigateur prendre en compte l'affichage avant d'animer.
+            requestAnimationFrame(function () {
+                detailsRow.classList.add('is-open');
+                afBuildPie(moisId);
+            });
+        } else {
+            detailsRow.classList.remove('is-open');
+            setTimeout(function () {
+                if (!detailsRow.classList.contains('is-open')) {
+                    detailsRow.style.display = 'none';
+                }
+            }, 300);
         }
+
+        if (moisRow) moisRow.classList.toggle('is-open', ouvre);
+        if (icon) icon.classList.toggle('is-open', ouvre);
     }
 </script>

@@ -1,6 +1,8 @@
 <?php
 @include_once("../donnees/categorie_flux_manuel.php");
 @include_once("donnees/categorie_flux_manuel.php");
+@include_once("../donnees/cout_service_charge.php");
+@include_once("donnees/cout_service_charge.php");
 @include_once(__DIR__ . '/../donnees/web_guard.php');
 
 CategorieFluxManuel::ensureOrdreAffichageColumn();
@@ -9,6 +11,18 @@ $id_aep = isset($_SESSION['id_aep']) ? (int) $_SESSION['id_aep'] : 0;
 $libele_aep = isset($_SESSION['libele_aep']) ? $_SESSION['libele_aep'] : '';
 $cfm_form_action = 'index.php?page=categories_flux_manuel';
 $cfm_ajax_reorder_url = 'traitement/categorie_flux_ordre_t.php';
+
+/**
+ * Inscrit une categorie de charge dans le calcul du cout du service, si la case
+ * correspondante etait cochee (elle l'est par defaut a la creation/duplication).
+ */
+function cfm_inscrire_dans_cout($id_aep, $id_categorie, $type_flux)
+{
+    if ($type_flux !== 'charge' || (int) $id_aep <= 0 || (int) $id_categorie <= 0) {
+        return;
+    }
+    CoutServiceCharge::ajouterCategorieALaSelection($id_aep, $id_categorie);
+}
 
 function cfm_redirect($query = array())
 {
@@ -56,7 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $categorie->type_flux = $_POST['type_flux'];
         $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
         $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
-        $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
+        // L'activite est un choix explicite : pas de repli silencieux sur « autre ».
+        $categorie->activite_associee = isset($_POST['activite_associee']) ? trim((string) $_POST['activite_associee']) : '';
+        if (!in_array($categorie->activite_associee, array('branchements', 'vente_eau', 'autre'), true)) {
+            cfm_redirect(array('error' => 'activite_obligatoire', 'cat' => isset($categorie->id) ? (int) $categorie->id : null));
+        }
         $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
         $categorie->ordre_affichage = CategorieFluxManuel::resolveOrdreAffichagePourCreation(
             $ordre_post,
@@ -66,6 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $categorie->id_aep = $id_aep;
         $categorie->ajouter();
         $new_id = (int) $categorie->id;
+        if (isset($_POST['inclure_cout_service']) && $_POST['inclure_cout_service'] == '1') {
+            cfm_inscrire_dans_cout($id_aep, $new_id, $categorie->type_flux);
+        }
         cfm_redirect(array('success' => '1', 'cat' => $new_id > 0 ? $new_id : null));
     }
 
@@ -84,7 +105,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $categorie->type_flux = $_POST['type_flux'];
         $categorie->description = isset($_POST['description']) ? $_POST['description'] : '';
         $categorie->est_actif = (isset($_POST['est_actif']) && $_POST['est_actif'] == '1') ? 1 : 0;
-        $categorie->activite_associee = isset($_POST['activite_associee']) ? $_POST['activite_associee'] : 'autre';
+        // L'activite est un choix explicite : pas de repli silencieux sur « autre ».
+        $categorie->activite_associee = isset($_POST['activite_associee']) ? trim((string) $_POST['activite_associee']) : '';
+        if (!in_array($categorie->activite_associee, array('branchements', 'vente_eau', 'autre'), true)) {
+            cfm_redirect(array('error' => 'activite_obligatoire', 'cat' => isset($categorie->id) ? (int) $categorie->id : null));
+        }
         $ordre_post = isset($_POST['ordre_affichage']) ? trim((string) $_POST['ordre_affichage']) : '';
         if ($ordre_post !== '' && (int) $ordre_post > 0) {
             $categorie->ordre_affichage = (int) $ordre_post;
@@ -106,8 +131,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         cfm_redirect(array('success' => '1', 'cat' => $categorie->id));
     }
 
+    // Bascule active/inactive : alternative non destructive a la suppression,
+    // l'historique des flux reste rattache a la categorie.
+    if ($action === 'toggle_actif') {
+        $toggle_id = (int) $_POST['id'];
+        $existant = CategorieFluxManuel::getById($toggle_id);
+        if ($existant) {
+            CategorieFluxManuel::setActif($toggle_id, empty($existant['est_actif']));
+        }
+        cfm_redirect(array('success' => '1', 'cat' => $toggle_id));
+    }
+
     if ($action === 'delete') {
         $del_id = (int) $_POST['id'];
+        // Garde-fou serveur : la suppression n'est acceptee que si l'utilisateur
+        // a bien recopie « Oui » dans la modale.
+        $confirmation = isset($_POST['confirmation']) ? trim((string) $_POST['confirmation']) : '';
+        if (strtolower($confirmation) !== 'oui') {
+            cfm_redirect(array('error' => 'confirmation_suppression', 'cat' => $del_id));
+        }
         $categorie = new CategorieFluxManuel();
         $categorie->delete($del_id);
         cfm_redirect(array('success' => '1'));
@@ -123,6 +165,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             cfm_redirect(array('error' => 'duplicate_vide'));
         }
         $dup = CategorieFluxManuel::duplicateCategoriesToAep($ids, $id_aep);
+        if (isset($_POST['inclure_cout_service']) && $_POST['inclure_cout_service'] == '1') {
+            foreach ($dup['created_ids'] as $cree) {
+                cfm_inscrire_dans_cout($cree['id_aep'], $cree['id'], $cree['type_flux']);
+            }
+        }
         $q = array(
             'success' => 'duplicate_import',
             'created' => (int) $dup['created'],
@@ -142,6 +189,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             cfm_redirect(array('error' => 'duplicate_vide'));
         }
         $dup = CategorieFluxManuel::duplicateCategoryToAeps($src_id, $aep_ids);
+        if (isset($_POST['inclure_cout_service']) && $_POST['inclure_cout_service'] == '1') {
+            foreach ($dup['created_ids'] as $cree) {
+                cfm_inscrire_dans_cout($cree['id_aep'], $cree['id'], $cree['type_flux']);
+            }
+        }
         cfm_redirect(array(
             'success' => 'duplicate',
             'cat' => $src_id,
@@ -284,6 +336,10 @@ function cfm_render_sidebar_row($cat, $selected_id, $activite_labels)
 
 function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep)
 {
+    // Action des formulaires de la page (bascule actif/inactif) : definie au niveau
+    // global, il faut l'importer explicitement dans la fonction.
+    global $cfm_form_action;
+
     $cat = $detail['categorie'];
     $bilan = $detail['bilan'];
     $transactions = $detail['transactions'];
@@ -321,8 +377,21 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
                         <i class="fas fa-copy me-1"></i>Dupliquer
                     </button>
                 <?php endif; ?>
+                <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" class="d-inline">
+                    <input type="hidden" name="action" value="toggle_actif">
+                    <input type="hidden" name="id" value="<?php echo $cat_id; ?>">
+                    <?php if ($cat['est_actif']): ?>
+                        <button type="submit" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-toggle-off me-1"></i>Désactiver
+                        </button>
+                    <?php else: ?>
+                        <button type="submit" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-toggle-on me-1"></i>Activer
+                        </button>
+                    <?php endif; ?>
+                </form>
                 <button type="button" class="btn btn-outline-danger btn-sm"
-                    onclick="confirmDelete(<?php echo $cat_id; ?>, '<?php echo htmlspecialchars(addslashes($cat['nom']), ENT_QUOTES, 'UTF-8'); ?>')">
+                    onclick="confirmDelete(<?php echo $cat_id; ?>, '<?php echo htmlspecialchars(addslashes($cat['nom']), ENT_QUOTES, 'UTF-8'); ?>', <?php echo $cat['est_actif'] ? 'true' : 'false'; ?>)">
                     <i class="fas fa-trash me-1"></i>Supprimer
                 </button>
             </div>
@@ -557,27 +626,48 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
     #categorieModal .cfm-modal-header {
         background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
         color: #fff;
-        padding: 1.25rem 1.5rem;
+        padding: 0.75rem 1.25rem;
         border: none;
     }
+    #categorieModal .cfm-back-btn {
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        border-radius: 8px;
+        line-height: 1;
+        padding: 0.3rem 0.55rem;
+    }
+    #categorieModal .cfm-back-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
     #categorieModal .cfm-modal-header .btn-close { filter: brightness(0) invert(1); opacity: 0.85; }
-    #categorieModal .cfm-modal-body { padding: 1.5rem; background: #f8fafc; }
+    #categorieModal .cfm-modal-body { padding: 1rem 1.25rem; background: #f8fafc; }
+    #categorieModal .modal-footer { padding: 0.6rem 1.25rem; }
     #categorieModal .cfm-field-card {
         background: #fff;
         border: 1px solid #e2e8f0;
         border-radius: 10px;
-        padding: 1rem 1.15rem;
-        margin-bottom: 1rem;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.65rem;
     }
     #categorieModal .cfm-field-card h6 {
         font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         color: #64748b;
-        margin-bottom: 0.75rem;
+        margin-bottom: 0.5rem;
         font-weight: 600;
     }
     #duplicateAepModal .dup-aep-row.disabled { opacity: 0.55; background: #f8f9fa; }
+    /* Option « coût du service » des modales de duplication : elle doit rester
+       lisible entre la liste scrollable et les boutons du pied. */
+    .cfm-dup-option {
+        background: #e8f0fe;
+        border: 1px solid #aecbfa;
+        border-radius: 8px;
+        padding: 0.6rem 0.85rem;
+        margin: 0 1.25rem 0.75rem;
+    }
+    .cfm-dup-option .form-check-label { color: #174ea6; font-size: 0.85rem; }
+    .cfm-dup-option .form-check-input:checked { background-color: #1a73e8; border-color: #1a73e8; }
+    #duplicateAepModal .cfm-dup-option { margin-left: 0; margin-right: 0; }
     #categorieModal .modal-dialog.cfm-dup-dialog {
         max-width: 920px;
         width: calc(100% - 2rem);
@@ -688,6 +778,12 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
         <?php if (isset($_GET['error']) && $_GET['error'] === 'code_obligatoire'): ?>
             <div class="alert alert-danger alert-dismissible fade show py-2">Le code budgétaire est obligatoire.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
         <?php endif; ?>
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'activite_obligatoire'): ?>
+            <div class="alert alert-danger alert-dismissible fade show py-2">L'activité associée doit être choisie (AS, VE ou Autre).<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
+        <?php if (isset($_GET['error']) && $_GET['error'] === 'confirmation_suppression'): ?>
+            <div class="alert alert-danger alert-dismissible fade show py-2">Suppression annulée : la confirmation « Oui » n'a pas été saisie.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+        <?php endif; ?>
         <?php if (isset($_GET['error']) && $_GET['error'] === 'no_aep'): ?>
             <div class="alert alert-warning alert-dismissible fade show py-2">Sélectionnez un AEP en session pour importer des catégories.<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
         <?php endif; ?>
@@ -712,7 +808,12 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
     <div class="modal-dialog modal-lg modal-dialog-centered" id="categorieModalDialog">
         <div class="modal-content">
             <div class="modal-header cfm-modal-header">
-                <div>
+                <!-- Retour place dans l'entete : il ne consomme plus de hauteur dans
+                     le corps du formulaire, deja dense. -->
+                <button type="button" class="btn btn-sm cfm-back-btn me-2" id="cfmBackToChoice" title="Retour">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <div class="me-auto">
                     <h5 class="modal-title mb-0" id="modalTitle">Nouvelle catégorie</h5>
                     <p class="small mb-0 opacity-75" id="modalSubtitle">Que souhaitez-vous faire ?</p>
                 </div>
@@ -746,9 +847,6 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
             <div id="cfmPaneCreate" class="d-none">
                 <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="categorieForm">
                     <div class="modal-body cfm-modal-body">
-                        <button type="button" class="btn btn-link btn-sm text-secondary px-0 mb-2" id="cfmBackToChoice">
-                            <i class="bi bi-arrow-left me-1"></i>Retour
-                        </button>
                         <input type="hidden" name="action" id="formAction" value="create">
                         <input type="hidden" name="id" id="formId">
                     <div class="cfm-field-card">
@@ -779,22 +877,41 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
                                 <input type="number" class="form-control" id="ordre_affichage" name="ordre_affichage" min="1" placeholder="Auto">
                             </div>
                             <div class="col-md-4">
-                                <label for="activite_associee" class="form-label">Activité</label>
+                                <label for="activite_associee" class="form-label">Activité <span class="text-danger">*</span></label>
                                 <select class="form-select" id="activite_associee" name="activite_associee" required>
+                                    <!-- Valeur vide en premier : l'activite conditionne le rattachement
+                                         comptable, elle doit etre un choix explicite et non un defaut. -->
+                                    <option value="" selected disabled>Choisir une activité…</option>
                                     <option value="branchements">AS — Abonnement service</option>
                                     <option value="vente_eau">VE — Vente d'eau</option>
                                     <option value="autre">Autre</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-check form-switch mt-3">
-                            <input type="checkbox" class="form-check-input" id="est_actif" name="est_actif" value="1" checked>
-                            <label class="form-check-label" for="est_actif">Catégorie active</label>
+                        <div class="row g-3 mt-0">
+                            <div class="col-md-5">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" id="est_actif" name="est_actif" value="1" checked>
+                                    <label class="form-check-label" for="est_actif">Catégorie active</label>
+                                </div>
+                            </div>
+                            <!-- Charges seulement : inscrit la nouvelle categorie dans la
+                                 selection du cout du service (page analyse financiere). -->
+                            <div class="col-md-7" id="coutServiceWrap">
+                                <div class="form-check form-switch">
+                                    <input type="checkbox" class="form-check-input" id="inclure_cout_service"
+                                        name="inclure_cout_service" value="1" checked>
+                                    <label class="form-check-label" for="inclure_cout_service"
+                                        title="La catégorie est comptée dès maintenant dans le coût par m³.">
+                                        Utiliser dans le calcul du coût du service
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="cfm-field-card mb-0">
                         <h6>Description</h6>
-                        <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        <textarea class="form-control" id="description" name="description" rows="2"></textarea>
                     </div>
                     </div>
                     <div class="modal-footer bg-white border-top">
@@ -818,9 +935,6 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
                         <input type="hidden" name="redirect_cat" value="<?php echo (int) $selected_id; ?>">
                     <?php endif; ?>
                     <div class="modal-body cfm-modal-body cfm-dup-scroll">
-                        <button type="button" class="btn btn-link btn-sm text-secondary px-0 mb-2" id="cfmBackFromDuplicate">
-                            <i class="bi bi-arrow-left me-1"></i>Retour
-                        </button>
                     <p class="text-muted small">
                         Cochez les catégories à copier depuis les autres AEP.
                         Les doublons (même code budgétaire et type) déjà présents sur votre AEP sont grisés.
@@ -919,6 +1033,17 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
                         <?php endforeach; ?>
                     </div>
                     </div>
+                    <!-- Bandeau distinct, juste au-dessus du pied : sans cadre l'option
+                         se perdait entre la liste scrollable et les boutons. -->
+                    <div class="cfm-dup-option">
+                        <div class="form-check form-switch mb-0">
+                            <input type="checkbox" class="form-check-input" id="dupInclureCout"
+                                name="inclure_cout_service" value="1" checked>
+                            <label class="form-check-label fw-semibold" for="dupInclureCout">
+                                <i class="bi bi-calculator me-1"></i>Utiliser les copies (charges) dans le calcul du coût du service
+                            </label>
+                        </div>
+                    </div>
                     <div class="modal-footer bg-white border-top">
                         <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
                         <button type="submit" class="btn btn-primary" id="dupFromSubmitBtn">
@@ -955,6 +1080,15 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
                         Les AEP qui ont déjà le code <strong><?php echo htmlspecialchars($detail['categorie']['code_budgetaire'], ENT_QUOTES, 'UTF-8'); ?></strong>
                         sont grisés.
                     </p>
+                    <div class="cfm-dup-option mb-3">
+                        <div class="form-check form-switch mb-0">
+                            <input type="checkbox" class="form-check-input" id="dupAepInclureCout"
+                                name="inclure_cout_service" value="1" checked>
+                            <label class="form-check-label fw-semibold" for="dupAepInclureCout">
+                                <i class="bi bi-calculator me-1"></i>Utiliser les copies (charges) dans le calcul du coût du service de chaque AEP
+                            </label>
+                        </div>
+                    </div>
                     <div class="d-flex gap-2 mb-3">
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="dupAepSelectAll">Tout cocher</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="dupAepSelectNone">Tout décocher</button>
@@ -994,14 +1128,42 @@ function cfm_render_detail($detail, $type_flux_labels, $activite_labels, $id_aep
             </div>
             <div class="modal-body">
                 <p>Supprimer la catégorie <strong id="deleteCategorieNom"></strong> ?</p>
-                <p class="small text-muted mb-0">Les flux associés ne seront pas supprimés mais perdront leur catégorie.</p>
+
+                <div class="alert alert-warning small">
+                    <div class="fw-bold mb-1"><i class="fas fa-exclamation-triangle me-1"></i>La suppression est définitive</div>
+                    <ul class="mb-2 ps-3">
+                        <li>Les flux financiers déjà saisis ne sont pas supprimés, mais ils
+                            <strong>perdent leur catégorie</strong> et basculent en « sorties sans catégorie ».</li>
+                        <li>Leur rattachement d'origine est perdu : il faudra les recatégoriser un par un.</li>
+                    </ul>
+                    <div class="fw-bold mb-1">Mieux vaut désactiver la catégorie</div>
+                    <ul class="mb-0 ps-3">
+                        <li>Elle n'est plus proposée à la saisie de nouvelles transactions.</li>
+                        <li>Elle disparaît des lignes du compte d'exploitation et de la synthèse.</li>
+                        <li>Elle reste visible ici, en bas de liste, et se réactive en un clic.</li>
+                        <li>Aucun flux n'est touché : le rattachement est conservé.</li>
+                    </ul>
+                </div>
+
+                <label for="deleteConfirmation" class="form-label small fw-bold">
+                    Pour confirmer la suppression, écrivez <code>Oui</code> :
+                </label>
+                <input type="text" class="form-control" id="deleteConfirmation" name="confirmation"
+                    form="deleteForm" autocomplete="off" placeholder="Oui">
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="deleteToggleForm" class="d-inline">
+                    <input type="hidden" name="action" value="toggle_actif">
+                    <input type="hidden" name="id" id="deleteToggleCategorieId">
+                    <button type="submit" class="btn btn-warning" id="deleteToggleBtn">
+                        <i class="fas fa-toggle-off me-1"></i>Désactiver plutôt
+                    </button>
+                </form>
                 <form method="post" action="<?php echo htmlspecialchars($cfm_form_action, ENT_QUOTES, 'UTF-8'); ?>" id="deleteForm" class="d-inline">
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="id" id="deleteCategorieId">
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                    <button type="submit" class="btn btn-danger" id="deleteSubmitBtn" disabled>Supprimer</button>
                 </form>
             </div>
         </div>
@@ -1022,12 +1184,13 @@ function cfmShowPane(pane) {
     var footerChoice = document.getElementById('cfmFooterChoice');
     var dialog = document.getElementById('categorieModalDialog');
     var backCreate = document.getElementById('cfmBackToChoice');
-    var backDup = document.getElementById('cfmBackFromDuplicate');
 
     if (choice) choice.classList.add('d-none');
     if (create) create.classList.add('d-none');
     if (dup) dup.classList.add('d-none');
     if (footerChoice) footerChoice.classList.add('d-none');
+
+    if (backCreate) backCreate.style.display = 'none';
 
     if (pane === 'choice' && choice) {
         choice.classList.remove('d-none');
@@ -1055,6 +1218,7 @@ function cfmShowPane(pane) {
         }
     } else if (pane === 'duplicate' && dup) {
         dup.classList.remove('d-none');
+        if (backCreate) backCreate.style.display = '';
         document.getElementById('modalTitle').textContent = 'Dupliquer depuis d\'autres AEP';
         document.getElementById('modalSubtitle').textContent = 'Vers votre réseau actuel';
         if (dialog) {
@@ -1073,8 +1237,10 @@ function cfmResetCreateForm() {
         document.getElementById(id).value = '';
     });
     document.getElementById('type_flux').value = 'charge';
-    document.getElementById('activite_associee').value = 'autre';
+    document.getElementById('activite_associee').value = '';
     document.getElementById('est_actif').checked = true;
+    document.getElementById('inclure_cout_service').checked = true;
+    cfmMajCoutServiceField();
 }
 
 function cfmOpenNewModal() {
@@ -1180,6 +1346,7 @@ function editCategorie(categorie) {
     document.getElementById('description').value = categorie.description || '';
     document.getElementById('ordre_affichage').value = categorie.ordre_affichage !== undefined ? categorie.ordre_affichage : '';
     document.getElementById('est_actif').checked = (categorie.est_actif == 1 || categorie.est_actif == '1');
+    cfmMajCoutServiceField();
     var btnAll = document.getElementById('btnUpdateAllAep');
     if (btnAll) {
         btnAll.style.display = (cfmNbMemeCode > 1) ? 'inline-block' : 'none';
@@ -1209,13 +1376,50 @@ document.getElementById('categorieModal').addEventListener('hidden.bs.modal', fu
     }
 });
 
-function confirmDelete(id, nom) {
+// La case « coût du service » ne concerne que la creation d'une charge :
+// masquee en modification et pour les recettes.
+function cfmMajCoutServiceField() {
+    var wrap = document.getElementById('coutServiceWrap');
+    if (!wrap) return;
+    var estCharge = document.getElementById('type_flux').value === 'charge';
+    var estCreation = document.getElementById('formAction').value === 'create';
+    wrap.style.display = (estCharge && estCreation) ? '' : 'none';
+}
+
+function confirmDelete(id, nom, estActif) {
     document.getElementById('deleteCategorieId').value = id;
+    document.getElementById('deleteToggleCategorieId').value = id;
     document.getElementById('deleteCategorieNom').textContent = nom;
+
+    // Le bouton de bascule suit l'etat courant : desactiver une categorie active,
+    // reactiver une categorie deja desactivee.
+    var toggleBtn = document.getElementById('deleteToggleBtn');
+    if (estActif === false) {
+        toggleBtn.className = 'btn btn-success';
+        toggleBtn.innerHTML = '<i class="fas fa-toggle-on me-1"></i>Activer';
+    } else {
+        toggleBtn.className = 'btn btn-warning';
+        toggleBtn.innerHTML = '<i class="fas fa-toggle-off me-1"></i>Désactiver plutôt';
+    }
+
+    // La suppression reste bloquee tant que « Oui » n'est pas recopie.
+    var champ = document.getElementById('deleteConfirmation');
+    var btn = document.getElementById('deleteSubmitBtn');
+    champ.value = '';
+    btn.disabled = true;
+    champ.oninput = function () {
+        btn.disabled = champ.value.trim().toLowerCase() !== 'oui';
+    };
+
     new bootstrap.Modal(document.getElementById('deleteModal')).show();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    var typeFluxSelect = document.getElementById('type_flux');
+    if (typeFluxSelect) {
+        typeFluxSelect.addEventListener('change', cfmMajCoutServiceField);
+        cfmMajCoutServiceField();
+    }
     initCfmDragDrop();
 
     var btnNew = document.getElementById('btnNouvelleCategorie');
@@ -1238,12 +1442,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var backCreate = document.getElementById('cfmBackToChoice');
     if (backCreate) {
         backCreate.addEventListener('click', function () {
-            cfmShowPane('choice');
-        });
-    }
-    var backDup = document.getElementById('cfmBackFromDuplicate');
-    if (backDup) {
-        backDup.addEventListener('click', function () {
             cfmShowPane('choice');
         });
     }

@@ -94,6 +94,46 @@ if ($action === 'save') {
     exit;
 }
 
+// Simulation a partir d'une selection choisie a la main dans la modale : la meme
+// selection est appliquee a tous les mois de la periode, sans rien enregistrer.
+if ($action === 'simulate_selection') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(array('ok' => false, 'error' => 'Méthode non autorisée.'));
+        exit;
+    }
+    Csrf::requireValid('Jeton CSRF invalide.', true);
+
+    $mois_debut = isset($_POST['mois_debut']) ? $_POST['mois_debut'] : '';
+    $mois_fin = isset($_POST['mois_fin']) ? $_POST['mois_fin'] : '';
+    if (!csc_mois_valide($mois_debut) || !csc_mois_valide($mois_fin)) {
+        echo json_encode(array('ok' => false, 'error' => 'Paramètres invalides.'));
+        exit;
+    }
+
+    $selection = array(
+        'categories' => isset($_POST['categories']) && is_array($_POST['categories']) ? array_map('intval', $_POST['categories']) : array(),
+        'redevances' => isset($_POST['redevances']) && is_array($_POST['redevances']) ? array_map('intval', $_POST['redevances']) : array(),
+        'sans_categorie' => !empty($_POST['sans_categorie']),
+    );
+
+    $moisList = CoutServiceCharge::getMoisListPeriode($id_aep, $mois_debut, $mois_fin);
+    $mois = array();
+    $coutParM3 = array();
+    foreach ($moisList as $m) {
+        $cout = CoutServiceCharge::calculerCoutMois($id_aep, $m, $selection);
+        $mois[] = $m;
+        $coutParM3[] = round($cout['cout_par_m3'], 2);
+    }
+
+    echo json_encode(array(
+        'ok' => true,
+        'mois' => $mois,
+        'cout_par_m3' => $coutParM3,
+        'nb_charges' => count($selection['categories']) + count($selection['redevances']) + ($selection['sans_categorie'] ? 1 : 0),
+    ));
+    exit;
+}
+
 if ($action === 'simulate') {
     $mois_source = isset($_GET['mois_source']) ? $_GET['mois_source'] : '';
     $mois_debut = isset($_GET['mois_debut']) ? $_GET['mois_debut'] : '';
