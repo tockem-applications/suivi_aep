@@ -77,6 +77,62 @@ class CoutServiceCharge
     }
 
     /**
+     * Ajoute une categorie a la selection des charges du cout du service.
+     *
+     * Elle est ajoutee au mois configure le plus recent : les mois suivants, qui
+     * n'ont pas de configuration propre, en heritent — la categorie compte donc
+     * des maintenant sans que l'historique deja configure soit reecrit. Si l'AEP
+     * n'a encore aucun mois configure, on fige la selection historique du mois en
+     * cours en y ajoutant la nouvelle categorie.
+     *
+     * @return bool true si la categorie a ete ajoutee
+     */
+    public static function ajouterCategorieALaSelection($id_aep, $id_categorie)
+    {
+        self::ensureTable();
+        $id_aep = (int) $id_aep;
+        $id_categorie = (int) $id_categorie;
+        if ($id_aep <= 0 || $id_categorie <= 0) {
+            return false;
+        }
+
+        $row = Manager::prepare_query(
+            "SELECT mois FROM cout_service_charge_mois WHERE id_aep = ? ORDER BY mois DESC LIMIT 1",
+            array($id_aep)
+        )->fetch(PDO::FETCH_ASSOC);
+
+        if ($row) {
+            $mois = $row['mois'];
+            $deja = Manager::prepare_query(
+                "SELECT id FROM cout_service_charge_mois
+                 WHERE id_aep = ? AND mois = ? AND type_element = ? AND id_element = ?",
+                array($id_aep, $mois, self::TYPE_CATEGORIE, $id_categorie)
+            )->fetch(PDO::FETCH_ASSOC);
+            if ($deja) {
+                return true;
+            }
+            Manager::prepare_query(
+                "INSERT INTO cout_service_charge_mois (id_aep, mois, type_element, id_element) VALUES (?, ?, ?, ?)",
+                array($id_aep, $mois, self::TYPE_CATEGORIE, $id_categorie)
+            );
+            return true;
+        }
+
+        $selection = self::legacyDefaultSelection($id_aep);
+        if (!in_array($id_categorie, $selection['categories'], true)) {
+            $selection['categories'][] = $id_categorie;
+        }
+        self::saveSelection(
+            $id_aep,
+            date('Y-m'),
+            $selection['categories'],
+            $selection['redevances'],
+            $selection['sans_categorie']
+        );
+        return true;
+    }
+
+    /**
      * Sélection explicitement enregistrée pour ce mois exact (null si aucune ligne).
      *
      * @return array{categories:int[], redevances:int[], sans_categorie:bool}|null
@@ -325,6 +381,10 @@ class CoutServiceCharge
      * Consommation totale (m³) et prix moyen du m³ pour un mois (indépendant de la
      * sélection de charges — mêmes règles que l'ancien calcul de analyse_financiere_page).
      *
+     * Seuls les compteurs d'abonnés BP et BF sont comptés : la table `indexes`
+     * contient aussi les relevés des compteurs de réseau (production,
+     * distribution), qui gonfleraient le volume et fausseraient le coût au m³.
+     *
      * @return array{total_conso:float, prix_moyen_m3:float}
      */
     public static function calculerConsommationEtPrixMoyen($id_aep, $mois)
@@ -336,6 +396,8 @@ class CoutServiceCharge
                 i.nouvel_index - i.ancien_index AS conso,
                 COALESCE(td.prix_metre_cube_eau, cr.prix_metre_cube_eau) AS prix_m3
             FROM indexes i
+            INNER JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
+            INNER JOIN abone a ON a.id = ca.id_abone
             INNER JOIN mois_facturation mf ON i.id_mois_facturation = mf.id
             INNER JOIN constante_reseau cr ON mf.id_constante = cr.id
             LEFT JOIN tarif_differencie td ON i.id_tarif_differencie = td.id
@@ -343,6 +405,7 @@ class CoutServiceCharge
             AND mf.mois = ?
             AND mf.est_mois_base = 0
             AND (i.nouvel_index - i.ancien_index) > 0
+            AND COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') IN ('BP', 'BF')
         ";
         $rows = Manager::prepare_query($query_prix_moyen, array($id_aep, $mois))->fetchAll(PDO::FETCH_ASSOC);
 
@@ -373,9 +436,12 @@ class CoutServiceCharge
         $row_conso = Manager::prepare_query(
             "SELECT SUM(i.nouvel_index - i.ancien_index) AS total_conso
              FROM indexes i
+             INNER JOIN compteur_abone ca ON ca.id_compteur = i.id_compteur
+             INNER JOIN abone a ON a.id = ca.id_abone
              INNER JOIN mois_facturation mf ON i.id_mois_facturation = mf.id
              INNER JOIN constante_reseau cr ON mf.id_constante = cr.id
-             WHERE cr.id_aep = ? AND mf.mois = ? AND mf.est_mois_base = 0",
+             WHERE cr.id_aep = ? AND mf.mois = ? AND mf.est_mois_base = 0
+             AND COALESCE(NULLIF(TRIM(a.type_abone), ''), 'BP') IN ('BP', 'BF')",
             array($id_aep, $mois)
         )->fetch(PDO::FETCH_ASSOC);
         $total_conso = $row_conso ? (float) $row_conso['total_conso'] : 0.0;

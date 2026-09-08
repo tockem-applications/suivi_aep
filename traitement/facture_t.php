@@ -1804,6 +1804,51 @@ class Facture_t
         ob_start();
         ?>
             <div class="facture_abone mt-0">
+            <style>
+                /* Facture compacte : un peu plus d'air que la version serree,
+                   mais tout doit continuer a tenir sur une seule page. */
+                .facture_abone .table th,
+                .facture_abone .table td {
+                    padding-top: .3rem;
+                    padding-bottom: .3rem;
+                    line-height: 1.25;
+                }
+
+                .facture_abone .table {
+                    margin-bottom: 0;
+                }
+
+                .facture_abone .logo_commune img,
+                .facture_abone .logo_amgeea img {
+                    height: 17vh !important;
+                }
+
+                .facture_abone .mt-2 {
+                    margin-top: .55rem !important;
+                }
+
+                .facture_abone .mt-3 {
+                    margin-top: .7rem !important;
+                }
+
+                .facture_abone .my-2 {
+                    margin-top: .55rem !important;
+                    margin-bottom: .55rem !important;
+                }
+
+                @media print {
+                    /* Une facture ne doit jamais etre coupee en deux pages. */
+                    .facture_abone {
+                        page-break-inside: avoid;
+                        break-inside: avoid;
+                    }
+
+                    .facture_abone .logo_commune img,
+                    .facture_abone .logo_amgeea img {
+                        height: 80px !important;
+                    }
+                }
+            </style>
                 <div class="row">
                     <div class="logo_commune col d-flex align-items-center text-center justify-content-between text-success">
                         <img src="presentation/assets/images/logo_tockem.png" height="" style="height: 25vh" class="col-12"
@@ -1974,21 +2019,6 @@ class Facture_t
                         </tr>
                     </table>
 
-                    <?php if (!empty($codes_marchands)): ?>
-                        <!-- Paiement mobile : la syntaxe USSD est reproduite telle
-                             quelle, l'abonne la recopie chiffre pour chiffre. -->
-                        <div class="d-flex justify-content-center my-2">
-                            <div class="col-11 text-center"
-                                style="border: 2px dashed #2F5597; border-radius: 10px; padding: 6px 10px;">
-                                <div class="fw-bold" style="color: #2F5597;">Payer par téléphone</div>
-                                <?php foreach ($codes_marchands as $code): ?>
-                                    <div class="fs-5 fw-bold" style="font-family: Consolas, monospace;">
-                                        <?php echo htmlspecialchars($code, ENT_QUOTES, 'UTF-8'); ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
 
                     <div class="text-center fs-">
                         <span>Pour rapporter un dysfonctionnement sur le réseau, contactez le 670 02 90 33</span><br>
@@ -2003,6 +2033,37 @@ class Facture_t
                             Le payement de votre facture dans les délais est le garant d’un service d’eau potable durable
                         </div>
                     </div>
+
+                    <?php if (!empty($codes_marchands)): ?>
+                        <!-- Paiement mobile : la syntaxe USSD est reproduite telle
+                             quelle, l'abonne la recopie chiffre pour chiffre. -->
+                        <div class="d-flex justify-content-center my-2">
+                            <div class="col-11 text-center"
+                                style="border: 2px dashed #2F5597; border-radius: 10px; padding: 6px 10px;">
+                                <div class="fw-bold" style="color: #2F5597;">Payer par téléphone</div>
+                                <?php foreach ($codes_marchands as $code): ?>
+                                    <!-- Le code marchand est saisi dans un textarea : chaque retour
+                                         a la ligne devient une ligne. La premiere porte le code a
+                                         composer, elle reste la plus lisible ; les suivantes sont
+                                         des precisions. -->
+                                    <?php
+                                    $lignes_code = preg_split('/
+
+|
+|
+/', $code);
+                                    ?>
+                                    <div style="font-family: Consolas, monospace;">
+                                        <?php foreach ($lignes_code as $i => $ligne_code): ?>
+                                            <div class="<?php echo $i === 0 ? 'fs-4 fw-bold' : 'fs-6'; ?>">
+                                                <?php echo htmlspecialchars($ligne_code, ENT_QUOTES, 'UTF-8'); ?>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
 
                 </div>

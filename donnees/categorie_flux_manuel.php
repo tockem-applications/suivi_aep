@@ -121,6 +121,18 @@ class CategorieFluxManuel extends Manager
     }
 
     /**
+     * Active ou desactive une categorie (archivage doux : les flux deja saisis
+     * gardent leur rattachement, seule la visibilite change).
+     */
+    public static function setActif($id, $actif)
+    {
+        return self::prepare_query(
+            "UPDATE categorie_flux_manuel SET est_actif = ? WHERE id = ?",
+            array($actif ? 1 : 0, (int) $id)
+        );
+    }
+
+    /**
      * Récupère toutes les catégories actives
      */
     public static function getAllActives($type_flux = null, $id_aep = null)
@@ -234,9 +246,12 @@ class CategorieFluxManuel extends Manager
         $created = 0;
         $skipped = 0;
         $errors = 0;
+        // Couples (aep, categorie) crees : l'appelant en a besoin pour, par exemple,
+        // inscrire aussitot la copie dans le calcul du cout du service.
+        $created_ids = array();
 
         if ($id_aep_cible <= 0) {
-            return array('created' => 0, 'skipped' => 0, 'errors' => 1);
+            return array('created' => 0, 'skipped' => 0, 'errors' => 1, 'created_ids' => array());
         }
 
         foreach ($source_ids as $raw_id) {
@@ -269,9 +284,14 @@ class CategorieFluxManuel extends Manager
             $categorie->id_aep = $id_aep_cible;
             $categorie->ajouter();
             $created++;
+            $created_ids[] = array(
+                'id_aep' => $id_aep_cible,
+                'id' => (int) $categorie->id,
+                'type_flux' => $categorie->type_flux,
+            );
         }
 
-        return array('created' => $created, 'skipped' => $skipped, 'errors' => $errors);
+        return array('created' => $created, 'skipped' => $skipped, 'errors' => $errors, 'created_ids' => $created_ids);
     }
 
     /**
@@ -614,9 +634,10 @@ class CategorieFluxManuel extends Manager
         $created = 0;
         $skipped = 0;
         $errors = 0;
+        $created_ids = array();
 
         if (!$src || empty($src['code_budgetaire'])) {
-            return array('created' => 0, 'skipped' => 0, 'errors' => 1);
+            return array('created' => 0, 'skipped' => 0, 'errors' => 1, 'created_ids' => array());
         }
 
         $source_aep = isset($src['id_aep']) ? (int) $src['id_aep'] : 0;
@@ -646,9 +667,14 @@ class CategorieFluxManuel extends Manager
             $categorie->id_aep = $id_aep;
             $categorie->ajouter();
             $created++;
+            $created_ids[] = array(
+                'id_aep' => $id_aep,
+                'id' => (int) $categorie->id,
+                'type_flux' => $categorie->type_flux,
+            );
         }
 
-        return array('created' => $created, 'skipped' => $skipped, 'errors' => $errors);
+        return array('created' => $created, 'skipped' => $skipped, 'errors' => $errors, 'created_ids' => $created_ids);
     }
 
     /**
