@@ -107,6 +107,16 @@ class DatabaseUpdaterAll
                 'method' => 'updateDatabase',
                 'version' => '10.0.0',
                 'date' => '2025'
+            ),
+            // Mise à jour 6: Rapport d'exploitation (commentaires libres persistés par période)
+            array(
+                'name' => "Rapport d'exploitation",
+                'description' => "Table des commentaires libres saisis dans le rapport d'exploitation",
+                'file' => __DIR__ . DIRECTORY_SEPARATOR . 'update_database_rapport_exploitation.php',
+                'class' => 'DatabaseUpdaterRapportExploitation',
+                'method' => 'updateDatabase',
+                'version' => '10.1.0',
+                'date' => '2026'
             )
             // Ajouter ici les futures mises à jour dans l'ordre chronologique
             // Exemple:

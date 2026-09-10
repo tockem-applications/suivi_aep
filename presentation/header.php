@@ -42,8 +42,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                     (BP)</a></li>
                             <li><a class="dropdown-item" href="?page=borne_fontaine"><i
                                         class="bi bi-droplet me-2"></i>Bornes Fontaines</a></li>
-                            <!-- <li><a class="dropdown-item" href="?page=cartographie"><i
-                                        class="bi bi-geo-alt me-2"></i>Cartographie</a></li> -->
+                            <li><a class="dropdown-item" href="?page=cartographie"><i
+                                        class="bi bi-geo-alt me-2"></i>Cartographie</a></li>
                             <!-- <li><a class="dropdown-item" href="?page=affectation_coordonnees"><i
                                         class="bi bi-pin-map me-2"></i>Affecter des coordonnées</a></li> -->
                             <!--                            <li><a class="dropdown-item" href="?form=reseau">Nouveau réseau</a></li>-->
@@ -113,6 +113,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                         class="bi bi-columns-gap me-2"></i>Synthèse compte d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=analyse_financiere"><i
                                         class="bi bi-graph-up me-2"></i>Analyse Financière</a></li>
+                            <!-- <li><a class="dropdown-item" href="?page=rapport_exploitation"><i
+                                        class="bi bi-file-earmark-word me-2"></i>Rapport d'exploitation</a></li> -->
                             <li><a class="dropdown-item" href="?page=config_compte_rendu"><i
                                         class="bi bi-gear me-2"></i>Config. Compte Rendu</a></li>
                             <li><a class="dropdown-item" href="?page=categories_flux_manuel"><i
