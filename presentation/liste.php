@@ -430,6 +430,8 @@ if (isset($_GET['list'])) {
         require_once 'presentation/synthese_compte_exploitation_page.php';
     } else if ($_GET['page'] == 'analyse_financiere') {
         require_once 'presentation/analyse_financiere_page.php';
+    } else if ($_GET['page'] == 'rapport_exploitation') {
+        require_once 'presentation/rapport_exploitation_page.php';
     } else if ($_GET['page'] == 'cartographie') {
         require_once 'presentation/cartographie_page.php';
     } else if ($_GET['page'] == 'affectation_coordonnees') {
