@@ -78,6 +78,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                         class="bi bi-journal-text me-2"></i>Relèves</a></li>
                             <li><a class="dropdown-item" href="index.php?page=penalites"><i
                                         class="bi bi-exclamation-triangle text-warning me-2"></i>Pénalités</a></li>
+                            <li><a class="dropdown-item" href="index.php?page=avis_coupure"><i
+                                        class="bi bi-scissors text-danger me-2"></i>Avis de coupure</a></li>
                             <li><a class="dropdown-item" href="index.php?list=mois_facturation"><i
                                         class="bi bi-calendar-month me-2"></i>Mois Facturés</a></li>
                             <li><a class="dropdown-item" href="index.php?page=reseau"><i
