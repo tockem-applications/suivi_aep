@@ -59,13 +59,24 @@ if (!$aepId) {
         'nom' => 'a.nom',
         'reseau' => 'nom_reseau',
         'restant' => 'total_restant',
-        'nb_mois' => 'nb_mois_factures'
+        'nb_mois' => 'nb_mois_factures',
+        // Tri actifs / non actifs : 0 = actif, 1 = non actif (inactif, suspendu, ...)
+        'etat' => "CASE WHEN LOWER(TRIM(a.etat)) = 'actif' THEN 0 ELSE 1 END"
+    );
+    // Tri secondaire appliqué avant le tri final par nom
+    $allowedSecondarySorts = array(
+        // Regroupe les non actifs par état (inactif, suspendu, ...)
+        'etat' => 'a.etat ASC'
     );
     $orderExprPrimary = 'COALESCE(a.nom, 999999)';
     if ($sortBy !== '' && isset($allowedSorts[$sortBy])) {
         $orderExprPrimary = $allowedSorts[$sortBy];
     }
     $orderDirSql = (strtolower($sortDir) === 'desc') ? 'DESC' : 'ASC';
+    $orderExprSecondary = '';
+    if ($sortBy !== '' && isset($allowedSecondarySorts[$sortBy])) {
+        $orderExprSecondary = ', ' . $allowedSecondarySorts[$sortBy];
+    }
 
     // Récupérer tous les abonnés pour l'AEP avec statistiques et filtres
     $abonnes = Manager::prepare_query(
@@ -79,7 +90,7 @@ if (!$aepId) {
          FROM abone a
          INNER JOIN reseau r ON a.id_reseau = r.id
          WHERE $whereClause 
-         ORDER BY " . $orderExprPrimary . " " . $orderDirSql . ", a.nom ASC",
+         ORDER BY " . $orderExprPrimary . " " . $orderDirSql . $orderExprSecondary . ", a.nom ASC",
         $params
     )->fetchAll();
     $nbAbonnes = count($abonnes);
@@ -219,14 +230,20 @@ if ($aepId) {
                         <option value="reseau" <?php echo $sortBy == 'reseau' ? 'selected' : ''; ?>>Réseau</option>
                         <option value="restant" <?php echo $sortBy == 'restant' ? 'selected' : ''; ?>>Reste à payer</option>
                         <option value="nb_mois" <?php echo $sortBy == 'nb_mois' ? 'selected' : ''; ?>>Mois facturés</option>
+                        <option value="etat" <?php echo $sortBy == 'etat' ? 'selected' : ''; ?>>État (actifs / non actifs)</option>
                     </select>
                 </div>
 
                 <div class="col-md-2">
                     <label for="sort_dir" class="form-label">Ordre</label>
+                    <?php
+                    // Pour le tri par état, on explicite ce que donnent l'ordre croissant / décroissant
+                    $labelAsc = ($sortBy == 'etat') ? 'Actifs d\'abord' : 'Croissant';
+                    $labelDesc = ($sortBy == 'etat') ? 'Non actifs d\'abord' : 'Décroissant';
+                    ?>
                     <select class="form-control" id="sort_dir" name="sort_dir">
-                        <option value="asc" <?php echo strtolower($sortDir) == 'asc' ? 'selected' : ''; ?>>Croissant</option>
-                        <option value="desc" <?php echo strtolower($sortDir) == 'desc' ? 'selected' : ''; ?>>Décroissant
+                        <option value="asc" <?php echo strtolower($sortDir) == 'asc' ? 'selected' : ''; ?>><?php echo $labelAsc; ?></option>
+                        <option value="desc" <?php echo strtolower($sortDir) == 'desc' ? 'selected' : ''; ?>><?php echo $labelDesc; ?>
                         </option>
                     </select>
                 </div>
@@ -260,6 +277,9 @@ if ($aepId) {
             }
             if (!empty($searchNom)) {
                 $filtresActifs[] = 'Nom: ' . htmlspecialchars($searchNom);
+            }
+            if ($sortBy == 'etat') {
+                $filtresActifs[] = 'Tri: état (' . (strtolower($sortDir) == 'desc' ? 'non actifs d\'abord' : 'actifs d\'abord') . ')';
             }
             if (!empty($filtresActifs)) {
                 ?>
