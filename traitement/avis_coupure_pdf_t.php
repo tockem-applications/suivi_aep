@@ -47,6 +47,7 @@ if (!$moisAutorise) {
 
 $libelleMois = function_exists('getLetterMonth') ? getLetterMonth($moisAutorise['mois']) : (string) $moisAutorise['mois'];
 $campagne = AvisCoupure::getCampagne($aepId, $id_mois);
+// Les abonnés déjà rétablis ne reçoivent plus d'avis : ils sont exclus.
 $avis = AvisCoupure::getAvis($aepId, $id_mois);
 
 // Le responsable est commun à la campagne : son nom et son téléphone figurent
@@ -64,8 +65,13 @@ foreach ($avis as $ligne) {
     }
 }
 
+// Le logo est propre à l'AEP : le même est imprimé quel que soit le mois.
+$logo = AvisCoupure::getLogo($aepId);
+
 $pdf = AvisCoupurePdf::generer($avis, array(
     'entete' => $campagne['entete'],
+    'logo' => $logo !== null ? $logo['contenu'] : '',
+    'frais_remise' => $campagne['frais_remise'],
     'reference' => $libeleAep !== ''
         ? 'AEP ' . (function_exists('mb_strtoupper') ? mb_strtoupper($libeleAep, 'UTF-8') : strtoupper($libeleAep))
         : 'AEP',

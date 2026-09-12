@@ -11,6 +11,8 @@
  * Reproduit le formulaire papier : deux avis par page A4, séparés par un trait
  * de découpe. Le cachet et la signature sont apposés à la main après
  * impression, les emplacements correspondants sont donc laissés vides.
+ * Les champs sont imprimés sans ligne de pointillés : la valeur suit
+ * simplement son libellé.
  */
 class AvisCoupurePdf
 {
@@ -23,11 +25,16 @@ class AvisCoupurePdf
     /** Interligne entre deux champs du formulaire. */
     const PAS_CHAMP = 25.0;
 
+    /** Encombrement maximal du logo en haut à gauche de l'avis, en points. */
+    const LOGO_LARGEUR_MAX = 70.0;
+    const LOGO_HAUTEUR_MAX = 52.0;
+
     /**
      * Construit le document.
      *
      * @param array<int,array<string,mixed>> $avis     lignes issues de AvisCoupure::getAvis()
-     * @param array<string,mixed>            $contexte entete, reference, libelle_mois, responsable
+     * @param array<string,mixed>            $contexte entete, reference, libelle_mois, responsable,
+     *                                                 contact, frais_remise, logo (contenu binaire PNG/JPEG)
      * @return Pdf
      */
     public static function generer(array $avis, array $contexte = array())
@@ -51,6 +58,20 @@ class AvisCoupurePdf
                 10
             );
             return $pdf;
+        }
+
+        // Le logo est mesuré une seule fois : le même est imprimé sur chaque
+        // avis, réduit pour tenir dans son encombrement maximal.
+        $contexte['logo_largeur'] = 0;
+        $contexte['logo_hauteur'] = 0;
+        $logo = isset($contexte['logo']) ? (string) $contexte['logo'] : '';
+        $info = $logo !== '' ? Pdf::analyserImage($logo) : false;
+        if ($info !== false && $info['largeur'] > 0 && $info['hauteur'] > 0) {
+            $echelle = min(self::LOGO_LARGEUR_MAX / $info['largeur'], self::LOGO_HAUTEUR_MAX / $info['hauteur']);
+            $contexte['logo_largeur'] = $info['largeur'] * $echelle;
+            $contexte['logo_hauteur'] = $info['hauteur'] * $echelle;
+        } else {
+            $contexte['logo'] = '';
         }
 
         $position = 0;
@@ -92,6 +113,12 @@ class AvisCoupurePdf
         $centre = $pdf->largeurPage() / 2;
         $gris = array(0.35, 0.35, 0.35);
 
+        // Le logo de l'AEP occupe le coin haut gauche ; l'en-tête reste centré
+        // sur la page, comme sur le formulaire papier.
+        if (!empty($contexte['logo']) && $contexte['logo_largeur'] > 0) {
+            $pdf->image($contexte['logo'], $gauche, $haut + 12, $contexte['logo_largeur'], $contexte['logo_hauteur']);
+        }
+
         $entete = isset($contexte['entete']) ? trim((string) $contexte['entete']) : '';
         if ($entete !== '') {
             $pdf->texteCentre($centre, $haut + 22, $entete, 8.5, true);
@@ -132,7 +159,11 @@ class AvisCoupurePdf
         $montant = isset($ligne['montant_impaye']) ? (float) $ligne['montant_impaye'] : 0.0;
         $chiffres = number_format($montant, 0, ',', ' ') . ' F';
         $lettres = '(' . AvisCoupure::montantEnLettres($montant) . ')';
-        $mention = 'PREVOIR LES FRAIS DE REMISE EN SUS';
+        // Les frais de remise en service sont fixés par campagne ; s'ils sont
+        // connus, leur montant est imprimé avec la mention.
+        $frais = isset($contexte['frais_remise']) ? (float) $contexte['frais_remise'] : 0.0;
+        $mention = 'PREVOIR LES FRAIS DE REMISE EN SUS'
+            . ($frais > 0 ? ' : ' . number_format($frais, 0, ',', ' ') . ' F' : '');
         $largeurMention = $pdf->largeurTexte($mention, 7.5, true);
         $finValeur = $droite - $largeurMention - 10;
 
@@ -198,29 +229,25 @@ class AvisCoupurePdf
     }
 
     /**
-     * Trace un champ « libellé : valeur » suivi d'un pointillé jusqu'à $xFin,
-     * à la manière des lignes à remplir du formulaire papier.
+     * Écrit un champ « libellé : valeur ». La valeur doit tenir avant $xFin,
+     * limite du champ voisin.
      */
     private static function champ(Pdf $pdf, $x, $y, $xFin, $libelle, $valeur)
     {
         $pdf->texte($x, $y, $libelle, 9.5);
-        $xValeur = $x + $pdf->largeurTexte($libelle, 9.5) + 6;
         $valeur = trim((string) $valeur);
-
-        if ($valeur !== '') {
-            // Une valeur trop longue est réduite plutôt que de déborder sur le
-            // champ voisin : l'avis doit rester lisible tel quel.
-            $taille = 10.0;
-            $disponible = $xFin - $xValeur;
-            while ($taille > 6.5 && $pdf->largeurTexte($valeur, $taille, true) > $disponible) {
-                $taille -= 0.5;
-            }
-            $pdf->texte($xValeur, $y, $valeur, $taille, true);
-            $xValeur += $pdf->largeurTexte($valeur, $taille, true) + 4;
+        if ($valeur === '') {
+            return;
         }
+        $xValeur = $x + $pdf->largeurTexte($libelle, 9.5) + 6;
 
-        if ($xValeur < $xFin) {
-            $pdf->ligne($xValeur, $y + 12, $xFin, $y + 12, 0.4, array(1, 2), array(0.45, 0.45, 0.45));
+        // Une valeur trop longue est réduite plutôt que de déborder sur le
+        // champ voisin : l'avis doit rester lisible tel quel.
+        $taille = 10.0;
+        $disponible = $xFin - $xValeur;
+        while ($taille > 6.5 && $pdf->largeurTexte($valeur, $taille, true) > $disponible) {
+            $taille -= 0.5;
         }
+        $pdf->texte($xValeur, $y, $valeur, $taille, true);
     }
 }

@@ -18,6 +18,8 @@ traitement_guard();
 @include_once("donnees/facture.php");
 @include_once("../donnees/compteur.php");
 @include_once("donnees/compteur.php");
+@include_once("../donnees/inactivite_abone.php");
+@include_once("donnees/inactivite_abone.php");
 
 /*$lettreMonth = array(
     '01'=>'Janvier',
@@ -295,8 +297,25 @@ class MoisFacturation_t
                 }
             }
         }
+        // Seuil de désactivation des abonnés sans consommation, réglé depuis
+        // l'écran de création du mois ; la fenêtre est rouverte avec la liste
+        // recalculée.
+        if (isset($_POST['action']) && $_POST['action'] === 'save_seuil_inactivite') {
+            if (!isset($_SESSION['id_aep'])) {
+                header('Location: ../?page=releve&error=no_aep');
+                exit;
+            }
+            $seuil = isset($_POST['seuil_inactivite']) ? (int) $_POST['seuil_inactivite'] : 0;
+            if ($seuil > 0) {
+                InactiviteAbone::setSeuil((int) $_SESSION['id_aep'], $seuil);
+            }
+            header('Location: ../?page=releves&ouvrir=nouveau_mois');
+            exit;
+        }
+
         // Nouveau flux: création auto d'un mois à partir des réseaux (sans import fichier)
         if (isset($_POST['action']) && $_POST['action'] === 'create_month_auto') {
+            $bd = null;
             try {
                 if (!isset($_SESSION['id_aep'])) {
                     header('Location: ../?page=releve&error=no_aep');
@@ -332,6 +351,32 @@ class MoisFacturation_t
                 // Activer ce mois et désactiver les autres
                 $nouveau = new MoisFacturation(0, $mois, $date_facturation, $date_depot, $id_constante, $description, 1);
 
+                // La transaction couvre aussi la désactivation : sans mois créé,
+                // personne n'est désactivé. Elle doit porter sur la connexion de
+                // Manager : Connexion::connect() en ouvre une nouvelle à chaque appel.
+                // Les tables sont vérifiées avant : un CREATE TABLE, même sans
+                // effet, validerait implicitement la transaction.
+                InactiviteAbone::ensureTables();
+                $bd = Manager::getBdd();
+                if ($bd === null) {
+                    Manager::prepare_query('SELECT 1', array());
+                    $bd = Manager::getBdd();
+                }
+                $bd->beginTransaction();
+
+                // Abonnés sans consommation validés par l'agent : désactivés
+                // avant de lister les compteurs, ils ne sont donc pas facturés
+                // sur le nouveau mois.
+                $nbDesactives = 0;
+                if (isset($_POST['desactiver']) && is_array($_POST['desactiver'])) {
+                    $nbDesactives = InactiviteAbone::desactiver(
+                        $aepId,
+                        $_POST['desactiver'],
+                        InactiviteAbone::getSeuil($aepId),
+                        isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : 0
+                    );
+                }
+
                 // Récupérer les compteurs de l'AEP: abonnés actifs, réseau et AEP
                 // Abonnés actifs
                 $compteursAbonnes = Manager::prepare_query('
@@ -361,10 +406,7 @@ class MoisFacturation_t
                     WHERE a.id = ?
                 ', array($aepId))->fetchAll();
 
-                // Démarrer transaction et créer mois + indexes + factures
-
-                $bd = Connexion::connect();
-                $bd->beginTransaction();
+                // Créer mois + indexes + factures
 
                 // Désactiver anciens mois de l'AEP
                 Manager::prepare_query('UPDATE mois_facturation SET est_actif = 0 WHERE id_constante IN (SELECT id FROM constante_reseau WHERE id_aep = ?)', array($aepId));
@@ -413,7 +455,7 @@ class MoisFacturation_t
                 }
 
                 $bd->commit();
-                header('Location: ../?page=releves&success=mois_cree');
+                header('Location: ../?page=releves&success=mois_cree&desactives=' . (int) $nbDesactives);
                 exit;
             } catch (Exception $e) {
                 if ($bd)

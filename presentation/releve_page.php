@@ -6,7 +6,17 @@
 @include_once("donnees/facture.php");
 @include_once("../donnees/mois_facturation.php");
 @include_once("donnees/mois_facturation.php");
+@include_once("../donnees/inactivite_abone.php");
+@include_once("donnees/inactivite_abone.php");
 
+// Abonnés sans consommation proposés à la désactivation avant de créer le
+// mois suivant ; le seuil N est un paramètre de l'AEP.
+$inactivite_seuil = InactiviteAbone::SEUIL_DEFAUT;
+$inactivite_abones = array();
+if (isset($_SESSION['id_aep']) && (int) $_SESSION['id_aep'] > 0) {
+    $inactivite_seuil = InactiviteAbone::getSeuil((int) $_SESSION['id_aep']);
+    $inactivite_abones = InactiviteAbone::getAbonesSansConsommation((int) $_SESSION['id_aep'], $inactivite_seuil);
+}
 
 function moneyFormatter($montant)
 {
@@ -23,6 +33,17 @@ function addDaysAndFormat($string_date, $days = 10)
 
 ?>
 <div class="container-fluid">
+    <?php if (isset($_GET['success']) && $_GET['success'] === 'mois_cree'): ?>
+        <?php $nb_desactives = isset($_GET['desactives']) ? (int) $_GET['desactives'] : 0; ?>
+        <div class="alert alert-success alert-dismissible fade show mt-2 py-2 small" role="alert">
+            <i class="bi bi-check2-circle me-1"></i>
+            Nouveau mois créé.
+            <?php if ($nb_desactives > 0): ?>
+                <?php echo $nb_desactives; ?> abonné(s) sans consommation désactivé(s) : ils ne sont plus facturés.
+            <?php endif; ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    <?php endif; ?>
     <div class="row">
         <!-- Menu à gauche -->
         <div class="col-md-3 bg-light sidebar p-3">
@@ -564,7 +585,80 @@ function addDaysAndFormat($string_date, $days = 10)
                                 aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <form action="traitement/mois_facturation_t.php" method="post">
+                            <!-- Abonnés sans consommation : à désactiver avant de passer au mois suivant -->
+                            <div class="card border-warning mb-3">
+                                <div class="card-header bg-warning-subtle d-flex flex-wrap align-items-center justify-content-between gap-2 py-2">
+                                    <span class="fw-semibold">
+                                        <i class="bi bi-person-dash me-1"></i>
+                                        Abonnés sans consommation depuis <?php echo (int) $inactivite_seuil; ?> mois
+                                        <span class="badge bg-warning text-dark ms-1"><?php echo count($inactivite_abones); ?></span>
+                                    </span>
+                                    <form method="post" action="traitement/mois_facturation_t.php"
+                                        class="d-flex align-items-center gap-1 m-0" title="Nombre de mois consécutifs sans consommation">
+                                        <input type="hidden" name="action" value="save_seuil_inactivite">
+                                        <label for="seuil_inactivite" class="small text-muted mb-0">N =</label>
+                                        <input type="number" min="1" max="120" class="form-control form-control-sm"
+                                            id="seuil_inactivite" name="seuil_inactivite" style="width: 4.5rem"
+                                            value="<?php echo (int) $inactivite_seuil; ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-arrow-repeat"></i> Appliquer
+                                        </button>
+                                    </form>
+                                </div>
+                                <?php if (empty($inactivite_abones)): ?>
+                                    <div class="card-body py-2 small text-muted">
+                                        Aucun abonné actif n'a <?php echo (int) $inactivite_seuil; ?> mois consécutifs sans consommation.
+                                    </div>
+                                <?php else: ?>
+                                    <div class="table-responsive" style="max-height: 16rem; overflow-y: auto;">
+                                        <table class="table table-sm table-hover mb-0 small">
+                                            <thead class="table-light" style="position: sticky; top: 0;">
+                                                <tr>
+                                                    <th style="width: 2rem">
+                                                        <input class="form-check-input" type="checkbox" id="inactivite_tous" checked
+                                                            title="Tout cocher / décocher">
+                                                    </th>
+                                                    <th>Abonné</th>
+                                                    <th>Réseau</th>
+                                                    <th>Compteur</th>
+                                                    <th class="text-end">Mois sans conso</th>
+                                                    <th>Dernière conso</th>
+                                                    <th class="text-end">Impayé</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($inactivite_abones as $ia): ?>
+                                                    <tr>
+                                                        <td>
+                                                            <input class="form-check-input inactivite-case" type="checkbox" checked
+                                                                form="form_create_month_auto" name="desactiver[]"
+                                                                value="<?php echo (int) $ia['id_abone']; ?>">
+                                                        </td>
+                                                        <td>
+                                                            <?php echo htmlspecialchars($ia['nom'], ENT_QUOTES, 'UTF-8'); ?>
+                                                            <?php if (!empty($ia['numero_telephone'])): ?>
+                                                                <span class="text-muted"><?php echo htmlspecialchars($ia['numero_telephone'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                                            <?php endif; ?>
+                                                        </td>
+                                                        <td><?php echo htmlspecialchars($ia['nom_reseau'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                        <td class="text-muted"><?php echo $ia['numero_compteur'] !== null && $ia['numero_compteur'] !== '' ? htmlspecialchars($ia['numero_compteur'], ENT_QUOTES, 'UTF-8') : '—'; ?></td>
+                                                        <td class="text-end fw-semibold"><?php echo (int) $ia['nb_mois_sans_conso']; ?></td>
+                                                        <td class="text-muted"><?php echo $ia['dernier_mois_conso'] !== null ? htmlspecialchars(getLetterMonth($ia['dernier_mois_conso']), ENT_QUOTES, 'UTF-8') : 'Jamais'; ?></td>
+                                                        <td class="text-end"><?php echo moneyFormatter($ia['solde']); ?> F</td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="card-body py-2 small text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <span id="inactivite_compteur"><?php echo count($inactivite_abones); ?></span> abonné(s) coché(s)
+                                        seront désactivés à la création du mois et ne seront plus facturés. Décochez ceux à conserver.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+
+                            <form action="traitement/mois_facturation_t.php" method="post" id="form_create_month_auto">
                                 <input type="hidden" name="action" value="create_month_auto">
                                 <input type="hidden" name="id_constante"
                                     value="<?php echo isset($constante_reseau_id) ? (int) $constante_reseau_id : 0; ?>">
@@ -715,6 +809,43 @@ function addDaysAndFormat($string_date, $days = 10)
                     </div>
                 </div>
             </div>
+            <script>
+                (function () {
+                    // Cases « abonnés sans consommation » : compteur et case d'en-tête.
+                    var cases = document.querySelectorAll('.inactivite-case');
+                    var tous = document.getElementById('inactivite_tous');
+                    var compteur = document.getElementById('inactivite_compteur');
+                    function maj() {
+                        var n = 0;
+                        for (var i = 0; i < cases.length; i++) {
+                            if (cases[i].checked) { n++; }
+                        }
+                        if (compteur) { compteur.textContent = n; }
+                        if (tous) {
+                            tous.checked = (n === cases.length && n > 0);
+                            tous.indeterminate = (n > 0 && n < cases.length);
+                        }
+                    }
+                    for (var i = 0; i < cases.length; i++) {
+                        cases[i].addEventListener('change', maj);
+                    }
+                    if (tous) {
+                        tous.addEventListener('change', function () {
+                            for (var i = 0; i < cases.length; i++) { cases[i].checked = tous.checked; }
+                            maj();
+                        });
+                    }
+                    maj();
+
+                    // Après modification du seuil N, la fenêtre est rouverte.
+                    <?php if (isset($_GET['ouvrir']) && $_GET['ouvrir'] === 'nouveau_mois'): ?>
+                    var modale = document.getElementById('createMonthModal');
+                    if (modale && window.bootstrap && bootstrap.Modal) {
+                        bootstrap.Modal.getOrCreateInstance(modale).show();
+                    }
+                    <?php endif; ?>
+                })();
+            </script>
             <script>
                 (function () {
                     var moisInput = document.getElementById('mois_new');

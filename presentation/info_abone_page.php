@@ -8,6 +8,8 @@
 @include_once('donnees/manager.php');
 @include_once(__DIR__ . '/../donnees/branchement_abonne.php');
 @include_once('donnees/branchement_abonne.php');
+@include_once(__DIR__ . '/../donnees/compteur_remplacement.php');
+@include_once('donnees/compteur_remplacement.php');
 
 $id_abone = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 $section = isset($_GET['section']) ? preg_replace('/[^a-z_]/', '', $_GET['section']) : 'accueil';
@@ -106,6 +108,11 @@ function ia_section_url($id, $sec)
 
 $etatClass = ($data['etat'] === 'actif') ? 'success' : (($data['etat'] === 'suspendu') ? 'warning' : 'secondary');
 $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
+
+// Remplacement du compteur : situation courante (index minimal de dépose) et
+// historique des remplacements déjà effectués.
+$ia_situation_compteur = CompteurRemplacement::getSituation($id_abone);
+$ia_remplacements = CompteurRemplacement::getHistorique($id_abone);
 ?>
 
 <link rel="stylesheet" href="presentation/assets/css/info_abone.css">
@@ -238,8 +245,93 @@ $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
                 <a href="?page=releves" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-speedometer"></i> Relevés
                 </a>
+                <?php if ($ia_situation_compteur !== null): ?>
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalChangerCompteur">
+                        <i class="bi bi-arrow-repeat"></i> Changer le compteur
+                    </button>
+                <?php endif; ?>
             </div>
         </div>
+
+        <?php if ($ia_situation_compteur !== null): ?>
+            <!-- Modal : remplacement du compteur -->
+            <div class="modal fade" id="modalChangerCompteur" tabindex="-1" aria-labelledby="modalChangerCompteurLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <form method="post" action="traitement/compteur_remplacement_t.php"
+                            onsubmit="return confirm('Confirmer le remplacement du compteur ? L\'ancien compteur sera clos à son index de dépose.');">
+                            <input type="hidden" name="action" value="remplacer_compteur">
+                            <input type="hidden" name="id_abone" value="<?php echo (int) $id_abone; ?>">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="modalChangerCompteurLabel">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Changer le compteur de <?php echo $nom_abone; ?>
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-light border small mb-3">
+                                    <div class="fw-semibold mb-1"><i class="bi bi-speedometer2 me-1"></i> Compteur actuel : n° <?php echo htmlspecialchars($ia_situation_compteur['numero_compteur'], ENT_QUOTES, 'UTF-8'); ?></div>
+                                    Dernier index : <?php echo CompteurRemplacement::formatIndex($ia_situation_compteur['derniers_index']); ?> m³.
+                                    <?php if ($ia_situation_compteur['releve_courant'] !== null): ?>
+                                        Relevé du mois en cours (<?php echo htmlspecialchars(getLetterMonth($ia_situation_compteur['releve_courant']['mois']), ENT_QUOTES, 'UTF-8'); ?>) :
+                                        ancien index <?php echo CompteurRemplacement::formatIndex($ia_situation_compteur['releve_courant']['ancien_index']); ?>,
+                                        nouvel index <?php echo CompteurRemplacement::formatIndex($ia_situation_compteur['releve_courant']['nouvel_index']); ?>.
+                                        Ce relevé sera arrêté à l'index de dépose : la consommation de l'ancien compteur est facturée ce mois-ci.
+                                    <?php else: ?>
+                                        Aucun relevé ouvert sur le mois en cours pour ce compteur.
+                                    <?php endif; ?>
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="cc_index_depose" class="form-label fw-semibold">Index de dépose de l'ancien compteur <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" min="<?php echo htmlspecialchars(sprintf('%.2F', (float) $ia_situation_compteur['index_minimum']), ENT_QUOTES, 'UTF-8'); ?>"
+                                            class="form-control" id="cc_index_depose" name="index_depose" required
+                                            value="<?php echo htmlspecialchars(sprintf('%.2F', max((float) $ia_situation_compteur['derniers_index'], (float) $ia_situation_compteur['index_minimum'])), ENT_QUOTES, 'UTF-8'); ?>">
+                                        <div class="form-text">Index lu sur l'ancien compteur au moment du retrait (minimum <?php echo CompteurRemplacement::formatIndex($ia_situation_compteur['index_minimum']); ?>).</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cc_date" class="form-label fw-semibold">Date du remplacement <span class="text-danger">*</span></label>
+                                        <input type="date" class="form-control" id="cc_date" name="date_remplacement" required value="<?php echo date('Y-m-d'); ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cc_numero" class="form-label fw-semibold">Numéro du nouveau compteur <span class="text-danger">*</span></label>
+                                        <input type="text" class="form-control" id="cc_numero" name="numero_compteur" maxlength="16" required autocomplete="off">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cc_index_initial" class="form-label fw-semibold">Index de départ du nouveau compteur <span class="text-danger">*</span></label>
+                                        <input type="number" step="0.01" min="0" class="form-control" id="cc_index_initial" name="index_initial" required value="0">
+                                        <div class="form-text">Le prochain mois de facturation partira de cet index.</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cc_latitude" class="form-label">Latitude</label>
+                                        <input type="text" class="form-control" id="cc_latitude" name="latitude" inputmode="decimal"
+                                            value="<?php echo $ia_situation_compteur['latitude'] !== null ? htmlspecialchars((string) $ia_situation_compteur['latitude'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cc_longitude" class="form-label">Longitude</label>
+                                        <input type="text" class="form-control" id="cc_longitude" name="longitude" inputmode="decimal"
+                                            value="<?php echo $ia_situation_compteur['longitude'] !== null ? htmlspecialchars((string) $ia_situation_compteur['longitude'], ENT_QUOTES, 'UTF-8') : ''; ?>">
+                                        <div class="form-text">Position reprise de l'ancien compteur si elle n'est pas modifiée.</div>
+                                    </div>
+                                    <div class="col-12">
+                                        <label for="cc_motif" class="form-label">Motif</label>
+                                        <input type="text" class="form-control" id="cc_motif" name="motif" maxlength="255"
+                                            placeholder="Compteur bloqué, cassé, illisible…">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="bi bi-arrow-repeat me-1"></i> Remplacer le compteur
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php if ($section === 'accueil'): ?>
             <div class="row g-3 mb-4">
@@ -247,6 +339,13 @@ $nom_abone = htmlspecialchars($data['nom'], ENT_QUOTES, 'UTF-8');
                     <div class="ia-kpi">
                         <div class="ia-kpi-label">N° compteur</div>
                         <div class="ia-kpi-value"><?php echo htmlspecialchars($data['numero_compteur'], ENT_QUOTES, 'UTF-8'); ?></div>
+                        <?php if (!empty($ia_remplacements)): ?>
+                            <div class="small text-muted mt-1" title="Historique des remplacements dans « Index & relevés »">
+                                <i class="bi bi-arrow-repeat"></i>
+                                Posé le <?php echo date('d/m/Y', strtotime($ia_remplacements[0]['date_remplacement'])); ?>
+                                (ancien n° <?php echo htmlspecialchars($ia_remplacements[0]['ancien_numero'], ENT_QUOTES, 'UTF-8'); ?>)
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">

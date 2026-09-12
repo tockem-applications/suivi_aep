@@ -43,6 +43,14 @@ class Pdf
     private $meta;
 
     /**
+     * Images embarquées, indexées par empreinte du contenu : une même image
+     * placée sur plusieurs pages n'est écrite qu'une fois dans le fichier.
+     *
+     * @var array<string,array<string,mixed>>
+     */
+    private $images = array();
+
+    /**
      * @param array<string,mixed> $options titre, auteur, sujet, largeur, hauteur
      */
     public function __construct(array $options = array())
@@ -164,6 +172,84 @@ class Pdf
     }
 
     /**
+     * Place une image PNG ou JPEG dont (x, y) est le coin haut gauche.
+     *
+     * Si une seule des deux dimensions est fournie, l'autre est déduite des
+     * proportions de l'image. Le contenu est analysé une seule fois, même si
+     * l'image est placée sur toutes les pages.
+     *
+     * @param string     $binaire contenu du fichier image
+     * @param float      $x
+     * @param float      $y       distance depuis le haut de la page
+     * @param float|null $largeur en points
+     * @param float|null $hauteur en points
+     * @return bool false si le format n'est pas pris en charge
+     */
+    public function image($binaire, $x, $y, $largeur = null, $hauteur = null)
+    {
+        $cle = md5($binaire);
+        if (!isset($this->images[$cle])) {
+            $info = self::analyserImage($binaire);
+            if ($info === false) {
+                return false;
+            }
+            $info['nom'] = 'Im' . (count($this->images) + 1);
+            $this->images[$cle] = $info;
+        }
+        $info = $this->images[$cle];
+
+        $largeur = $largeur !== null ? (float) $largeur : null;
+        $hauteur = $hauteur !== null ? (float) $hauteur : null;
+        if ($largeur === null && $hauteur === null) {
+            $largeur = (float) $info['largeur'];
+            $hauteur = (float) $info['hauteur'];
+        } elseif ($largeur === null) {
+            $largeur = $hauteur * $info['largeur'] / max(1, $info['hauteur']);
+        } elseif ($hauteur === null) {
+            $hauteur = $largeur * $info['hauteur'] / max(1, $info['largeur']);
+        }
+
+        $this->ouvrirPageSiBesoin();
+        $this->courante .= sprintf(
+            "q %s 0 0 %s %s %s cm /%s Do Q\n",
+            $this->nombre($largeur),
+            $this->nombre($hauteur),
+            $this->nombre($x),
+            $this->nombre($this->hauteur - (float) $y - $hauteur),
+            $info['nom']
+        );
+        return true;
+    }
+
+    /**
+     * Lit un PNG ou un JPEG et en extrait ce qu'il faut pour l'embarquer.
+     *
+     * Le moteur n'a pas de bibliothèque graphique : les données compressées du
+     * fichier sont reprises telles quelles (DCTDecode pour le JPEG, FlateDecode
+     * avec prédicteur PNG pour le PNG), le lecteur PDF fait le décodage. Seule
+     * la couche alpha d'un PNG doit être séparée des couleurs, ce qui demande
+     * zlib.
+     *
+     * Sert aussi de validation en amont : un contenu refusé ici ne pourra pas
+     * être imprimé.
+     *
+     * @param string $binaire
+     * @return array<string,mixed>|false largeur, hauteur, type, et les champs
+     *                                   propres au format
+     */
+    public static function analyserImage($binaire)
+    {
+        $binaire = (string) $binaire;
+        if (substr($binaire, 0, 8) === "\x89PNG\r\n\x1a\n") {
+            return self::analyserPng($binaire);
+        }
+        if (substr($binaire, 0, 3) === "\xFF\xD8\xFF") {
+            return self::analyserJpeg($binaire);
+        }
+        return false;
+    }
+
+    /**
      * Largeur d'un texte au corps demandé, en points.
      *
      * @param string $texte UTF-8
@@ -226,13 +312,15 @@ class Pdf
         }
 
         $nbPages = count($this->pages);
-        // 1 catalogue + 1 arbre de pages + 2 polices + 1 info, puis 2 objets par page.
+        // 1 catalogue + 1 arbre de pages + 2 polices + 1 info, puis 2 objets par
+        // page, puis les images (un objet chacune, plus un pour la couche alpha).
         $idCatalogue = 1;
         $idPages = 2;
         $idPoliceNormale = 3;
         $idPoliceGrasse = 4;
         $idInfo = 5;
         $premierIdPage = 6;
+        $prochainId = $premierIdPage + $nbPages * 2;
 
         $objets = array();
         $kids = array();
@@ -246,13 +334,32 @@ class Pdf
         $objets[$idPoliceGrasse] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
         $objets[$idInfo] = $this->dictionnaireInfo();
 
+        // Les images sont déclarées dans les ressources de chaque page : le
+        // fichier reste simple et une image n'est jamais écrite deux fois.
+        $xobjects = array();
+        foreach ($this->images as $info) {
+            $idImage = $prochainId++;
+            $idMasque = null;
+            if (isset($info['alpha'])) {
+                $idMasque = $prochainId++;
+                $objets[$idMasque] = '<< /Type /XObject /Subtype /Image'
+                    . ' /Width ' . (int) $info['largeur'] . ' /Height ' . (int) $info['hauteur']
+                    . ' /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode'
+                    . ' /DecodeParms << /Predictor 15 /Colors 1 /BitsPerComponent 8 /Columns ' . (int) $info['largeur'] . ' >>'
+                    . ' /Length ' . strlen($info['alpha']) . " >>\nstream\n" . $info['alpha'] . "\nendstream";
+            }
+            $objets[$idImage] = $this->dictionnaireImage($info, $idMasque);
+            $xobjects[] = '/' . $info['nom'] . ' ' . $idImage . ' 0 R';
+        }
+        $ressourcesImages = empty($xobjects) ? '' : ' /XObject << ' . implode(' ', $xobjects) . ' >>';
+
         for ($i = 0; $i < $nbPages; $i++) {
             $idPage = $premierIdPage + $i * 2;
             $idContenu = $idPage + 1;
             $objets[$idPage] = '<< /Type /Page /Parent ' . $idPages . ' 0 R'
                 . ' /MediaBox [0 0 ' . $this->nombre($this->largeur) . ' ' . $this->nombre($this->hauteur) . ']'
                 . ' /Resources << /Font << /' . self::POLICE_NORMALE . ' ' . $idPoliceNormale . ' 0 R'
-                . ' /' . self::POLICE_GRASSE . ' ' . $idPoliceGrasse . ' 0 R >> >>'
+                . ' /' . self::POLICE_GRASSE . ' ' . $idPoliceGrasse . ' 0 R >>' . $ressourcesImages . ' >>'
                 . ' /Contents ' . $idContenu . ' 0 R >>';
             $flux = $this->pages[$i];
             $objets[$idContenu] = '<< /Length ' . strlen($flux) . " >>\nstream\n" . $flux . "endstream";
@@ -325,6 +432,222 @@ class Pdf
         }
         $parties[] = '/CreationDate (D:' . date('YmdHis') . ")";
         return '<< ' . implode(' ', $parties) . ' >>';
+    }
+
+    /**
+     * Objet XObject d'une image analysée par analyserImage().
+     *
+     * @param array<string,mixed> $info
+     * @param int|null            $idMasque objet de la couche alpha, s'il y en a une
+     */
+    private function dictionnaireImage(array $info, $idMasque)
+    {
+        $dico = '<< /Type /XObject /Subtype /Image'
+            . ' /Width ' . (int) $info['largeur'] . ' /Height ' . (int) $info['hauteur']
+            . ' /ColorSpace ' . $info['espace']
+            . ' /BitsPerComponent ' . (int) $info['bpc']
+            . ' /Filter /' . $info['filtre'];
+        if (isset($info['decode_parms'])) {
+            $dico .= ' /DecodeParms ' . $info['decode_parms'];
+        }
+        if (isset($info['decode'])) {
+            $dico .= ' /Decode ' . $info['decode'];
+        }
+        if (isset($info['masque_couleur'])) {
+            $dico .= ' /Mask ' . $info['masque_couleur'];
+        }
+        if ($idMasque !== null) {
+            $dico .= ' /SMask ' . $idMasque . ' 0 R';
+        }
+        return $dico . ' /Length ' . strlen($info['donnees']) . " >>\nstream\n" . $info['donnees'] . "\nendstream";
+    }
+
+    /**
+     * Lit l'en-tête d'un JPEG : le flux est embarqué tel quel (DCTDecode).
+     *
+     * @return array<string,mixed>|false
+     */
+    private static function analyserJpeg($binaire)
+    {
+        $n = strlen($binaire);
+        $position = 2;
+        while ($position + 4 <= $n) {
+            if (ord($binaire[$position]) !== 0xFF) {
+                return false;
+            }
+            $marqueur = ord($binaire[$position + 1]);
+            if ($marqueur === 0xFF) {
+                // Octet de bourrage entre deux segments.
+                $position++;
+                continue;
+            }
+            if ($marqueur === 0xD8 || ($marqueur >= 0xD0 && $marqueur <= 0xD7) || $marqueur === 0x01) {
+                $position += 2;
+                continue;
+            }
+            $longueur = (ord($binaire[$position + 2]) << 8) | ord($binaire[$position + 3]);
+            // SOF0..SOF15 hors DHT (C4), JPG (C8) et DAC (CC) décrivent l'image.
+            $estSof = $marqueur >= 0xC0 && $marqueur <= 0xCF
+                && $marqueur !== 0xC4 && $marqueur !== 0xC8 && $marqueur !== 0xCC;
+            if ($estSof) {
+                if ($position + 10 > $n) {
+                    return false;
+                }
+                $composantes = ord($binaire[$position + 9]);
+                $info = array(
+                    'type' => 'jpeg',
+                    'bpc' => ord($binaire[$position + 4]),
+                    'hauteur' => (ord($binaire[$position + 5]) << 8) | ord($binaire[$position + 6]),
+                    'largeur' => (ord($binaire[$position + 7]) << 8) | ord($binaire[$position + 8]),
+                    'filtre' => 'DCTDecode',
+                    'donnees' => $binaire,
+                );
+                if ($composantes === 3) {
+                    $info['espace'] = '/DeviceRGB';
+                } elseif ($composantes === 4) {
+                    // Les JPEG CMYK produits par Adobe sont stockés inversés.
+                    $info['espace'] = '/DeviceCMYK';
+                    $info['decode'] = '[1 0 1 0 1 0 1 0]';
+                } else {
+                    $info['espace'] = '/DeviceGray';
+                }
+                return $info['largeur'] > 0 && $info['hauteur'] > 0 ? $info : false;
+            }
+            if ($marqueur === 0xDA || $marqueur === 0xD9) {
+                // Début des données ou fin d'image sans SOF : fichier invalide.
+                return false;
+            }
+            $position += 2 + $longueur;
+        }
+        return false;
+    }
+
+    /**
+     * Lit un PNG chunk par chunk.
+     *
+     * Les données IDAT sont reprises telles quelles avec le prédicteur PNG.
+     * Une image avec couche alpha (types 4 et 6) est décompressée pour séparer
+     * couleurs et transparence, cette dernière devenant un masque doux.
+     * Les PNG entrelacés et 16 bits ne sont pas pris en charge.
+     *
+     * @return array<string,mixed>|false
+     */
+    private static function analyserPng($binaire)
+    {
+        $n = strlen($binaire);
+        if ($n < 33 || substr($binaire, 12, 4) !== 'IHDR') {
+            return false;
+        }
+        $entete = unpack('Nlargeur/Nhauteur/Cbpc/Ctype/Ccompression/Cfiltre/Centrelace', substr($binaire, 16, 13));
+        if ($entete['bpc'] > 8 || $entete['compression'] !== 0 || $entete['filtre'] !== 0 || $entete['entrelace'] !== 0) {
+            return false;
+        }
+        $type = $entete['type'];
+        if ($type === 0 || $type === 4) {
+            $espace = '/DeviceGray';
+            $couleurs = 1;
+        } elseif ($type === 2 || $type === 6) {
+            $espace = '/DeviceRGB';
+            $couleurs = 3;
+        } elseif ($type === 3) {
+            $espace = null; // Indexed, complété une fois la palette lue.
+            $couleurs = 1;
+        } else {
+            return false;
+        }
+
+        $palette = '';
+        $transparence = '';
+        $donnees = '';
+        $position = 33;
+        while ($position + 8 <= $n) {
+            $taille = unpack('N', substr($binaire, $position, 4));
+            $taille = $taille[1];
+            $nom = substr($binaire, $position + 4, 4);
+            $contenu = substr($binaire, $position + 8, $taille);
+            if ($nom === 'PLTE') {
+                $palette = $contenu;
+            } elseif ($nom === 'tRNS') {
+                $transparence = $contenu;
+            } elseif ($nom === 'IDAT') {
+                $donnees .= $contenu;
+            } elseif ($nom === 'IEND') {
+                break;
+            }
+            $position += 12 + $taille;
+        }
+        if ($donnees === '' || ($type === 3 && $palette === '')) {
+            return false;
+        }
+
+        $info = array(
+            'type' => 'png',
+            'largeur' => (int) $entete['largeur'],
+            'hauteur' => (int) $entete['hauteur'],
+            'bpc' => (int) $entete['bpc'],
+            'filtre' => 'FlateDecode',
+            'espace' => $espace === null
+                ? '[/Indexed /DeviceRGB ' . (strlen($palette) / 3 - 1) . ' <' . bin2hex($palette) . '>]'
+                : $espace,
+            'decode_parms' => '<< /Predictor 15 /Colors ' . $couleurs . ' /BitsPerComponent ' . (int) $entete['bpc']
+                . ' /Columns ' . (int) $entete['largeur'] . ' >>',
+            'donnees' => $donnees,
+        );
+
+        // Transparence par couleur (tRNS) : une couleur ou un index de palette
+        // rendu entièrement transparent par un masque de couleur.
+        if ($transparence !== '') {
+            if ($type === 0 && strlen($transparence) >= 2) {
+                $g = ord($transparence[1]);
+                $info['masque_couleur'] = '[' . $g . ' ' . $g . ']';
+            } elseif ($type === 2 && strlen($transparence) >= 6) {
+                $r = ord($transparence[1]);
+                $v = ord($transparence[3]);
+                $b = ord($transparence[5]);
+                $info['masque_couleur'] = '[' . $r . ' ' . $r . ' ' . $v . ' ' . $v . ' ' . $b . ' ' . $b . ']';
+            } elseif ($type === 3) {
+                $index = strpos($transparence, chr(0));
+                if ($index !== false) {
+                    $info['masque_couleur'] = '[' . $index . ' ' . $index . ']';
+                }
+            }
+        }
+
+        if ($type === 4 || $type === 6) {
+            if (!function_exists('gzuncompress') || !function_exists('gzcompress')) {
+                return false;
+            }
+            $brut = @gzuncompress($donnees);
+            if ($brut === false) {
+                return false;
+            }
+            // Chaque ligne commence par un octet de filtre, recopié dans les
+            // deux flux ; les pixels alternent ensuite couleurs et alpha.
+            $largeur = $info['largeur'];
+            $longueurLigne = 1 + ($couleurs + 1) * $largeur;
+            if (strlen($brut) < $longueurLigne * $info['hauteur']) {
+                return false;
+            }
+            $couleur = '';
+            $alpha = '';
+            for ($ligne = 0; $ligne < $info['hauteur']; $ligne++) {
+                $debut = $ligne * $longueurLigne;
+                $couleur .= $brut[$debut];
+                $alpha .= $brut[$debut];
+                $pixels = substr($brut, $debut + 1, $longueurLigne - 1);
+                if ($couleurs === 1) {
+                    $couleur .= preg_replace('/(.)./s', '$1', $pixels);
+                    $alpha .= preg_replace('/.(.)/s', '$1', $pixels);
+                } else {
+                    $couleur .= preg_replace('/(.{3})./s', '$1', $pixels);
+                    $alpha .= preg_replace('/.{3}(.)/s', '$1', $pixels);
+                }
+            }
+            $info['donnees'] = gzcompress($couleur);
+            $info['alpha'] = gzcompress($alpha);
+        }
+
+        return $info;
     }
 
     /** Formate un nombre sans notation scientifique ni virgule décimale locale. */

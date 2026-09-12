@@ -10,6 +10,8 @@ traitement_guard();
 @include_once("resau_t.php");
 @include_once("../donnees/branchement_abonne.php");
 @include_once("donnees/branchement_abonne.php");
+@include_once("../donnees/compteur_remplacement.php");
+@include_once("donnees/compteur_remplacement.php");
 
 class Abone_t
 {
@@ -227,7 +229,7 @@ class Abone_t
             'data' => $data,
             'id_compteur' => $idCompteur,
             'branchement' => BranchementAbonne::getByAboneId($id_abone),
-            'indexes' => self::getIndexesByCompteur($idCompteur),
+            'indexes' => self::getIndexesByCompteur($idCompteur, $id_abone),
         );
     }
 
@@ -343,8 +345,15 @@ class Abone_t
                     </div>
                     <div class="ia-card-body">
                         <?php
-                        // Récupérer l'historique des index pour ce compteur
-                        $indexes = self::getIndexesByCompteur($idCompteur);
+                        // Historique des index de l'abonné, anciens compteurs compris.
+                        $indexes = self::getIndexesByCompteur($idCompteur, $id_abone);
+                        $plusieursCompteurs = false;
+                        foreach ($indexes as $index) {
+                            if ((int) $index['id_compteur'] !== (int) $idCompteur) {
+                                $plusieursCompteurs = true;
+                                break;
+                            }
+                        }
                         if (count($indexes) > 0):
                             ?>
                             <div class="table-responsive">
@@ -352,6 +361,7 @@ class Abone_t
                                     <thead class="table-light">
                                         <tr>
                                             <th>Mois</th>
+                                            <?php if ($plusieursCompteurs): ?><th>Compteur</th><?php endif; ?>
                                             <th>Ancien Index</th>
                                             <th>Nouvel Index</th>
                                             <th>Consommation</th>
@@ -362,6 +372,12 @@ class Abone_t
                                         <?php foreach ($indexes as $index): ?>
                                             <tr>
                                                 <td><?php echo getLetterMonth($index['mois']); ?></td>
+                                                <?php if ($plusieursCompteurs): ?>
+                                                    <td class="small <?php echo (int) $index['id_compteur'] === (int) $idCompteur ? 'fw-bold' : 'text-muted'; ?>">
+                                                        <?php echo htmlspecialchars($index['numero_compteur'], ENT_QUOTES, 'UTF-8'); ?>
+                                                        <?php if ((int) $index['id_compteur'] !== (int) $idCompteur): ?><span class="badge bg-secondary">remplacé</span><?php endif; ?>
+                                                    </td>
+                                                <?php endif; ?>
                                                 <td class="text-end"><?php echo number_format($index['ancien_index'], 2); ?></td>
                                                 <td class="text-end fw-bold"><?php echo number_format($index['nouvel_index'], 2); ?>
                                                 </td>
@@ -376,7 +392,44 @@ class Abone_t
                                     </tbody>
                                 </table>
                             </div>
-                        <?php else: ?>
+                        <?php endif; ?>
+                        <?php
+                        $remplacements = class_exists('CompteurRemplacement') ? CompteurRemplacement::getHistorique($id_abone) : array();
+                        if (!empty($remplacements)):
+                            ?>
+                            <div class="mt-3">
+                                <div class="small text-muted fw-semibold mb-1"><i class="bi bi-arrow-repeat me-1"></i> Remplacements de compteur</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered mb-0 small">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Ancien compteur</th>
+                                                <th class="text-end">Index de dépose</th>
+                                                <th>Nouveau compteur</th>
+                                                <th class="text-end">Index de départ</th>
+                                                <th>Motif</th>
+                                                <th>Par</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($remplacements as $rc): ?>
+                                                <tr>
+                                                    <td><?php echo date('d/m/Y', strtotime($rc['date_remplacement'])); ?></td>
+                                                    <td><?php echo htmlspecialchars($rc['ancien_numero'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="text-end"><?php echo CompteurRemplacement::formatIndex($rc['index_depose']); ?></td>
+                                                    <td class="fw-bold"><?php echo htmlspecialchars($rc['nouveau_numero'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="text-end"><?php echo CompteurRemplacement::formatIndex($rc['index_initial']); ?></td>
+                                                    <td><?php echo htmlspecialchars($rc['motif'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                                    <td class="text-muted"><?php echo htmlspecialchars(trim((isset($rc['user_nom']) ? $rc['user_nom'] : '') . ' ' . (isset($rc['user_prenom']) ? $rc['user_prenom'] : '')), ENT_QUOTES, 'UTF-8'); ?></td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (count($indexes) === 0): ?>
                             <div class="text-muted text-center py-3">
                                 <i class="fas fa-info-circle"></i> Aucun historique d'index disponible
                             </div>
@@ -1729,27 +1782,37 @@ class Abone_t
         }
     }
 
-    public static function getIndexesByCompteur($id_compteur)
+    /**
+     * Historique des index de l'abonné : ceux de son compteur actuel et, via
+     * ses factures, ceux relevés sur les compteurs remplacés depuis.
+     *
+     * @param int $id_abone facultatif ; sans lui, seul le compteur est consulté
+     */
+    public static function getIndexesByCompteur($id_compteur, $id_abone = 0)
     {
         if ($id_compteur <= 0) {
             return array();
         }
 
         $query = "
-            SELECT 
+            SELECT DISTINCT
                 i.id,
                 i.ancien_index,
                 i.nouvel_index,
+                i.id_compteur,
+                c.numero_compteur,
                 mf.mois,
                 f.date_paiement
             FROM indexes i
             INNER JOIN mois_facturation mf ON mf.id = i.id_mois_facturation
+            INNER JOIN compteur c ON c.id = i.id_compteur
             LEFT JOIN facture f ON f.id_indexes = i.id
-            WHERE i.id_compteur = ?
-            ORDER BY mf.mois DESC
+            WHERE i.id_compteur = ?" . ((int) $id_abone > 0 ? " OR f.id_abone = ?" : "") . "
+            ORDER BY mf.mois DESC, i.id DESC
         ";
+        $params = (int) $id_abone > 0 ? array($id_compteur, (int) $id_abone) : array($id_compteur);
 
-        $result = Manager::prepare_query($query, array($id_compteur));
+        $result = Manager::prepare_query($query, $params);
         return $result ? $result->fetchAll(PDO::FETCH_ASSOC) : array();
     }
 
