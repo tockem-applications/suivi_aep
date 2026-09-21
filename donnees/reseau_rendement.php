@@ -118,9 +118,24 @@ class ReseauRendement
                 $vDistEnfBr = isset($br['vol_dist_enfants'][$mois]) ? (float) $br['vol_dist_enfants'][$mois] : 0.0;
                 // Distribution des autres fils directs (hors cette branche)
                 $vDistAutresFils = max(0.0, $vDistEnf - $vDistBr);
-                // Aval = BP/BF branche + (BP/BF directs père − dist. des autres fils)
-                $avalBranche = $vAbBr + $vAbDir - $vDistAutresFils;
+                // Branche équipée d'un compteur de tête : rendement mesuré
+                // directement (BP/BF de la branche ÷ son compteur). Sans
+                // compteur, on déduit par résidu : ce qui entre dans la branche
+                // est ce que le père distribue moins ce que mesurent les autres
+                // fils, et les BP/BF directs du père restent sur ce tronçon.
+                if ($vDistBr > 0) {
+                    $methode = 'compteur';
+                    $avalBranche = $vAbBr;
+                    $amontBranche = $vDistBr;
+                } else {
+                    $methode = 'residu';
+                    // Aval = BP/BF branche + (BP/BF directs père − dist. des autres fils)
+                    $avalBranche = $vAbBr + $vAbDir - $vDistAutresFils;
+                    $amontBranche = $vDist;
+                }
                 $branchesMois[] = array(
+                    'methode' => $methode,
+                    'amont' => $amontBranche,
                     'id' => $br['id'],
                     'nom' => $br['nom'],
                     'vol_dist_pere' => $vDist,
@@ -131,7 +146,7 @@ class ReseauRendement
                     'amont_net_pere' => $amontNet,
                     'vol_abonnes_pere_direct' => $vAbDir,
                     'aval' => $avalBranche,
-                    'pct' => self::pct($avalBranche, $vDist),
+                    'pct' => self::pct($avalBranche, $amontBranche),
                 );
             }
 

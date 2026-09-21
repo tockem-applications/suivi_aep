@@ -88,6 +88,12 @@ if (isset($_GET['error'])) {
                 $errorMessage .= ' : ' . htmlspecialchars($_GET['message']);
             }
             break;
+        case 'download_failed':
+            $errorMessage = 'Échec du téléchargement';
+            if (isset($_GET['message'])) {
+                $errorMessage .= ' : ' . htmlspecialchars($_GET['message']);
+            }
+            break;
         case 'delete_failed':
             $errorMessage = 'Échec de la suppression';
             if (isset($_GET['message'])) {
@@ -222,7 +228,7 @@ if ($actionPerformed) {
                                 <td class="text-end">
                                     <div class="btn-group" role="group">
                                         <a class="btn btn-sm btn-outline-primary"
-                                            href="backups/<?php echo urlencode($f['name']); ?>" download>
+                                            href="traitement/backup_t.php?action=download_backup&amp;file=<?php echo urlencode($f['name']); ?>">
                                             <i class="bi bi-download"></i>
                                         </a>
                                         <button class="btn btn-sm btn-outline-warning"

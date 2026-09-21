@@ -831,8 +831,8 @@ function rrd_render_branches($lignes, $enfantsDirects, $exportSlug = 'reseau')
                                 rrd_th('− Dist. autres fils', 'Distribution des autres fils directs du père (hors cette branche), soustraite dans l\'aval.', 'text-end');
                                 rrd_th('Dist. branche', 'Compteur de distribution du fils direct (information).', 'text-end');
                                 rrd_th('Dist. petits-fils', 'Distribution des petits-enfants sous ce fils (information).', 'text-end');
-                                rrd_th('Aval', 'Aval = BP/BF branche + BP/BF père direct − dist. autres fils.', 'text-end');
-                                rrd_th('Rendement', 'Rendement branche = Aval ÷ dist. père × 100.', 'text-end');
+                                rrd_th('Aval', 'Branche avec compteur : aval = BP/BF branche. Sans compteur : aval = BP/BF branche + BP/BF père direct − dist. autres fils.', 'text-end');
+                                rrd_th('Rendement', 'Branche avec compteur de tête : BP/BF branche ÷ dist. branche × 100 (mesuré). Sans compteur : Aval ÷ dist. père × 100 (déduit par résidu).', 'text-end');
                                 ?>
                             </tr>
                         </thead>
@@ -855,7 +855,15 @@ function rrd_render_branches($lignes, $enfantsDirects, $exportSlug = 'reseau')
                                         <td class="text-end text-muted"><?php echo rrd_fmt_vol($br['vol_dist']); ?></td>
                                         <td class="text-end text-muted"><?php echo rrd_fmt_vol($br['vol_dist_enfants']); ?></td>
                                         <td class="text-end"><?php echo rrd_fmt_vol($br['aval']); ?></td>
-                                        <td class="text-end fw-semibold <?php echo rrd_pct_class($br['pct']); ?>"><?php echo rrd_fmt_pct($br['pct']); ?></td>
+                                        <td class="text-end fw-semibold <?php echo rrd_pct_class($br['pct']); ?>">
+                                            <?php echo rrd_fmt_pct($br['pct']); ?>
+                                            <?php if (isset($br['methode'])): ?>
+                                                <span class="badge <?php echo $br['methode'] === 'compteur' ? 'bg-primary-subtle text-primary' : 'bg-secondary-subtle text-secondary'; ?> fw-normal ms-1"
+                                                    title="<?php echo $br['methode'] === 'compteur' ? 'Mesuré sur le compteur de tête de la branche' : 'Déduit par résidu (branche sans compteur)'; ?>">
+                                                    <?php echo $br['methode'] === 'compteur' ? 'mesuré' : 'résidu'; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
                                     </tr>
                                     <?php
                                 }

@@ -115,8 +115,8 @@ $is_aep_selected = Aep_t::isAepIdInSession();
                                         class="bi bi-columns-gap me-2"></i>Synthèse compte d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=analyse_financiere"><i
                                         class="bi bi-graph-up me-2"></i>Analyse Financière</a></li>
-                            <!-- <li><a class="dropdown-item" href="?page=rapport_exploitation"><i
-                                        class="bi bi-file-earmark-word me-2"></i>Rapport d'exploitation</a></li> -->
+                            <li><a class="dropdown-item" href="?page=rapport_exploitation"><i
+                                        class="bi bi-file-earmark-word me-2"></i>Rapport d'exploitation</a></li>
                             <li><a class="dropdown-item" href="?page=config_compte_rendu"><i
                                         class="bi bi-gear me-2"></i>Config. Compte Rendu</a></li>
                             <li><a class="dropdown-item" href="?page=categories_flux_manuel"><i

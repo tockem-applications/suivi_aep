@@ -379,6 +379,41 @@ class Backup_t
         }
     }
 
+    /**
+     * Téléchargement d'une sauvegarde.
+     *
+     * Le dossier backups/ vit sous la racine web mais Apache refuse d'y servir
+     * les .sql (garde-fou dans c:/wamp/www/fokoue/.htaccess) : un dump de la
+     * base ne doit pas être récupérable en devinant un nom de fichier. Le
+     * fichier est donc remis ici, après passage par la garde de session, et
+     * uniquement depuis ce dossier.
+     */
+    public static function downloadBackup()
+    {
+        $filename = isset($_GET['file']) ? basename(trim($_GET['file'])) : '';
+        if ($filename === '' || $filename !== trim($_GET['file']) || !preg_match('/^[A-Za-z0-9._ -]+\.sql$/', $filename)) {
+            header('Location: ..?page=backup&error=download_failed&message=' . urlencode('Nom de fichier invalide'));
+            exit;
+        }
+        $backupDir = realpath(__DIR__ . '/..') . DIRECTORY_SEPARATOR . 'backups';
+        $filePath = realpath($backupDir . DIRECTORY_SEPARATOR . $filename);
+        if ($filePath === false || strpos($filePath, $backupDir . DIRECTORY_SEPARATOR) !== 0 || !is_file($filePath)) {
+            header('Location: ..?page=backup&error=download_failed&message=' . urlencode('Fichier introuvable'));
+            exit;
+        }
+        // Rien ne doit précéder le contenu : la sortie tamponnée est vidée.
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+        header('Content-Type: application/sql');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        header('Pragma: public');
+        readfile($filePath);
+        exit;
+    }
+
     public static function bulkRename()
     {
         try {
@@ -482,6 +517,9 @@ class Backup_t
     }
 }
 
+if (isset($_GET['action']) && $_GET['action'] === 'download_backup') {
+    Backup_t::downloadBackup();
+}
 if (isset($_POST['action']) && $_POST['action'] === 'export_sql') {
     require_once dirname(__DIR__) . '/donnees/web_guard.php';
     Csrf::requireValid();
