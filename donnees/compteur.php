@@ -55,8 +55,6 @@ class Compteur extends Manager
                     inner join compteur_abone ca on c.id = ca.id_compteur
                     where c.id=? limit 1;", array($id_compteur));
         $res = $res->fetchAll();
-        var_dump('est facturable donne ');
-        var_dump($res);
         if (count($res) == 1) {
             if($res[0]["id_abone"]){
                 return $res[0]["id_abone"];

@@ -16,6 +16,10 @@ class Backup_t
             throw new Exception('Impossible de créer le fichier d\'export');
         }
         fwrite($fh, "-- Export SQL généré par l'application (PHP)\n");
+        @include_once(__DIR__ . '/../donnees/version.php');
+        if (defined('APP_VERSION')) {
+            fwrite($fh, "-- Version de l'application : " . APP_VERSION . "\n");
+        }
         fwrite($fh, "SET NAMES utf8;\nSET FOREIGN_KEY_CHECKS=0;\n\n");
 
         $tables = array();

@@ -8,6 +8,8 @@
 @include_once("donnees/mois_facturation.php");
 @include_once("../donnees/inactivite_abone.php");
 @include_once("donnees/inactivite_abone.php");
+@include_once("../donnees/mois_completion.php");
+@include_once("donnees/mois_completion.php");
 
 // Abonnés sans consommation proposés à la désactivation avant de créer le
 // mois suivant ; le seuil N est un paramètre de l'AEP.
@@ -33,6 +35,22 @@ function addDaysAndFormat($string_date, $days = 10)
 
 ?>
 <div class="container-fluid">
+    <?php if (isset($_GET['success']) && $_GET['success'] === 'mois_complete'): ?>
+        <div class="alert alert-success alert-dismissible fade show mt-2 py-2 small" role="alert">
+            <i class="bi bi-check2-circle me-1"></i>
+            Mois complété : <?php echo (int) (isset($_GET['a']) ? $_GET['a'] : 0); ?> abonné(s) ajouté(s)
+            <?php if (isset($_GET['f']) && (int) $_GET['f'] > 0): ?>
+                et <?php echo (int) $_GET['f']; ?> facture(s) manquante(s) créée(s)
+            <?php endif; ?>. Leurs relevés sont à saisir comme les autres.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    <?php elseif (isset($_GET['error']) && $_GET['error'] === 'completion'): ?>
+        <div class="alert alert-danger alert-dismissible fade show mt-2 py-2 small" role="alert">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <?php echo htmlspecialchars(isset($_GET['message']) ? $_GET['message'] : 'Le mois n\'a pas pu être complété.', ENT_QUOTES, 'UTF-8'); ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    <?php endif; ?>
     <?php if (isset($_GET['success']) && $_GET['success'] === 'mois_cree'): ?>
         <?php $nb_desactives = isset($_GET['desactives']) ? (int) $_GET['desactives'] : 0; ?>
         <div class="alert alert-success alert-dismissible fade show mt-2 py-2 small" role="alert">
@@ -173,7 +191,73 @@ function addDaysAndFormat($string_date, $days = 10)
 
             $titre_table = " $mois_lettre";
 
+            // Mois actif incomplet : abonnés actifs sans relevé, relevés sans facture.
+            $completion_absents = array();
+            $completion_sans_facture = array();
+            if ((int) $id_mois > 0 && (int) $id_mois === (int) $id_mois_actif) {
+                $completion_absents = MoisCompletion::getAbonesAbsents((int) $_SESSION['id_aep'], (int) $id_mois);
+                $completion_sans_facture = MoisCompletion::getRelevesSansFacture((int) $_SESSION['id_aep'], (int) $id_mois);
+            }
             ?>
+
+            <?php if (!empty($completion_absents) || !empty($completion_sans_facture)): ?>
+                <div class="alert alert-warning mb-3" role="alert">
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                        <span class="fw-semibold">
+                            <?php if (!empty($completion_absents)): ?>
+                                <?php echo count($completion_absents); ?> abonné(s) actif(s) ne figurent pas dans <?php echo htmlspecialchars($mois_lettre, ENT_QUOTES, 'UTF-8'); ?>
+                            <?php endif; ?>
+                            <?php if (!empty($completion_absents) && !empty($completion_sans_facture)): ?> et <?php endif; ?>
+                            <?php if (!empty($completion_sans_facture)): ?>
+                                <?php echo count($completion_sans_facture); ?> relevé(s) sans facture
+                            <?php endif; ?>
+                        </span>
+                        <button class="btn btn-sm btn-outline-dark" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#completion_detail">Voir la liste</button>
+                        <form method="post" action="traitement/mois_facturation_t.php" class="ms-auto m-0"
+                            onsubmit="return confirm('Ajouter ces abonnés au mois en cours ? Leur relevé partira de leur dernier index connu.');">
+                            <?php echo Csrf::hiddenField(); ?>
+                            <input type="hidden" name="action" value="completer_mois">
+                            <input type="hidden" name="id_mois" value="<?php echo (int) $id_mois; ?>">
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                <i class="bi bi-person-plus me-1"></i> Ajouter au mois
+                            </button>
+                        </form>
+                    </div>
+                    <div class="small mt-1">
+                        La création de ce mois a probablement été interrompue, ou ces abonnés ont été créés après son ouverture.
+                        Ils n'ont ni relevé ni facture ce mois-ci.
+                    </div>
+                    <div class="collapse mt-2" id="completion_detail">
+                        <div class="table-responsive" style="max-height: 14rem; overflow-y: auto;">
+                            <table class="table table-sm table-bordered mb-0 small bg-white">
+                                <thead class="table-light">
+                                    <tr><th>Abonné</th><th>Réseau</th><th>Compteur</th><th class="text-end">Dernier index</th><th>Manque</th></tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($completion_absents as $ca): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($ca['nom'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($ca['reseau'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td><?php echo htmlspecialchars($ca['numero_compteur'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td class="text-end"><?php echo number_format((float) $ca['derniers_index'], 2, ',', ' '); ?></td>
+                                            <td>Relevé et facture</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php foreach ($completion_sans_facture as $cs): ?>
+                                        <tr>
+                                            <td><?php echo htmlspecialchars($cs['nom'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                            <td colspan="3" class="text-muted">Relevé présent</td>
+                                            <td>Facture</td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <?php if (isset($tarifs_differencies) && count($tarifs_differencies) > 0): ?>
                 <!-- Bandeau compact : tarif différencié utilisé -->

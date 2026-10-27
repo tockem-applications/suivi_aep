@@ -1,5 +1,6 @@
 <?php
 require_once("traitement/aep_t.php");
+@include_once("donnees/version.php");
 
 $is_aep_selected = Aep_t::isAepIdInSession();
 
@@ -11,6 +12,9 @@ $is_aep_selected = Aep_t::isAepIdInSession();
         <a class="navbar-brand text-white fw-bold fs-4" href="index.php?page=home"
             style="font-family: 'Segoe UI', sans-serif;">
             Tockem SPE
+            <?php if (defined('APP_VERSION')): ?>
+                <small class="fw-normal opacity-75" style="font-size: 0.65rem;" title="Version de l'application">v<?php echo APP_VERSION; ?></small>
+            <?php endif; ?>
         </a>
         <!-- Toggler Button -->
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse"

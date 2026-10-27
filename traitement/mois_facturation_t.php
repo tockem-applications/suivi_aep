@@ -20,6 +20,8 @@ traitement_guard();
 @include_once("donnees/compteur.php");
 @include_once("../donnees/inactivite_abone.php");
 @include_once("donnees/inactivite_abone.php");
+@include_once("../donnees/mois_completion.php");
+@include_once("donnees/mois_completion.php");
 
 /*$lettreMonth = array(
     '01'=>'Janvier',
@@ -297,6 +299,26 @@ class MoisFacturation_t
                 }
             }
         }
+        // Ajout au mois actif des abonnés actifs qui n'y figurent pas (création
+        // du mois interrompue, abonné créé après l'ouverture du mois).
+        if (isset($_POST['action']) && $_POST['action'] === 'completer_mois') {
+            require_once dirname(__DIR__) . '/donnees/web_guard.php';
+            Csrf::requireValid();
+            if (!isset($_SESSION['id_aep'])) {
+                header('Location: ../?page=releve&error=no_aep');
+                exit;
+            }
+            $idMois = isset($_POST['id_mois']) ? (int) $_POST['id_mois'] : 0;
+            $resultat = MoisCompletion::completer((int) $_SESSION['id_aep'], $idMois);
+            if (!is_array($resultat)) {
+                header('Location: ../?page=releves&error=completion&message=' . urlencode((string) $resultat));
+                exit;
+            }
+            header('Location: ../?page=releves&success=mois_complete&a=' . (int) $resultat['abones']
+                . '&f=' . (int) $resultat['factures']);
+            exit;
+        }
+
         // Seuil de désactivation des abonnés sans consommation, réglé depuis
         // l'écran de création du mois ; la fenêtre est rouverte avec la liste
         // recalculée.
